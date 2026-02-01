@@ -17,8 +17,6 @@ export function useAuthForm() {
       const { data } = await $api.post<LoginResponse>('login', loginForm.value)
       const now = Math.floor(Date.now() / 1000)
 
-      console.log(data)
-
       if (data.status === 'success') {
         accessToken.value = data.data.token
         user.value = data.data.user

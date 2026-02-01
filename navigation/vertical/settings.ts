@@ -10,7 +10,7 @@ export default [
       },
       {
         title: 'Permissions',
-        to: 'index',
+        to: 'permissions',
         icon: { icon: 'tabler-key' },
       },
       {

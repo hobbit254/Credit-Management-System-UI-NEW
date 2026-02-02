@@ -1,38 +1,35 @@
 <script setup lang="ts">
-import { usePermissions } from '@/composables/permissions/usePermissions'
-import CreatePermissionModal from '@/components/permissions/CreatePermissionModal.vue'
-import UpdatePermissionModal from '@/components/permissions/UpdatePermissionModal.vue'
-import DeletePermissionModal from '@/components/permissions/DeletePermissionModal.vue'
+import { useUsers } from '@/composables/users/useUsers'
 
 const perPageOptions = [5, 10, 25, 50, 100]
 
 const {
-  permissions,
+  users,
   pagination,
-  fetchAllPermissions,
+  fetchAllUsers,
   showToast,
   loading,
   openAdd,
-  newPermission,
-  addPermission,
-  createPermission,
+  newUser,
+  addUser,
+  createUser,
   openEdit,
-  permissionToEdit,
-  editPermission,
-  updatePermission,
+  editUser,
+  updateUser,
+  userToEdit,
   openDelete,
-  permissionToDelete,
-  deletePermissionModal,
-  deletePermission,
-  restorePermission,
-  activatePermission,
-  deactivatePermission,
-} = usePermissions()
+  deleteUserModal,
+  deleteUser,
+  userToDelete,
+  restoreUser,
+  activateUser,
+  deactivateUser,
+} = useUsers()
 
 onMounted(async () => {
   loading.value = true
   try {
-    await fetchAllPermissions()
+    await fetchAllUsers()
   }
   finally {
     loading.value = false
@@ -42,7 +39,7 @@ onMounted(async () => {
 function changePerPage(value: number) {
   pagination.value.perPage = value
   pagination.value.currentPage = 1
-  fetchAllPermissions()
+  fetchAllUsers()
 }
 
 function copyUuid(uuid: string) {
@@ -56,12 +53,12 @@ function copyUuid(uuid: string) {
 }
 
 const headers = [
-  { title: 'Permission Name', key: 'permission_name' },
-  { title: 'Slug', key: 'permission_slug' },
-  { title: 'Description', key: 'description' },
-  { title: 'Permission Action', key: 'permission_action' },
+  { title: 'Full Name', key: 'full_name' },
+  { title: 'Email', key: 'email' },
+  { title: 'Role', key: 'roles.0.role_name' },
   { title: 'Active', key: 'active' },
   { title: 'Created', key: 'created_at' },
+  { title: 'Email Verified Data', key: 'email_verified_at' },
   { title: 'Updated', key: 'updated_at' },
   { title: 'Deleted', key: 'deleted_at' },
   { title: 'Actions', key: 'actions' },
@@ -76,20 +73,20 @@ const headers = [
     >
       <VCard class="d-flex flex-column flex-grow-1">
         <VCardTitle class="d-flex justify-space-between align-center">
-          <span class="text-h6">Permissions Table</span>
+          <span class="text-h6">Users Table</span>
           <VBtn
             color="primary"
-            @click="addPermission"
+            @click="addUser"
           >
-            Add Permission
+            Add User
           </VBtn>
         </VCardTitle>
 
         <VDataTable
           :headers="headers"
-          :items="permissions"
+          :items="users"
           :loading="loading"
-          item-key="permission_uuid"
+          item-key="user_uuid"
           class="flex-grow-1"
           :items-per-page="-1"
         >
@@ -99,6 +96,9 @@ const headers = [
           </template>
 
           <!-- Dates -->
+          <template #item.email_verified_at="{ item }">
+            <TableDate :value="item.email_verified_at" />
+          </template>
           <template #item.created_at="{ item }">
             <TableDate :value="item.created_at" />
           </template>
@@ -121,43 +121,43 @@ const headers = [
               </template>
               <VList>
                 <VListSubheader>Actions</VListSubheader>
-                <VListItem @click="copyUuid(item.permission_uuid)">
+                <VListItem @click="copyUuid(item.user_uuid)">
                   <VIcon>tabler-copy</VIcon>
                   <span class="ms-2">Copy UUID</span>
                 </VListItem>
                 <VDivider />
 
-                <VListItem @click="editPermission(item)">
+                <VListItem @click="editUser(item)">
                   <VIcon>tabler-edit</VIcon>
-                  <span class="ms-2">Edit Permission</span>
+                  <span class="ms-2">Edit User</span>
                 </VListItem>
                 <VListItem
                   v-if="item.deleted_at !== null"
-                  @click="restorePermission(item)"
+                  @click="restoreUser(item)"
                 >
                   <VIcon>tabler-restore</VIcon>
-                  <span class="ms-2">Restore Permission</span>
+                  <span class="ms-2">Restore User</span>
                 </VListItem>
                 <VListItem
                   v-else
-                  @click="deletePermissionModal(item)"
+                  @click="deleteUserModal(item)"
                 >
                   <VIcon>tabler-trash</VIcon>
-                  <span class="ms-2">Delete Permission</span>
+                  <span class="ms-2">Delete User</span>
                 </VListItem>
                 <VListItem
                   v-if="item.active === 1"
-                  @click="deactivatePermission(item)"
+                  @click="deactivateUser(item)"
                 >
                   <VIcon>tabler-radio-off</VIcon>
-                  <span class="ms-2">Deactivate Permission</span>
+                  <span class="ms-2">Deactivate User</span>
                 </VListItem>
                 <VListItem
                   v-else
-                  @click="activatePermission(item)"
+                  @click="activateUser(item)"
                 >
                   <VIcon>tabler-radio</VIcon>
-                  <span class="ms-2">Activate Permission</span>
+                  <span class="ms-2">Activate User</span>
                 </VListItem>
               </vlist>
             </VMenu>
@@ -189,7 +189,7 @@ const headers = [
               <VPagination
                 v-model="pagination.currentPage"
                 :length="pagination.lastPage"
-                @update:model-value="(page: number) => fetchAllPermissions(page)"
+                @update:model-value="(page: number) => fetchAllUsers(page)"
               />
             </div>
           </template>
@@ -197,22 +197,22 @@ const headers = [
       </VCard>
     </VCol>
   </VRow>
-  <CreatePermissionModal
+  <CreateUserModal
     v-model:model-value="openAdd"
-    v-model:permission="newPermission"
+    v-model:user="newUser"
     :loading="loading"
-    @confirm="createPermission"
+    @confirm="createUser"
   />
-  <UpdatePermissionModal
+  <UpdateUserModal
     v-model:model-value="openEdit"
-    v-model:permission="permissionToEdit"
+    v-model:user="userToEdit"
     :loading="loading"
-    @confirm="updatePermission"
+    @confirm="updateUser"
   />
-  <DeletePermissionModal
+  <DeleteUserModal
     v-model:model-value="openDelete"
-    v-model:permission="permissionToDelete"
+    v-model:user="userToDelete"
     :loading="loading"
-    @confirm="deletePermission"
+    @confirm="deleteUser"
   />
 </template>

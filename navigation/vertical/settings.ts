@@ -15,12 +15,12 @@ export default [
       },
       {
         title: 'Permission Matrix',
-        to: 'index',
+        to: 'permission-matrix',
         icon: { icon: 'tabler-table' },
       },
       {
         title: 'Users',
-        to: 'index',
+        to: 'users',
         icon: { icon: 'tabler-users' },
       },
     ],

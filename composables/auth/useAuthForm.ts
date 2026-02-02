@@ -32,7 +32,7 @@ export function useAuthForm() {
           title: 'Login Successful',
           text: data.message,
           color: 'success',
-          icon: 'tabler-check',
+          icon: '$success',
         })
         navigateTo('/dashboard')
       }
@@ -41,6 +41,7 @@ export function useAuthForm() {
           title: 'Login failed',
           text: data.message || 'Invalid credentials',
           color: 'error',
+          icon: '$error',
         })
         throw new Error(data.message || 'Login failed')
       }
@@ -69,6 +70,46 @@ export function useAuthForm() {
     loginForm.value = createLoginForm()
   }
 
+  function logout() {
+    accessToken.value = null
+    user.value = null
+    expiry.value = null
+
+    if (import.meta.client) {
+      localStorage.removeItem('accessToken')
+      localStorage.removeItem('expiry')
+      localStorage.removeItem('user')
+    }
+
+    navigateTo('/')
+  }
+
+  async function verifyEmail(redirectUrl: string) {
+    const { data } = await $api.get(redirectUrl)
+
+    showToast({
+      title: 'Verify email',
+      text: data.message || 'Verify email',
+      color: data.message === 'Invalid verification link.' ? 'error' : 'success',
+      icon: '$error',
+    })
+
+    return data
+  }
+
+  async function resendEmail(email: string) {
+    const { data } = await $api.post('resendVerificationEmail', {
+      email,
+    })
+
+    showToast({
+      title: 'Resend email',
+      text: data.message || 'Resend email',
+      color: 'success',
+      icon: '$success',
+    })
+  }
+
   return {
     loginForm,
     loading,
@@ -76,5 +117,8 @@ export function useAuthForm() {
     reset,
     isAuthenticated,
     user,
+    logout,
+    verifyEmail,
+    resendEmail,
   }
 }

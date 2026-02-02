@@ -23,6 +23,20 @@ export function useRoles() {
     return result
   }
 
+  async function fetchAllActiveRoles() {
+    const { data } = await $api.get('roles/active')
+
+    let result: Role[] = []
+    if (Array.isArray(data))
+      result = data
+    else if (data && Array.isArray(data.data))
+      result = data.data
+
+    roles.value = result // <-- update reactive state here
+
+    return result
+  }
+
   const openAdd = ref(false)
 
   const newRole = ref<NewRole>({
@@ -196,5 +210,6 @@ export function useRoles() {
     restoreRole,
     deactivateRole,
     activateRole,
+    fetchAllActiveRoles,
   }
 }

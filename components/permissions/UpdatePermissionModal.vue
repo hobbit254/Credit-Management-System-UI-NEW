@@ -1,6 +1,6 @@
 <script lang="ts" setup>
 import { computed, ref, watch } from 'vue'
-import type {Permission} from "@/schemas/permissions";
+import type { Permission } from '@/schemas/permissions'
 
 const props = defineProps<{
   modelValue: boolean

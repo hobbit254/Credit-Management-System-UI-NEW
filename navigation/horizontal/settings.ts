@@ -1,0 +1,29 @@
+export default [
+  {
+    title: 'Settings',
+    icon: { icon: 'tabler-settings' },
+    children: [
+      {
+        title: 'Roles',
+        to: 'roles',
+        icon: { icon: 'tabler-shield-lock' },
+      },
+      {
+        title: 'Permissions',
+        to: 'permissions',
+        icon: { icon: 'tabler-key' },
+      },
+      {
+        title: 'Permission Matrix',
+        to: 'permission-matrix',
+        icon: { icon: 'tabler-table' },
+      },
+      {
+        title: 'Users',
+        to: 'users',
+        icon: { icon: 'tabler-users' },
+      },
+    ],
+  },
+
+]

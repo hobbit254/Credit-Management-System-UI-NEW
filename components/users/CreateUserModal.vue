@@ -60,7 +60,6 @@ onMounted(async () => {
     const data = await fetchAllActiveRoles()
 
     roles.value = data as unknown as Role[]
-    console.log('Roles loaded:', roles.value)
   }
   finally {
     loadingRoles.value = false

@@ -2,7 +2,7 @@ export default [
   {
     title: 'Dashboard',
     icon: { icon: 'tabler-smart-home' },
-    to: 'index',
+    to: 'dashboard',
   },
 
 ]

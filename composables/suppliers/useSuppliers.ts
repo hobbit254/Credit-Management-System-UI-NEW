@@ -201,6 +201,19 @@ export function useSuppliers() {
     }
   }
 
+  async function fetchActiveSupplier() {
+    const { data } = await $api.get('/suppliers/active')
+    let result: Supplier[] = []
+    if (Array.isArray(data))
+      result = data
+    else if (data && Array.isArray(data.data))
+      result = data.data
+
+    suppliers.value = result
+
+    return result
+  }
+
   return {
     showToast,
     suppliers,
@@ -222,5 +235,6 @@ export function useSuppliers() {
     supplierToDelete,
     deleteSupplierModal,
     deleteSupplier,
+    fetchActiveSupplier,
   }
 }

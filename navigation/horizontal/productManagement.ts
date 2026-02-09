@@ -15,13 +15,8 @@ export default [
       },
       {
         title: 'Product Inventory',
-        to: 'permission-matrix',
+        to: 'product-inventory',
         icon: { icon: 'tabler-clipboard-list' },
-      },
-      {
-        title: 'Users',
-        to: 'users',
-        icon: { icon: 'tabler-users' },
       },
     ],
   },

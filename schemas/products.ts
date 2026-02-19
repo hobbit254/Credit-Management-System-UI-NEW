@@ -19,6 +19,6 @@ export const NewProductSchema = z.object({
   product_model_number: z.string().min(1, 'Product model number is required'),
   category_uuid: z.string().min(1, 'Category uuid is required'),
   product_brand: z.string().min(1, 'Product brand is required'),
-  default_price: z.number().optional(),
+  default_price: z.coerce.number().optional(),
 })
 export type NewProduct = z.infer<typeof NewProductSchema>

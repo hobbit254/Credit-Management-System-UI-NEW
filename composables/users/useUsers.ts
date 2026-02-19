@@ -51,6 +51,20 @@ export function useUsers() {
     }
   }
 
+  async function fetchAllActiveUsers() {
+    const { data } = await $api.get('users/active')
+
+    let result: User[] = []
+    if (Array.isArray(data))
+      result = data
+    else if (data && Array.isArray(data.data))
+      result = data.data
+
+    users.value = result // <-- update reactive state here
+
+    return result
+  }
+
   const openAdd = ref(false)
 
   const newUser = ref<NewUser>({
@@ -224,5 +238,6 @@ export function useUsers() {
     restoreUser,
     activateUser,
     deactivateUser,
+    fetchAllActiveUsers,
   }
 }

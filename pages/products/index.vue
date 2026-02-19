@@ -53,10 +53,8 @@ function copyUuid(uuid: string) {
 }
 
 const headers = [
-  { title: 'Product Name', key: 'product_name' },
-  { title: 'Product Category', key: 'category_name' },
-  { title: 'Product Brand', key: 'product_brand' },
-  { title: 'Product Model Number', key: 'product_model_number' },
+  { title: 'Product', key: 'product_name' },
+  { title: 'Category', key: 'category_name' },
   { title: 'Default Price', key: 'default_price' },
   { title: 'Active', key: 'active' },
   { title: 'Created', key: 'created_at' },
@@ -64,6 +62,10 @@ const headers = [
   { title: 'Deleted', key: 'deleted_at' },
   { title: 'Actions', key: 'actions' },
 ]
+
+function getRowProps({ item }: { item: any }) {
+  return item.deleted_at !== null ? { class: 'deleted-row' } : {}
+}
 </script>
 
 <template>
@@ -73,15 +75,23 @@ const headers = [
       class="h-100 d-flex"
     >
       <VCard class="d-flex flex-column flex-grow-1">
-        <VCardTitle class="d-flex justify-space-between align-center">
-          <span class="text-h6">Products Table</span>
+        <VCardTitle class="d-flex justify-space-between align-center pa-4">
+          <div class="d-flex align-center ga-2">
+            <VIcon color="primary">
+              tabler-box
+            </VIcon>
+            <span class="text-h6 font-weight-bold">Products</span>
+          </div>
           <VBtn
             color="primary"
+            prepend-icon="tabler-plus"
             @click="addProduct"
           >
             Add Product
           </VBtn>
         </VCardTitle>
+
+        <VDivider />
 
         <VDataTable
           :headers="headers"
@@ -90,21 +100,112 @@ const headers = [
           item-key="product_uuid"
           class="flex-grow-1"
           :items-per-page="-1"
+          :row-props="getRowProps"
         >
-          <!-- Status Badge -->
+          <!-- Product -->
+          <template #item.product_name="{ item }">
+            <div class="d-flex align-center ga-2">
+              <VAvatar
+                size="32"
+                color="primary"
+                variant="tonal"
+              >
+                <span class="text-caption font-weight-bold">
+                  {{ item.product_name?.charAt(0)?.toUpperCase() ?? '?' }}
+                </span>
+              </VAvatar>
+              <div class="d-flex flex-column">
+                <span class="font-weight-medium text-body-2">{{ item.product_name ?? '—' }}</span>
+                <div class="d-flex align-center ga-1 mt-1">
+                  <VChip
+                    v-if="item.product_brand"
+                    size="x-small"
+                    color="secondary"
+                    variant="tonal"
+                  >
+                    {{ item.product_brand }}
+                  </VChip>
+                  <VChip
+                    v-if="item.product_model_number"
+                    size="x-small"
+                    color="info"
+                    variant="tonal"
+                  >
+                    {{ item.product_model_number }}
+                  </VChip>
+                </div>
+              </div>
+            </div>
+          </template>
+
+          <!-- Category -->
+          <template #item.category_name="{ item }">
+            <VChip
+              size="small"
+              color="info"
+              variant="tonal"
+            >
+              <VIcon
+                start
+                size="12"
+              >
+                tabler-tag
+              </VIcon>
+              {{ item.category_name ?? '—' }}
+            </VChip>
+          </template>
+
+          <!-- Default Price -->
+          <template #item.default_price="{ item }">
+            <div class="d-flex align-center ga-1">
+              <span class="text-caption font-weight-bold text-success">KES</span>
+              <span class="font-weight-medium text-body-2">
+                {{ item.default_price ? Number(item.default_price).toLocaleString() : '—' }}
+              </span>
+            </div>
+          </template>
+
+          <!-- Active -->
           <template #item.active="{ item }">
             <StatusBadge :active="item.active" />
           </template>
 
           <!-- Dates -->
           <template #item.created_at="{ item }">
-            <TableDate :value="item.created_at" />
+            <div class="d-flex align-center ga-1 text-caption text-medium-emphasis">
+              <VIcon size="13">
+                tabler-calendar
+              </VIcon>
+              <TableDate :value="item.created_at" />
+            </div>
           </template>
+
           <template #item.updated_at="{ item }">
-            <TableDate :value="item.updated_at" />
+            <div class="d-flex align-center ga-1 text-caption text-medium-emphasis">
+              <VIcon size="13">
+                tabler-clock-edit
+              </VIcon>
+              <TableDate :value="item.updated_at" />
+            </div>
           </template>
+
           <template #item.deleted_at="{ item }">
-            <TableDate :value="item.deleted_at" />
+            <div
+              v-if="item.deleted_at"
+              class="d-flex align-center ga-1 text-caption text-error"
+            >
+              <VIcon
+                size="13"
+                color="error"
+              >
+                tabler-trash
+              </VIcon>
+              <TableDate :value="item.deleted_at" />
+            </div>
+            <span
+              v-else
+              class="text-medium-emphasis"
+            >—</span>
           </template>
 
           <!-- Actions -->
@@ -114,60 +215,117 @@ const headers = [
                 <VBtn
                   icon="tabler-dots"
                   variant="text"
+                  size="small"
                   v-bind="props"
                 />
               </template>
-              <VList>
+              <VList density="compact">
                 <VListSubheader>Actions</VListSubheader>
+
                 <VListItem @click="copyUuid(item.product_uuid)">
-                  <VIcon>tabler-copy</VIcon>
-                  <span class="ms-2">Copy UUID</span>
+                  <div class="d-flex align-center ga-2">
+                    <VIcon size="16">
+                      tabler-copy
+                    </VIcon>
+                    <span>Copy UUID</span>
+                  </div>
                 </VListItem>
+
                 <VDivider />
 
                 <VListItem @click="editProduct(item)">
-                  <VIcon>tabler-edit</VIcon>
-                  <span class="ms-2">Edit Product</span>
+                  <div class="d-flex align-center ga-2">
+                    <VIcon size="16">
+                      tabler-edit
+                    </VIcon>
+                    <span>Edit Product</span>
+                  </div>
                 </VListItem>
+
                 <VListItem
                   v-if="item.deleted_at !== null"
                   @click="restoreProduct(item)"
                 >
-                  <VIcon>tabler-restore</VIcon>
-                  <span class="ms-2">Restore Product</span>
+                  <div class="d-flex align-center ga-2">
+                    <VIcon
+                      size="16"
+                      color="success"
+                    >
+                      tabler-restore
+                    </VIcon>
+                    <span class="text-success">Restore Product</span>
+                  </div>
                 </VListItem>
+
                 <VListItem
                   v-else
                   @click="deleteProductModal(item)"
                 >
-                  <VIcon>tabler-trash</VIcon>
-                  <span class="ms-2">Delete Product</span>
+                  <div class="d-flex align-center ga-2">
+                    <VIcon
+                      size="16"
+                      color="error"
+                    >
+                      tabler-trash
+                    </VIcon>
+                    <span class="text-error">Delete Product</span>
+                  </div>
                 </VListItem>
+
+                <VDivider />
+
                 <VListItem
                   v-if="item.active === 1"
                   @click="deactivateProduct(item)"
                 >
-                  <VIcon>tabler-radio-off</VIcon>
-                  <span class="ms-2">Deactivate Product</span>
+                  <div class="d-flex align-center ga-2">
+                    <VIcon
+                      size="16"
+                      color="warning"
+                    >
+                      tabler-radio-off
+                    </VIcon>
+                    <span class="text-warning">Deactivate</span>
+                  </div>
                 </VListItem>
+
                 <VListItem
                   v-else
                   @click="activateProduct(item)"
                 >
-                  <VIcon>tabler-radio</VIcon>
-                  <span class="ms-2">Activate Product</span>
+                  <div class="d-flex align-center ga-2">
+                    <VIcon
+                      size="16"
+                      color="success"
+                    >
+                      tabler-radio
+                    </VIcon>
+                    <span class="text-success">Activate</span>
+                  </div>
                 </VListItem>
-              </vlist>
+              </VList>
             </VMenu>
+          </template>
+
+          <!-- No data -->
+          <template #no-data>
+            <div class="d-flex flex-column align-center justify-center pa-6 ga-2">
+              <VIcon
+                size="40"
+                color="secondary"
+              >
+                tabler-box-off
+              </VIcon>
+              <span class="text-body-2 text-medium-emphasis">No products found.</span>
+            </div>
           </template>
 
           <!-- Bottom Pagination Slot -->
           <template #bottom>
+            <VDivider />
             <div class="d-flex justify-space-between align-center flex-wrap ga-4 pa-4">
-              <!-- LEFT: Items Per Page -->
               <div class="d-flex align-center ga-2">
                 <span class="text-medium-emphasis text-sm">Rows per page</span>
-
                 <VSelect
                   :model-value="pagination.perPage"
                   :items="perPageOptions"
@@ -177,13 +335,9 @@ const headers = [
                   @update:model-value="changePerPage"
                 />
               </div>
-
-              <!-- CENTER: Page Info -->
               <span class="text-medium-emphasis text-sm">
                 Page {{ pagination.currentPage }} of {{ pagination.lastPage }}
               </span>
-
-              <!-- RIGHT: Pagination -->
               <VPagination
                 v-model="pagination.currentPage"
                 :length="pagination.lastPage"
@@ -195,6 +349,7 @@ const headers = [
       </VCard>
     </VCol>
   </VRow>
+
   <CreateProductModal
     v-model:model-value="openAdd"
     v-model:product="newProduct"
@@ -214,3 +369,17 @@ const headers = [
     @confirm="deleteProduct"
   />
 </template>
+
+<style scoped>
+:deep(.deleted-row) td {
+  background-color: rgba(255, 82, 82, 0.12) !important;
+}
+
+:deep(.deleted-row:hover) td {
+  background-color: rgba(255, 82, 82, 0.22) !important;
+}
+
+:deep(.v-data-table__tr:hover) td {
+  background-color: rgba(0, 0, 0, 0.04) !important;
+}
+</style>

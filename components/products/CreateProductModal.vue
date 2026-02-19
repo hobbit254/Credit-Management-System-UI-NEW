@@ -20,7 +20,6 @@ const isOpen = computed({
 const localProduct = ref<NewProduct>({ ...props.product })
 
 watch(() => props.product, newVal => {
-  // Only update if different to avoid loops/resets during typing if parent updates back
   if (JSON.stringify(newVal) !== JSON.stringify(localProduct.value))
     localProduct.value = { ...newVal }
 }, { deep: true })
@@ -69,57 +68,165 @@ onMounted(async () => {
   <VDialog
     v-model="isOpen"
     max-width="600"
+    scrollable
   >
-    <VCard
-      prepend-icon="tabler-user"
-      title="Add New Product"
-    >
-      <VCardText>
+    <VCard>
+      <!-- Header -->
+      <VCardTitle class="d-flex align-center ga-3 pa-4">
+        <VAvatar
+          color="primary"
+          variant="tonal"
+          size="40"
+        >
+          <VIcon>tabler-box</VIcon>
+        </VAvatar>
+        <div class="d-flex flex-column">
+          <span class="text-h6 font-weight-bold">Add New Product</span>
+          <span class="text-caption text-medium-emphasis">Fill in the product details below</span>
+        </div>
+      </VCardTitle>
+
+      <VDivider />
+
+      <VCardText class="pa-4">
         <VForm @submit.prevent="handleConfirm">
           <VRow dense>
+            <!-- Product Name -->
             <VCol cols="12">
+              <p class="text-caption text-medium-emphasis font-weight-medium mb-1">
+                PRODUCT NAME
+              </p>
               <AppTextField
                 v-model="localProduct.product_name"
                 label="Product Name*"
-                placeholder="Enter Product Name"
+                placeholder="Enter product name"
                 :error-messages="fieldErrors.product_name"
-              />
+              >
+                <template #prepend-inner>
+                  <VIcon size="18">
+                    tabler-box
+                  </VIcon>
+                </template>
+              </AppTextField>
             </VCol>
-            <VCol cols="12">
-              <AppTextField
-                v-model="localProduct.product_model_number"
-                label="Product Model Number*"
-                placeholder="Enter Product Model Number"
-                :error-messages="fieldErrors.product_model_number"
-              />
-            </VCol>
-            <VCol cols="12">
+
+            <!-- Brand & Model side by side -->
+            <VCol
+              cols="12"
+              md="6"
+            >
+              <p class="text-caption text-medium-emphasis font-weight-medium mb-1">
+                BRAND
+              </p>
               <AppTextField
                 v-model="localProduct.product_brand"
-                label="Product Brand*"
-                placeholder="Enter Product Brand"
+                label="Brand*"
+                placeholder="Enter brand"
                 :error-messages="fieldErrors.product_brand"
-              />
+              >
+                <template #prepend-inner>
+                  <VIcon size="18">
+                    tabler-building-factory
+                  </VIcon>
+                </template>
+              </AppTextField>
             </VCol>
+
+            <VCol
+              cols="12"
+              md="6"
+            >
+              <p class="text-caption text-medium-emphasis font-weight-medium mb-1">
+                MODEL NUMBER
+              </p>
+              <AppTextField
+                v-model="localProduct.product_model_number"
+                label="Model Number*"
+                placeholder="Enter model number"
+                :error-messages="fieldErrors.product_model_number"
+              >
+                <template #prepend-inner>
+                  <VIcon size="18">
+                    tabler-barcode
+                  </VIcon>
+                </template>
+              </AppTextField>
+            </VCol>
+
+            <!-- Category -->
             <VCol cols="12">
+              <p class="text-caption text-medium-emphasis font-weight-medium mb-1">
+                CATEGORY
+              </p>
               <AppSelect
                 v-model="localProduct.category_uuid"
                 :items="categories"
                 item-title="category_name"
                 item-value="category_uuid"
-                label="Category Type*"
+                label="Category*"
                 :loading="loadingCategories"
-                placeholder="Select a Product Category*"
-              />
+                placeholder="Select a category"
+                :error-messages="fieldErrors.category_uuid"
+              >
+                <template #prepend-inner>
+                  <VIcon size="18">
+                    tabler-tag
+                  </VIcon>
+                </template>
+                <template #item="{ item, props: itemProps }">
+                  <VListItem v-bind="itemProps">
+                    <template #prepend>
+                      <VAvatar
+                        size="26"
+                        color="info"
+                        variant="tonal"
+                      >
+                        <span class="text-caption font-weight-bold">
+                          {{ item.raw.category_name?.charAt(0)?.toUpperCase() ?? '?' }}
+                        </span>
+                      </VAvatar>
+                    </template>
+                  </VListItem>
+                </template>
+              </AppSelect>
             </VCol>
+
+            <!-- Default Price -->
             <VCol cols="12">
+              <p class="text-caption text-medium-emphasis font-weight-medium mb-1">
+                DEFAULT PRICE
+              </p>
               <AppTextField
                 v-model="localProduct.default_price"
                 label="Default Price*"
                 type="number"
-                placeholder="Enter Default Price"
+                placeholder="Enter default price"
                 :error-messages="fieldErrors.default_price"
-              />
+              >
+                <template #prepend-inner>
+                  <span class="text-caption font-weight-bold text-success pt-1">KES</span>
+                </template>
+              </AppTextField>
+            </VCol>
+
+            <!-- Price Preview -->
+            <VCol
+              v-if="localProduct.default_price"
+              cols="12"
+            >
+              <VAlert
+                color="success"
+                variant="tonal"
+                density="compact"
+              >
+                <template #prepend>
+                  <VIcon color="success">
+                    tabler-circle-check
+                  </VIcon>
+                </template>
+                Default price set to
+                <strong>KES {{ Number(localProduct.default_price).toLocaleString() }}</strong>
+              </VAlert>
             </VCol>
           </VRow>
         </VForm>
@@ -127,22 +234,25 @@ onMounted(async () => {
 
       <VDivider />
 
-      <VCardActions>
+      <VCardActions class="pa-3">
         <VSpacer />
-
         <VBtn
-          text="Cancel"
           variant="plain"
+          prepend-icon="tabler-x"
+          :disabled="props.loading"
           @click="closeModal"
-        />
-
+        >
+          Cancel
+        </VBtn>
         <VBtn
           color="primary"
-          text="Save"
           variant="tonal"
+          prepend-icon="tabler-check"
           :loading="props.loading"
           @click="handleConfirm"
-        />
+        >
+          Save Product
+        </VBtn>
       </VCardActions>
     </VCard>
   </VDialog>

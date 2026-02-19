@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { type NewCategory, NewCategorySchema } from '@/schemas/category'
 
 const props = defineProps<{
@@ -17,12 +17,13 @@ const isOpen = computed({
 
 const localCategory = ref<NewCategory>({ ...props.category })
 
+// Sync local state with props
 watch(() => props.category, newVal => {
-  // Only update if different to avoid loops/resets during typing if parent updates back
   if (JSON.stringify(newVal) !== JSON.stringify(localCategory.value))
     localCategory.value = { ...newVal }
 }, { deep: true })
 
+// Emit changes back to parent
 watch(localCategory, newVal => {
   emit('update:category', newVal)
 }, { deep: true })
@@ -50,22 +51,60 @@ function handleConfirm() {
 <template>
   <VDialog
     v-model="isOpen"
-    max-width="600"
+    max-width="500"
+    scrollable
   >
-    <VCard
-      prepend-icon="tabler-user"
-      title="Add New Category"
-    >
-      <VCardText>
+    <VCard>
+      <VCardTitle class="d-flex align-center ga-3 pa-4">
+        <VAvatar
+          color="primary"
+          variant="tonal"
+          size="40"
+        >
+          <VIcon>tabler-category</VIcon>
+        </VAvatar>
+        <div class="d-flex flex-column">
+          <span class="text-h6 font-weight-bold">Add New Category</span>
+          <span class="text-caption text-medium-emphasis">Create a grouping for your products</span>
+        </div>
+      </VCardTitle>
+
+      <VDivider />
+
+      <VCardText class="pa-4">
         <VForm @submit.prevent="handleConfirm">
           <VRow dense>
             <VCol cols="12">
+              <p class="text-caption text-medium-emphasis font-weight-medium mb-1 text-uppercase">
+                Category Details
+              </p>
               <AppTextField
                 v-model="localCategory.category_name"
-                label="Debtor Name*"
-                placeholder="Enter Debtor Name"
-                :error-messages="fieldErrors.debtor_name"
-              />
+                label="Category Name*"
+                placeholder="e.g. Electronics, Furniture, etc."
+                :error-messages="fieldErrors.category_name"
+                autofocus
+              >
+                <template #prepend-inner>
+                  <VIcon size="18">
+                    tabler-tag
+                  </VIcon>
+                </template>
+              </AppTextField>
+            </VCol>
+
+            <VCol
+              cols="12"
+              class="mt-2"
+            >
+              <VAlert
+                color="info"
+                variant="tonal"
+                density="compact"
+                class="text-caption"
+              >
+                Categories help you organize products and generate better inventory reports.
+              </VAlert>
             </VCol>
           </VRow>
         </VForm>
@@ -73,22 +112,25 @@ function handleConfirm() {
 
       <VDivider />
 
-      <VCardActions>
+      <VCardActions class="pa-3">
         <VSpacer />
-
         <VBtn
-          text="Cancel"
           variant="plain"
+          prepend-icon="tabler-x"
+          :disabled="props.loading"
           @click="closeModal"
-        />
-
+        >
+          Cancel
+        </VBtn>
         <VBtn
           color="primary"
-          text="Save"
           variant="tonal"
+          prepend-icon="tabler-check"
           :loading="props.loading"
           @click="handleConfirm"
-        />
+        >
+          Save Category
+        </VBtn>
       </VCardActions>
     </VCard>
   </VDialog>

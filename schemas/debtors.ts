@@ -20,6 +20,6 @@ export const NewDebtorSchema = z.object({
   debtor_email: z.email('Invalid email address'),
   debtor_phone: z.string().min(12).max(20),
   debtor_type: z.string(),
-  credit_limit: z.number(),
+  credit_limit: z.coerce.number().default(0),
 })
 export type NewDebtor = z.infer<typeof NewDebtorSchema>

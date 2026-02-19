@@ -65,6 +65,20 @@ export function useProductInventory() {
     })
   }
 
+  async function fetchAllActiveProductInventory() {
+    const { data } = await $api.get('product-inventory/active')
+
+    let result: ProductInventory[] = []
+    if (Array.isArray(data))
+      result = data
+    else if (data && Array.isArray(data.data))
+      result = data.data
+
+    productInventories.value = result // <-- update reactive state here
+
+    return result
+  }
+
   const openAdd = ref(false)
 
   const newProductInventory = ref<NewProductInventory>({
@@ -220,5 +234,6 @@ export function useProductInventory() {
     restoreProductInventory,
     activateProductInventory,
     deactivateProductInventory,
+    fetchAllActiveProductInventory,
   }
 }

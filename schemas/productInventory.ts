@@ -17,6 +17,7 @@ export interface ProductInventory {
   supplier_name: string
   supplier_phone: string
   active: number
+  product_active_status: number
   deleted_at: string
   created_at: string
   updated_at: string

@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { computed, ref, watch } from 'vue'
+import { useTheme } from 'vuetify'
 import { type NewDebtor, NewDebtorSchema } from '@/schemas/debtors'
 
 const props = defineProps<{
@@ -10,15 +11,18 @@ const props = defineProps<{
 
 const emit = defineEmits(['update:modelValue', 'update:debtor', 'confirm'])
 
+const theme = useTheme()
+const surfaceColor = computed(() => theme.current.value.colors.surface)
+
 const isOpen = computed({
   get: () => props.modelValue,
   set: value => emit('update:modelValue', value),
 })
 
 const localDebtor = ref<NewDebtor>({ ...props.debtor })
+const fieldErrors = ref<Record<string, string[]>>({})
 
 watch(() => props.debtor, newVal => {
-  // Only update if different to avoid loops/resets during typing if parent updates back
   if (JSON.stringify(newVal) !== JSON.stringify(localDebtor.value))
     localDebtor.value = { ...newVal }
 }, { deep: true })
@@ -29,9 +33,8 @@ watch(localDebtor, newVal => {
 
 function closeModal() {
   isOpen.value = false
+  fieldErrors.value = {}
 }
-
-const fieldErrors = ref<Record<string, string[]>>({})
 
 function handleConfirm() {
   const result = NewDebtorSchema.safeParse(localDebtor.value)
@@ -45,61 +48,131 @@ function handleConfirm() {
   fieldErrors.value = {}
   emit('confirm', result.data)
 }
-const debtorTypes = ['Salesperson', 'Shop']
+
+const debtorTypes = [
+  { title: 'Salesperson / Individual', value: 'Salesperson' },
+  { title: 'Shop / Corporate', value: 'Shop' },
+]
 </script>
 
 <template>
   <VDialog
     v-model="isOpen"
-    max-width="600"
+    max-width="550"
+    persistent
   >
-    <VCard
-      prepend-icon="tabler-user"
-      title="Add New Debtor"
-    >
-      <VCardText>
+    <VCard :style="{ backgroundColor: surfaceColor }">
+      <VCardTitle class="d-flex align-center ga-3 pa-4">
+        <VAvatar
+          color="info"
+          variant="tonal"
+          size="40"
+        >
+          <VIcon>tabler-user-plus</VIcon>
+        </VAvatar>
+        <div class="d-flex flex-column">
+          <span class="text-h6 font-weight-bold">Add New Debtor</span>
+          <span class="text-caption text-medium-emphasis">Establish a new credit profile and limit</span>
+        </div>
+      </VCardTitle>
+
+      <VDivider />
+
+      <VCardText class="pa-4">
         <VForm @submit.prevent="handleConfirm">
           <VRow dense>
             <VCol cols="12">
+              <p class="text-caption text-medium-emphasis font-weight-medium mb-1 text-uppercase">
+                Debtor Identity
+              </p>
+            </VCol>
+
+            <VCol cols="12">
               <AppTextField
                 v-model="localDebtor.debtor_name"
-                label="Debtor Name*"
-                placeholder="Enter Debtor Name"
+                label="Full Name*"
+                placeholder="e.g. John Smith"
                 :error-messages="fieldErrors.debtor_name"
-              />
+                autofocus
+              >
+                <template #prepend-inner>
+                  <VIcon size="18">
+                    tabler-user
+                  </VIcon>
+                </template>
+              </AppTextField>
             </VCol>
-            <VCol cols="12">
+
+            <VCol
+              cols="12"
+              md="6"
+            >
               <AppTextField
                 v-model="localDebtor.debtor_email"
-                label="Debtor Email"
+                label="Email"
                 type="email"
-                placeholder="Enter Debtor Email"
+                placeholder="john@example.com"
                 :error-messages="fieldErrors.debtor_email"
-              />
+              >
+                <template #prepend-inner>
+                  <VIcon size="18">
+                    tabler-mail
+                  </VIcon>
+                </template>
+              </AppTextField>
             </VCol>
-            <VCol cols="12">
+
+            <VCol
+              cols="12"
+              md="6"
+            >
               <AppTextField
                 v-model="localDebtor.debtor_phone"
-                label="Debtor Phone Number"
-                placeholder="Enter Debtor Phone"
+                label="Phone Number"
+                placeholder="+1 234 567"
                 :error-messages="fieldErrors.debtor_phone"
-              />
+              >
+                <template #prepend-inner>
+                  <VIcon size="18">
+                    tabler-phone
+                  </VIcon>
+                </template>
+              </AppTextField>
             </VCol>
+
+            <VCol
+              cols="12"
+              class="mt-4"
+            >
+              <p class="text-caption text-medium-emphasis font-weight-medium mb-1 text-uppercase">
+                Credit Configuration
+              </p>
+            </VCol>
+
             <VCol cols="12">
               <AppSelect
-                v-model:="localDebtor.debtor_type"
+                v-model="localDebtor.debtor_type"
                 :items="debtorTypes"
                 label="Debtor Type*"
-                placeholder="Select a Debtor Type*"
-              />
+                placeholder="Select account type"
+                :error-messages="fieldErrors.debtor_type"
+              >
+                <template #prepend-inner>
+                  <VIcon size="18">
+                    tabler-category
+                  </VIcon>
+                </template>
+              </AppSelect>
             </VCol>
+
             <VCol cols="12">
               <AppTextField
                 v-model="localDebtor.credit_limit"
                 label="Credit Limit*"
                 type="number"
-                placeholder="Enter Credit Limit"
+                placeholder="0.00"
                 :error-messages="fieldErrors.credit_limit"
+                prefix="KSH"
               />
             </VCol>
           </VRow>
@@ -108,23 +181,32 @@ const debtorTypes = ['Salesperson', 'Shop']
 
       <VDivider />
 
-      <VCardActions>
+      <VCardActions class="pa-3">
         <VSpacer />
 
         <VBtn
           text="Cancel"
           variant="plain"
+          :disabled="props.loading"
           @click="closeModal"
         />
 
         <VBtn
           color="primary"
-          text="Save"
           variant="tonal"
+          prepend-icon="tabler-check"
           :loading="props.loading"
           @click="handleConfirm"
-        />
+        >
+          Create Profile
+        </VBtn>
       </VCardActions>
     </VCard>
   </VDialog>
 </template>
+
+<style scoped>
+.text-xxs {
+  font-size: 0.65rem;
+}
+</style>

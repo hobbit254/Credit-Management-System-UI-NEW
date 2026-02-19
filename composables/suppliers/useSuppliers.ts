@@ -153,6 +153,7 @@ export function useSuppliers() {
         color: 'success',
         icon: '$success',
       })
+      await fetchAllSuppliers()
     }
     finally {
       loading.value = false

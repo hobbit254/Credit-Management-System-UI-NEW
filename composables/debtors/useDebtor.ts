@@ -64,6 +64,20 @@ export function useDebtor() {
     })
   }
 
+  async function fetchAllActiveDebtors() {
+    const { data } = await $api.get('debtors/active')
+
+    let result: Debtor[] = []
+    if (Array.isArray(data))
+      result = data
+    else if (data && Array.isArray(data.data))
+      result = data.data
+
+    debtors.value = result // <-- update reactive state here
+
+    return result
+  }
+
   const openAdd = ref(false)
 
   const newDebtor = ref<NewDebtor>({
@@ -179,5 +193,6 @@ export function useDebtor() {
     restoreDebtor,
     activateDebtor,
     deactivateDebtor,
+    fetchAllActiveDebtors,
   }
 }

@@ -10,6 +10,7 @@ const props = defineProps<{
 
 const emit = defineEmits(['update:modelValue', 'update:supplier', 'confirm'])
 
+// Modal Visibility Control
 const isOpen = computed({
   get: () => props.modelValue,
   set: value => emit('update:modelValue', value),
@@ -18,11 +19,13 @@ const isOpen = computed({
 const localSupplier = ref<NewSupplier>({ ...props.supplier })
 const fieldErrors = ref<Record<string, string[]>>({})
 
-// Sync parent changes to local state
-watch(() => props.supplier, newVal => {
-  if (JSON.stringify(newVal) !== JSON.stringify(localSupplier.value))
-    localSupplier.value = { ...newVal }
-}, { deep: true })
+// Watch for external reset (when parent clears the object)
+watch(() => props.modelValue, val => {
+  if (val) {
+    localSupplier.value = { ...props.supplier }
+    fieldErrors.value = {}
+  }
+})
 
 // Sync local changes back to parent
 watch(localSupplier, newVal => {
@@ -31,7 +34,9 @@ watch(localSupplier, newVal => {
 
 function closeModal() {
   isOpen.value = false
-  fieldErrors.value = {}
+
+  // Delay error clearing slightly to avoid visual flicker during close animation
+  setTimeout(() => { fieldErrors.value = {} }, 200)
 }
 
 function handleConfirm() {
@@ -51,88 +56,108 @@ function handleConfirm() {
 <template>
   <VDialog
     v-model="isOpen"
-    max-width="500"
+    max-width="550"
     persistent
+    scrollable
   >
-    <VCard>
-      <VCardTitle class="d-flex align-center ga-3 pa-4">
+    <VCard class="border shadow-lg">
+      <VCardTitle class="d-flex align-center ga-3 pa-4 bg-var-theme-surface">
         <VAvatar
-          color="secondary"
+          color="primary"
           variant="tonal"
-          size="40"
+          size="44"
+          rounded="lg"
         >
-          <VIcon>tabler-building-community</VIcon>
+          <VIcon size="24">
+            tabler-building-community
+          </VIcon>
         </VAvatar>
         <div class="d-flex flex-column">
-          <span class="text-h6 font-weight-bold">Add Supplier</span>
-          <span class="text-caption text-medium-emphasis">Register a new procurement partner</span>
+          <span class="text-h6 font-weight-black">Register Supplier</span>
+          <span class="text-caption text-medium-emphasis">Create a new procurement partnership</span>
         </div>
+        <VSpacer />
+        <VBtn
+          icon="tabler-x"
+          variant="text"
+          size="small"
+          density="comfortable"
+          @click="closeModal"
+        />
       </VCardTitle>
 
       <VDivider />
 
-      <VCardText class="pa-4">
+      <VCardText class="pa-5">
         <VForm @submit.prevent="handleConfirm">
-          <VRow dense>
-            <VCol cols="12">
-              <p class="text-caption text-medium-emphasis font-weight-medium mb-1 text-uppercase">
-                Business Identity
-              </p>
+          <VRow>
+            <VCol
+              cols="12"
+              class="pb-0"
+            >
+              <div class="d-flex align-center ga-2 mb-3">
+                <VIcon
+                  size="16"
+                  color="primary"
+                >
+                  tabler-id-badge-2
+                </VIcon>
+                <span class="text-xxs font-weight-black text-uppercase tracking-widest text-disabled">
+                  Business Identity
+                </span>
+              </div>
             </VCol>
 
             <VCol cols="12">
               <AppTextField
                 v-model="localSupplier.supplier_name"
-                label="Representative Name*"
-                placeholder="e.g. Alexander Pierce"
+                label="Representative Name"
+                placeholder="Person to contact"
                 :error-messages="fieldErrors.supplier_name"
+                persistent-placeholder
+                prepend-inner-icon="tabler-user-check"
                 autofocus
-              >
-                <template #prepend-inner>
-                  <VIcon size="18">
-                    tabler-user-check
-                  </VIcon>
-                </template>
-              </AppTextField>
+              />
             </VCol>
 
             <VCol cols="12">
               <AppTextField
                 v-model="localSupplier.supplier_shop_name"
-                label="Shop / Business Name*"
-                placeholder="e.g. Global Logistics Inc."
+                label="Shop / Business Name"
+                placeholder="Official registered name"
                 :error-messages="fieldErrors.supplier_shop_name"
-              >
-                <template #prepend-inner>
-                  <VIcon size="18">
-                    tabler-building-store
-                  </VIcon>
-                </template>
-              </AppTextField>
+                persistent-placeholder
+                prepend-inner-icon="tabler-building-store"
+              />
             </VCol>
 
             <VCol
               cols="12"
-              class="mt-4"
+              class="pt-4 pb-0"
             >
-              <p class="text-caption text-medium-emphasis font-weight-medium mb-1 text-uppercase">
-                Communication
-              </p>
+              <div class="d-flex align-center ga-2 mb-3">
+                <VIcon
+                  size="16"
+                  color="primary"
+                >
+                  tabler-device-mobile-message
+                </VIcon>
+                <span class="text-xxs font-weight-black text-uppercase tracking-widest text-disabled">
+                  Communication
+                </span>
+              </div>
             </VCol>
 
             <VCol cols="12">
               <AppTextField
                 v-model="localSupplier.supplier_phone"
                 label="Phone Number"
-                placeholder="+1 (555) 000-0000"
+                placeholder="e.g. 0712 345 678"
+                type="tel"
                 :error-messages="fieldErrors.supplier_phone"
-              >
-                <template #prepend-inner>
-                  <VIcon size="18">
-                    tabler-phone-call
-                  </VIcon>
-                </template>
-              </AppTextField>
+                persistent-placeholder
+                prepend-inner-icon="tabler-phone-call"
+              />
             </VCol>
           </VRow>
         </VForm>
@@ -140,26 +165,28 @@ function handleConfirm() {
 
       <VDivider />
 
-      <VCardActions class="pa-3">
-        <VSpacer />
-
+      <VCardActions class="pa-4 bg-var-theme-background">
         <VBtn
-          variant="plain"
-          prepend-icon="tabler-x"
+          variant="text"
+          color="secondary"
+          class="font-weight-bold"
           :disabled="props.loading"
           @click="closeModal"
         >
           Cancel
         </VBtn>
-
+        <VSpacer />
         <VBtn
           color="primary"
-          variant="tonal"
-          prepend-icon="tabler-database-plus"
+          variant="elevated"
+          min-width="160"
           :loading="props.loading"
           @click="handleConfirm"
         >
-          Register Supplier
+          <VIcon start>
+            tabler-check
+          </VIcon>
+          Save Supplier
         </VBtn>
       </VCardActions>
     </VCard>
@@ -167,8 +194,20 @@ function handleConfirm() {
 </template>
 
 <style scoped>
-/* Standard background using the theme surface color safely */
-.v-card-text {
-  background-color: rgb(var(--v-theme-surface, 255,255,255));
+.text-xxs {
+  font-size: 0.65rem;
+}
+
+.tracking-widest {
+  letter-spacing: 0.1em;
+}
+
+/* Enhancing card aesthetics */
+.v-card {
+  border-radius: 12px !important;
+}
+
+:deep(.v-field__outline) {
+  --v-field-border-opacity: 0.08;
 }
 </style>

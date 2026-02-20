@@ -15,7 +15,7 @@ const props = withDefaults(defineProps<Props>(), {
   <IconBtn :class="props.class">
     <VIcon
       :size="iconSize"
-      icon="tabler-dots-vertical"
+      icon="tabler-dots"
     />
 
     <VMenu

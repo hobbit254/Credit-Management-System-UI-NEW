@@ -1,8 +1,8 @@
 <script setup lang="ts">
+import { computed, onMounted, ref } from 'vue'
+import { useTheme } from 'vuetify'
 import { usePayments } from '@/composables/payments/usePayments'
 import type { NewPayment, Payment, PaymentTransactionItem } from '@/schemas/payments'
-
-const perPageOptions = [5, 10, 25, 50, 100]
 
 const {
   payments,
@@ -13,8 +13,18 @@ const {
   createPayment,
 } = usePayments()
 
-const paymentStatusOptions = ['PENDING', 'ACCEPTED', 'REJECTED']
+const theme = useTheme()
+const surfaceColor = computed(() => theme.current.value.colors.surface)
 
+const paymentStatusOptions = ['PENDING', 'ACCEPTED', 'REJECTED']
+const perPageOptions = [5, 10, 25, 50, 100]
+
+// Modal States
+const openItemsModal = ref(false)
+const selectedTransactionItems = ref<PaymentTransactionItem[]>([])
+const openCreateModal = ref(false)
+
+// Logic Functions
 async function handleUpdatePaymentStatus(item: Payment, newStatus: string) {
   await updatePaymentStatus(item.payment_uuid, newStatus)
 }
@@ -25,6 +35,26 @@ function changePerPage(value: number) {
   fetchAllPayments()
 }
 
+function viewTransactionItems(item: Payment) {
+  selectedTransactionItems.value = item.transaction?.items ?? []
+  openItemsModal.value = true
+}
+
+async function handleCreatePayment(payment: NewPayment) {
+  await createPayment(payment)
+  openCreateModal.value = false
+}
+
+// Strictly Typed Headers
+const headers = [
+  { title: 'Method & Ref', key: 'payment_method', fixed: true },
+  { title: 'Amount (KES)', key: 'amount', align: 'end' },
+  { title: 'Status', key: 'status', width: '160px' },
+  { title: 'Linked Transaction', key: 'transaction' },
+  { title: 'Inventory', key: 'transaction_items', align: 'center' },
+  { title: 'Timeline', key: 'created_at' },
+] as const
+
 onMounted(async () => {
   loading.value = true
   try {
@@ -34,33 +64,6 @@ onMounted(async () => {
     loading.value = false
   }
 })
-
-const headers = [
-  { title: 'Payment Method', key: 'payment_method' },
-  { title: 'Amount', key: 'amount' },
-  { title: 'Reference Code', key: 'reference_code' },
-  { title: 'Status', key: 'status' },
-  { title: 'Transaction', key: 'transaction' },
-  { title: 'Transaction Items', key: 'transaction_items' },
-  { title: 'Created', key: 'created_at' },
-  { title: 'Updated', key: 'updated_at' },
-
-]
-
-const openItemsModal = ref(false)
-const selectedTransactionItems = ref<PaymentTransactionItem[]>([])
-
-function viewTransactionItems(item: Payment) {
-  selectedTransactionItems.value = item.transaction?.items ?? []
-  openItemsModal.value = true
-}
-
-const openCreateModal = ref(false)
-
-async function handleCreatePayment(payment: NewPayment) {
-  await createPayment(payment)
-  openCreateModal.value = false
-}
 </script>
 
 <template>
@@ -69,17 +72,28 @@ async function handleCreatePayment(payment: NewPayment) {
       cols="12"
       class="h-100 d-flex"
     >
-      <VCard class="d-flex flex-column flex-grow-1">
+      <VCard class="d-flex flex-column flex-grow-1 border shadow-sm">
         <VCardTitle class="d-flex justify-space-between align-center pa-4">
-          <div class="d-flex align-center ga-2">
-            <VIcon color="primary">
-              tabler-credit-card
-            </VIcon>
-            <span class="text-h6 font-weight-bold">Payments</span>
+          <div class="d-flex align-center ga-3">
+            <VAvatar
+              color="primary"
+              variant="tonal"
+              size="42"
+              rounded="lg"
+            >
+              <VIcon size="24">
+                tabler-credit-card
+              </VIcon>
+            </VAvatar>
+            <div class="d-flex flex-column">
+              <span class="text-h6 font-weight-bold">Payment Journal</span>
+              <span class="text-caption text-medium-emphasis">Verify incoming funds and reconcile transactions</span>
+            </div>
           </div>
           <VBtn
             color="primary"
             prepend-icon="tabler-plus"
+            variant="elevated"
             @click="openCreateModal = true"
           >
             Add Payment
@@ -93,73 +107,58 @@ async function handleCreatePayment(payment: NewPayment) {
           :items="payments"
           :loading="loading"
           item-key="payment_uuid"
-          class="flex-grow-1"
-          :items-per-page="-1"
+          class="flex-grow-1 payment-table"
+          hover
         >
-          <!-- Payment Method -->
           <template #item.payment_method="{ item }">
-            <VChip
-              size="small"
-              color="secondary"
-              variant="tonal"
-            >
-              <VIcon
-                start
-                size="14"
+            <div class="d-flex flex-column ga-1 py-2">
+              <div class="d-flex align-center ga-2">
+                <VIcon
+                  size="16"
+                  :color="item.payment_method === 'Cash' ? 'success' : 'primary'"
+                >
+                  {{ item.payment_method === 'Cash' ? 'tabler-cash' : item.payment_method === 'M-Pesa' ? 'tabler-device-mobile' : 'tabler-building-bank' }}
+                </VIcon>
+                <span class="text-body-2 font-weight-bold">{{ item.payment_method }}</span>
+              </div>
+              <div
+                v-if="item.reference_code"
+                class="d-flex align-center ga-1"
               >
-                {{ item.payment_method === 'Cash' ? 'tabler-cash' : item.payment_method === 'M-pesa' ? 'tabler-phone' : item.payment_method === 'Bank' ? 'tabler-building-bank' : 'tabler-receipt' }}
-              </VIcon>
-              {{ item.payment_method }}
-            </VChip>
-          </template>
-
-          <!-- Amount -->
-          <template #item.amount="{ item }">
-            <div class="d-flex align-center ga-1">
-              <span class="text-caption font-weight-bold text-success">KES</span>
-              <span class="font-weight-medium text-body-2">
-                {{ Number(item.amount).toLocaleString() }}
-              </span>
+                <span class="text-xxs text-disabled font-weight-bold uppercase">Ref:</span>
+                <span class="text-xxs font-mono text-medium-emphasis">{{ item.reference_code }}</span>
+              </div>
+              <span
+                v-else
+                class="text-xxs text-disabled font-italic"
+              >No reference code</span>
             </div>
           </template>
 
-          <!-- Reference Code -->
-          <template #item.reference_code="{ item }">
-            <template v-if="item.reference_code">
-              <VChip
-                size="small"
-                variant="outlined"
-                color="secondary"
-              >
-                <VIcon
-                  start
-                  size="12"
-                >
-                  tabler-hash
-                </VIcon>
-                {{ item.reference_code }}
-              </VChip>
-            </template>
-            <span
-              v-else
-              class="text-medium-emphasis"
-            >—</span>
+          <template #item.amount="{ item }">
+            <div class="d-flex flex-column align-end py-2">
+              <div class="d-flex align-center ga-1">
+                <span class="text-xxs text-disabled font-weight-bold">KES</span>
+                <span class="text-body-1 font-weight-black font-mono">
+                  {{ Number(item.amount).toLocaleString() }}
+                </span>
+              </div>
+            </div>
           </template>
 
-          <!-- Status -->
           <template #item.status="{ item }">
-            <VMenu>
-              <template #activator="{ props }">
+            <VMenu location="bottom center">
+              <template #activator="{ props: menuProps }">
                 <VChip
                   :color="item.status === 'ACCEPTED' ? 'success' : item.status === 'PENDING' ? 'warning' : 'error'"
                   size="small"
                   variant="tonal"
-                  class="cursor-pointer"
-                  v-bind="props"
+                  class="cursor-pointer font-weight-bold"
+                  v-bind="menuProps"
                 >
                   <VIcon
                     start
-                    size="13"
+                    size="14"
                   >
                     {{ item.status === 'ACCEPTED' ? 'tabler-circle-check' : item.status === 'PENDING' ? 'tabler-clock' : 'tabler-circle-x' }}
                   </VIcon>
@@ -168,151 +167,150 @@ async function handleCreatePayment(payment: NewPayment) {
                     end
                     size="12"
                   >
-                    tabler-pencil
+                    tabler-chevron-down
                   </VIcon>
                 </VChip>
               </template>
               <VList density="compact">
-                <VListSubheader>Change Status</VListSubheader>
+                <VListSubheader>UPDATE STATUS</VListSubheader>
                 <VListItem
                   v-for="status in paymentStatusOptions"
                   :key="status"
                   :disabled="item.status === status || loading"
                   @click="handleUpdatePaymentStatus(item, status)"
                 >
-                  <div class="d-flex align-center ga-2">
+                  <template #prepend>
                     <VIcon
+                      size="18"
                       :color="status === 'ACCEPTED' ? 'success' : status === 'PENDING' ? 'warning' : 'error'"
-                      size="16"
                     >
                       {{ status === 'ACCEPTED' ? 'tabler-circle-check' : status === 'PENDING' ? 'tabler-clock' : 'tabler-circle-x' }}
                     </VIcon>
-                    <span>{{ status }}</span>
-                    <VIcon
-                      v-if="item.status === status"
-                      size="12"
-                      color="primary"
-                    >
-                      tabler-check
-                    </VIcon>
-                  </div>
+                  </template>
+                  <VListItemTitle class="text-caption font-weight-bold">
+                    {{ status }}
+                  </VListItemTitle>
                 </VListItem>
               </VList>
             </VMenu>
           </template>
 
-          <!-- Transaction -->
           <template #item.transaction="{ item }">
-            <div class="d-flex flex-column ga-1">
+            <div class="d-flex flex-column ga-1 py-1">
               <div class="d-flex align-center ga-1">
                 <VChip
                   :color="item.transaction?.transaction_type === 'Sale' ? 'primary' : 'warning'"
                   size="x-small"
-                  variant="tonal"
+                  variant="flat"
+                  label
                 >
-                  <VIcon
-                    start
-                    size="11"
-                  >
-                    {{ item.transaction?.transaction_type === 'Sale' ? 'tabler-shopping-cart' : 'tabler-credit-card' }}
-                  </VIcon>
-                  {{ item.transaction?.transaction_type ?? '—' }}
+                  {{ item.transaction?.transaction_type ?? 'N/A' }}
                 </VChip>
-                <VChip
-                  :color="item.transaction?.status === 'Paid' ? 'success' : item.transaction?.status === 'Partially_Paid' ? 'warning' : 'error'"
-                  size="x-small"
-                  variant="tonal"
+                <span class="text-xxs font-mono text-disabled">#{{ item.transaction?.transaction_uuid?.split('-')[0] }}</span>
+              </div>
+              <div class="d-flex align-center ga-1 text-xxs">
+                <span class="text-disabled">Status:</span>
+                <span
+                  class="font-weight-bold"
+                  :class="item.transaction?.status === 'Paid' ? 'text-success' : 'text-warning'"
                 >
-                  {{ item.transaction?.status?.replace(/_/g, ' ') ?? '—' }}
-                </VChip>
+                  {{ item.transaction?.status?.replace(/_/g, ' ') }}
+                </span>
               </div>
             </div>
           </template>
 
-          <!-- Transaction Items -->
           <template #item.transaction_items="{ item }">
-            <VChip
-              size="small"
-              color="secondary"
+            <VBtn
               variant="tonal"
-              class="cursor-pointer"
+              size="x-small"
+              color="secondary"
+              rounded="pill"
+              prepend-icon="tabler-package"
               @click="viewTransactionItems(item)"
             >
-              <VIcon
-                start
-                size="14"
-              >
-                tabler-package
-              </VIcon>
-              {{ item.transaction?.items?.length ?? 0 }} item(s)
-            </VChip>
+              {{ item.transaction?.items?.length ?? 0 }} items
+            </VBtn>
           </template>
 
-          <!-- Dates -->
           <template #item.created_at="{ item }">
-            <div class="d-flex align-center ga-1 text-caption text-medium-emphasis">
-              <VIcon size="13">
-                tabler-calendar
-              </VIcon>
-              <TableDate :value="item.created_at" />
+            <div class="d-flex flex-column text-xxs text-medium-emphasis">
+              <div class="d-flex align-center ga-1">
+                <VIcon size="12">
+                  tabler-calendar-plus
+                </VIcon>
+                <TableDate :value="item.created_at" />
+              </div>
+              <div class="d-flex align-center ga-1">
+                <VIcon size="12">
+                  tabler-clock-edit
+                </VIcon>
+                <TableDate :value="item.updated_at" />
+              </div>
             </div>
           </template>
 
-          <template #item.updated_at="{ item }">
-            <div class="d-flex align-center ga-1 text-caption text-medium-emphasis">
-              <VIcon size="13">
-                tabler-clock-edit
-              </VIcon>
-              <TableDate :value="item.updated_at" />
-            </div>
-          </template>
-
-          <!-- No data -->
           <template #no-data>
-            <div class="d-flex flex-column align-center justify-center pa-6 ga-2">
+            <div class="d-flex flex-column align-center justify-center pa-12 ga-2">
               <VIcon
-                size="40"
+                size="48"
                 color="secondary"
+                alpha="0.5"
               >
                 tabler-credit-card-off
               </VIcon>
-              <span class="text-body-2 text-medium-emphasis">No payments found.</span>
+              <span class="text-h6 font-weight-light text-medium-emphasis">No payment records found</span>
+              <VBtn
+                color="primary"
+                variant="text"
+                size="small"
+                @click="openCreateModal = true"
+              >
+                Create your first payment
+              </VBtn>
             </div>
           </template>
 
-          <!-- Bottom Pagination Slot -->
           <template #bottom>
             <VDivider />
             <div class="d-flex justify-space-between align-center flex-wrap ga-4 pa-4">
-              <div class="d-flex align-center ga-2">
-                <span class="text-medium-emphasis text-sm">Rows per page</span>
+              <div class="d-flex align-center ga-3">
+                <span class="text-caption text-medium-emphasis font-weight-medium">Items per page:</span>
                 <VSelect
                   :model-value="pagination.perPage"
                   :items="perPageOptions"
                   density="compact"
                   variant="outlined"
-                  style="width: 90px"
+                  hide-details
+                  style="width: 85px"
                   @update:model-value="changePerPage"
                 />
               </div>
-              <span class="text-medium-emphasis text-sm">
-                Page {{ pagination.currentPage }} of {{ pagination.lastPage }}
-              </span>
-              <VPagination
-                v-model="pagination.currentPage"
-                :length="pagination.lastPage"
-                @update:model-value="(page: number) => fetchAllPayments(page)"
-              />
+              <div class="d-flex align-center ga-4">
+                <span class="text-caption text-medium-emphasis">
+                  Page <span class="text-high-emphasis font-weight-bold">{{ pagination.currentPage }}</span> of {{ pagination.lastPage }}
+                </span>
+                <VPagination
+                  v-model="pagination.currentPage"
+                  :length="pagination.lastPage"
+                  :total-visible="5"
+                  density="compact"
+                  active-color="primary"
+                  @update:model-value="(page: number) => fetchAllPayments(page)"
+                />
+              </div>
             </div>
           </template>
         </VDataTable>
       </VCard>
     </VCol>
   </VRow>
+
   <PaymentTransactionItemsModal
     v-model="openItemsModal"
     :items="selectedTransactionItems"
   />
+
   <CreatePaymentModal
     v-model="openCreateModal"
     :loading="loading"
@@ -321,7 +319,19 @@ async function handleCreatePayment(payment: NewPayment) {
 </template>
 
 <style scoped>
+.payment-table :deep(td:first-child) {
+  position: sticky;
+  left: 0;
+  background: v-bind(surfaceColor) !important;
+  z-index: 1;
+  border-right: 1px solid rgba(var(--v-border-color), 0.12);
+}
+
+.text-xxs { font-size: 0.65rem; }
+.font-mono { font-family: 'Fira Code', 'Roboto Mono', monospace; }
+.border { border: 1px solid rgba(var(--v-border-color), 0.12) !important; }
+
 :deep(.v-data-table__tr:hover) td {
-  background-color: rgba(0, 0, 0, 0.04) !important;
+  background-color: rgba(var(--v-theme-primary,255,255,255), 0.02) !important;
 }
 </style>

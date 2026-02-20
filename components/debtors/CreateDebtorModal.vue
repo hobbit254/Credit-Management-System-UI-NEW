@@ -22,18 +22,24 @@ const isOpen = computed({
 const localDebtor = ref<NewDebtor>({ ...props.debtor })
 const fieldErrors = ref<Record<string, string[]>>({})
 
-watch(() => props.debtor, newVal => {
-  if (JSON.stringify(newVal) !== JSON.stringify(localDebtor.value))
-    localDebtor.value = { ...newVal }
-}, { deep: true })
+// Watch for external reset (when opening/closing)
+watch(() => props.modelValue, val => {
+  if (val) {
+    localDebtor.value = { ...props.debtor }
+    fieldErrors.value = {}
+  }
+})
 
+// Sync local changes back to parent
 watch(localDebtor, newVal => {
   emit('update:debtor', newVal)
 }, { deep: true })
 
 function closeModal() {
   isOpen.value = false
-  fieldErrors.value = {}
+  setTimeout(() => {
+    fieldErrors.value = {}
+  }, 200)
 }
 
 function handleConfirm() {
@@ -58,49 +64,71 @@ const debtorTypes = [
 <template>
   <VDialog
     v-model="isOpen"
-    max-width="550"
+    max-width="580"
     persistent
+    scrollable
   >
-    <VCard :style="{ backgroundColor: surfaceColor }">
-      <VCardTitle class="d-flex align-center ga-3 pa-4">
+    <VCard
+      class="border shadow-lg"
+      :style="{ backgroundColor: surfaceColor }"
+    >
+      <VCardTitle class="d-flex align-center ga-3 pa-4 bg-var-theme-surface">
         <VAvatar
           color="info"
           variant="tonal"
-          size="40"
+          size="44"
+          rounded="lg"
         >
-          <VIcon>tabler-user-plus</VIcon>
+          <VIcon size="24">
+            tabler-user-plus
+          </VIcon>
         </VAvatar>
         <div class="d-flex flex-column">
-          <span class="text-h6 font-weight-bold">Add New Debtor</span>
-          <span class="text-caption text-medium-emphasis">Establish a new credit profile and limit</span>
+          <span class="text-h6 font-weight-black">Register New Debtor</span>
+          <span class="text-caption text-medium-emphasis">Establish credit limits and account details</span>
         </div>
+        <VSpacer />
+        <VBtn
+          icon="tabler-x"
+          variant="text"
+          size="small"
+          density="comfortable"
+          @click="closeModal"
+        />
       </VCardTitle>
 
       <VDivider />
 
-      <VCardText class="pa-4">
+      <VCardText class="pa-5">
         <VForm @submit.prevent="handleConfirm">
-          <VRow dense>
-            <VCol cols="12">
-              <p class="text-caption text-medium-emphasis font-weight-medium mb-1 text-uppercase">
-                Debtor Identity
-              </p>
+          <VRow>
+            <VCol
+              cols="12"
+              class="pb-0"
+            >
+              <div class="d-flex align-center ga-2 mb-3">
+                <VIcon
+                  size="16"
+                  color="info"
+                >
+                  tabler-id-badge-2
+                </VIcon>
+                <span class="text-xxs font-weight-black text-uppercase tracking-widest text-disabled">
+                  Debtor Identity
+                </span>
+              </div>
             </VCol>
 
             <VCol cols="12">
               <AppTextField
                 v-model="localDebtor.debtor_name"
-                label="Full Name*"
-                placeholder="e.g. John Smith"
+                label="Legal Name*"
+                placeholder="e.g. John Smith or TechCorp Ltd"
                 :error-messages="fieldErrors.debtor_name"
+                prepend-inner-icon="tabler-user"
+                persistent-placeholder
                 autofocus
-              >
-                <template #prepend-inner>
-                  <VIcon size="18">
-                    tabler-user
-                  </VIcon>
-                </template>
-              </AppTextField>
+              />
             </VCol>
 
             <VCol
@@ -109,17 +137,13 @@ const debtorTypes = [
             >
               <AppTextField
                 v-model="localDebtor.debtor_email"
-                label="Email"
+                label="Email Address"
                 type="email"
                 placeholder="john@example.com"
                 :error-messages="fieldErrors.debtor_email"
-              >
-                <template #prepend-inner>
-                  <VIcon size="18">
-                    tabler-mail
-                  </VIcon>
-                </template>
-              </AppTextField>
+                prepend-inner-icon="tabler-mail"
+                persistent-placeholder
+              />
             </VCol>
 
             <VCol
@@ -129,50 +153,57 @@ const debtorTypes = [
               <AppTextField
                 v-model="localDebtor.debtor_phone"
                 label="Phone Number"
-                placeholder="+1 234 567"
+                placeholder="07XX XXX XXX"
                 :error-messages="fieldErrors.debtor_phone"
-              >
-                <template #prepend-inner>
-                  <VIcon size="18">
-                    tabler-phone
-                  </VIcon>
-                </template>
-              </AppTextField>
+                prepend-inner-icon="tabler-phone"
+                persistent-placeholder
+              />
             </VCol>
 
             <VCol
               cols="12"
-              class="mt-4"
+              class="pt-4 pb-0"
             >
-              <p class="text-caption text-medium-emphasis font-weight-medium mb-1 text-uppercase">
-                Credit Configuration
-              </p>
+              <div class="d-flex align-center ga-2 mb-3">
+                <VIcon
+                  size="16"
+                  color="info"
+                >
+                  tabler-settings-automation
+                </VIcon>
+                <span class="text-xxs font-weight-black text-uppercase tracking-widest text-disabled">
+                  Credit Configuration
+                </span>
+              </div>
             </VCol>
 
-            <VCol cols="12">
+            <VCol
+              cols="12"
+              md="6"
+            >
               <AppSelect
                 v-model="localDebtor.debtor_type"
                 :items="debtorTypes"
-                label="Debtor Type*"
-                placeholder="Select account type"
+                label="Account Type*"
+                placeholder="Select type"
                 :error-messages="fieldErrors.debtor_type"
-              >
-                <template #prepend-inner>
-                  <VIcon size="18">
-                    tabler-category
-                  </VIcon>
-                </template>
-              </AppSelect>
+                prepend-inner-icon="tabler-category"
+              />
             </VCol>
 
-            <VCol cols="12">
+            <VCol
+              cols="12"
+              md="6"
+            >
               <AppTextField
                 v-model="localDebtor.credit_limit"
                 label="Credit Limit*"
                 type="number"
-                placeholder="0.00"
+                placeholder="0"
                 :error-messages="fieldErrors.credit_limit"
-                prefix="KSH"
+                prefix="KES"
+                persistent-placeholder
+                class="font-mono"
               />
             </VCol>
           </VRow>
@@ -181,23 +212,27 @@ const debtorTypes = [
 
       <VDivider />
 
-      <VCardActions class="pa-3">
-        <VSpacer />
-
+      <VCardActions class="pa-4 bg-var-theme-background">
         <VBtn
-          text="Cancel"
-          variant="plain"
+          variant="text"
+          color="secondary"
+          class="font-weight-bold"
           :disabled="props.loading"
           @click="closeModal"
-        />
-
+        >
+          Cancel
+        </VBtn>
+        <VSpacer />
         <VBtn
           color="primary"
-          variant="tonal"
-          prepend-icon="tabler-check"
+          variant="elevated"
+          min-width="160"
           :loading="props.loading"
           @click="handleConfirm"
         >
+          <VIcon start>
+            tabler-user-check
+          </VIcon>
           Create Profile
         </VBtn>
       </VCardActions>
@@ -208,5 +243,17 @@ const debtorTypes = [
 <style scoped>
 .text-xxs {
   font-size: 0.65rem;
+}
+
+.tracking-widest {
+  letter-spacing: 0.12em;
+}
+
+.font-mono {
+  font-family: 'Fira Code', monospace;
+}
+
+.v-card {
+  border-radius: 12px !important;
 }
 </style>

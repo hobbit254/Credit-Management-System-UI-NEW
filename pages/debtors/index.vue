@@ -13,7 +13,6 @@ const {
 
 const theme = useTheme()
 const surfaceColor = computed(() => theme.current.value.colors.surface)
-const errorColor = computed(() => theme.current.value.colors.error)
 
 onMounted(async () => {
   loading.value = true
@@ -37,7 +36,7 @@ function copyUuid(uuid: string) {
   navigator.clipboard.writeText(uuid)
   showToast({
     title: 'Copied',
-    text: 'Debtor UUID copied',
+    text: 'Debtor ID copied to clipboard',
     color: 'success',
     icon: 'tabler-clipboard-check',
   })
@@ -45,19 +44,23 @@ function copyUuid(uuid: string) {
 
 const headers = [
   { title: 'Debtor Identity', key: 'debtor_name', fixed: true },
-  { title: 'Type', key: 'debtor_type' },
+  { title: 'Type', key: 'debtor_type', width: '120px' },
   { title: 'Credit Limit', key: 'credit_limit', align: 'end' },
   { title: 'Status', key: 'active', align: 'center' },
   { title: 'Timeline', key: 'created_at' },
   { title: 'Actions', key: 'actions', sortable: false, align: 'end' },
-]
+] as const
 
 function getRowProps({ item }: { item: any }) {
-  return item.deleted_at !== null ? { class: 'deleted-row-style text-error italic' } : {}
+  return item.deleted_at !== null ? { class: 'deleted-row opacity-60 italic' } : {}
 }
 
 const formatCurrency = (value: number) => {
-  return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'KSH' }).format(value)
+  return new Intl.NumberFormat('en-KE', {
+    style: 'currency',
+    currency: 'KES',
+    minimumFractionDigits: 0,
+  }).format(value)
 }
 </script>
 
@@ -67,24 +70,28 @@ const formatCurrency = (value: number) => {
       cols="12"
       class="h-100 d-flex"
     >
-      <VCard class="d-flex flex-column flex-grow-1 border">
+      <VCard class="d-flex flex-column flex-grow-1 border shadow-sm">
         <VCardTitle class="d-flex justify-space-between align-center pa-4">
           <div class="d-flex align-center ga-3">
             <VAvatar
               color="info"
               variant="tonal"
-              size="40"
+              size="42"
+              rounded="lg"
             >
-              <VIcon>tabler-wallet</VIcon>
+              <VIcon size="24">
+                tabler-wallet
+              </VIcon>
             </VAvatar>
             <div class="d-flex flex-column">
-              <span class="text-h6 font-weight-bold">Debtor Management</span>
-              <span class="text-caption text-medium-emphasis">Manage customer credit and payment profiles</span>
+              <span class="text-h6 font-weight-black">Debtor Management</span>
+              <span class="text-caption text-medium-emphasis">Audit customer credit limits and account health</span>
             </div>
           </div>
           <VBtn
             color="primary"
             prepend-icon="tabler-user-plus"
+            variant="elevated"
             @click="addDebtor"
           >
             Add Debtor
@@ -99,28 +106,35 @@ const formatCurrency = (value: number) => {
           :loading="loading"
           item-key="debtor_uuid"
           class="flex-grow-1 debtor-table"
-          :items-per-page="-1"
+          :items-per-page="pagination.perPage"
           :row-props="getRowProps"
           hover
         >
           <template #item.debtor_name="{ item }">
-            <div class="d-flex align-center ga-3 py-2">
+            <div class="d-flex align-center ga-3 py-3">
               <VAvatar
-                size="38"
+                size="34"
                 color="info"
                 variant="tonal"
+                class="border"
               >
-                <VIcon size="20">
-                  tabler-user-dollar
-                </VIcon>
+                <span class="text-xs font-weight-bold">{{ item.debtor_name?.charAt(0) }}</span>
               </VAvatar>
               <div class="d-flex flex-column overflow-hidden">
                 <span class="text-body-2 font-weight-bold text-high-emphasis text-truncate">
                   {{ item.debtor_name }}
                 </span>
-                <span class="text-xxs text-medium-emphasis">
-                  {{ item.debtor_email || 'No Email' }}
-                </span>
+                <div class="d-flex align-center ga-1">
+                  <VIcon
+                    size="12"
+                    color="medium-emphasis"
+                  >
+                    tabler-mail
+                  </VIcon>
+                  <span class="text-xxs text-disabled text-truncate font-mono">
+                    {{ item.debtor_email || 'no-email-recorded' }}
+                  </span>
+                </div>
               </div>
             </div>
           </template>
@@ -130,16 +144,20 @@ const formatCurrency = (value: number) => {
               size="x-small"
               :color="item.debtor_type === 'Corporate' ? 'primary' : 'secondary'"
               variant="flat"
-              class="font-weight-bold text-uppercase"
+              label
+              class="font-weight-black text-uppercase tracking-tighter"
             >
               {{ item.debtor_type }}
             </VChip>
           </template>
 
           <template #item.credit_limit="{ item }">
-            <span class="font-weight-bold font-mono text-body-2">
-              {{ formatCurrency(item.credit_limit) }}
-            </span>
+            <div class="d-flex flex-column align-end">
+              <span class="font-weight-black font-mono text-body-2 text-primary">
+                {{ formatCurrency(item.credit_limit) }}
+              </span>
+              <span class="text-xxs text-disabled font-weight-bold uppercase tracking-widest">Limit</span>
+            </div>
           </template>
 
           <template #item.active="{ item }">
@@ -150,16 +168,16 @@ const formatCurrency = (value: number) => {
             <div class="d-flex flex-column ga-1 text-xxs text-medium-emphasis">
               <div class="d-flex align-center ga-1">
                 <VIcon size="12">
-                  tabler-clock-plus
+                  tabler-calendar-plus
                 </VIcon>
                 <TableDate :value="item.created_at" />
               </div>
               <div
                 v-if="item.deleted_at"
-                class="d-flex align-center ga-1 text-error"
+                class="d-flex align-center ga-1 text-error font-weight-bold"
               >
                 <VIcon size="12">
-                  tabler-trash-x
+                  tabler-user-off
                 </VIcon>
                 <TableDate :value="item.deleted_at" />
               </div>
@@ -167,67 +185,40 @@ const formatCurrency = (value: number) => {
           </template>
 
           <template #item.actions="{ item }">
-            <VMenu>
-              <template #activator="{ props: activatorProps }">
+            <VMenu location="bottom end">
+              <template #activator="{ props: menuProps }">
                 <VBtn
                   icon="tabler-dots-vertical"
                   variant="text"
                   size="small"
-                  v-bind="activatorProps"
+                  v-bind="menuProps"
                 />
               </template>
               <VList density="compact">
-                <VListSubheader>Debtor Actions</VListSubheader>
-                <VListItem @click="copyUuid(item.debtor_uuid)">
-                  <template #prepend>
-                    <VIcon size="18">
-                      tabler-copy
-                    </VIcon>
-                  </template>
-                  <VListItemTitle>Copy UUID</VListItemTitle>
-                </VListItem>
-                <VDivider class="my-1" />
+                <VListSubheader class="text-xxs font-weight-black uppercase">
+                  Account Actions
+                </VListSubheader>
+
                 <VListItem @click="editDebtor(item)">
                   <template #prepend>
                     <VIcon size="18">
                       tabler-edit
                     </VIcon>
                   </template>
-                  <VListItemTitle>Edit Profile</VListItemTitle>
+                  <VListItemTitle>Edit Details</VListItemTitle>
                 </VListItem>
-                <VListItem
-                  v-if="item.deleted_at !== null"
-                  @click="restoreDebtor(item)"
-                >
+
+                <VListItem @click="copyUuid(item.debtor_uuid)">
                   <template #prepend>
-                    <VIcon
-                      size="18"
-                      color="success"
-                    >
-                      tabler-restore
+                    <VIcon size="18">
+                      tabler-fingerprint
                     </VIcon>
                   </template>
-                  <VListItemTitle class="text-success">
-                    Restore Debtor
-                  </VListItemTitle>
+                  <VListItemTitle>Copy UUID</VListItemTitle>
                 </VListItem>
-                <VListItem
-                  v-else
-                  @click="deleteDebtorModal(item)"
-                >
-                  <template #prepend>
-                    <VIcon
-                      size="18"
-                      color="error"
-                    >
-                      tabler-trash
-                    </VIcon>
-                  </template>
-                  <VListItemTitle class="text-error">
-                    Remove Debtor
-                  </VListItemTitle>
-                </VListItem>
+
                 <VDivider class="my-1" />
+
                 <VListItem
                   :color="item.active === 1 ? 'warning' : 'success'"
                   @click="item.active === 1 ? deactivateDebtor(item) : activateDebtor(item)"
@@ -237,7 +228,39 @@ const formatCurrency = (value: number) => {
                       {{ item.active === 1 ? 'tabler-lock-pause' : 'tabler-lock-open' }}
                     </VIcon>
                   </template>
-                  <VListItemTitle>{{ item.active === 1 ? 'Suspend Credit' : 'Unsuspend' }}</VListItemTitle>
+                  <VListItemTitle class="font-weight-medium">
+                    {{ item.active === 1 ? 'Suspend Account' : 'Unsuspend Account' }}
+                  </VListItemTitle>
+                </VListItem>
+
+                <VListItem
+                  v-if="item.deleted_at !== null"
+                  color="success"
+                  @click="restoreDebtor(item)"
+                >
+                  <template #prepend>
+                    <VIcon size="18">
+                      tabler-restore
+                    </VIcon>
+                  </template>
+                  <VListItemTitle class="font-weight-bold">
+                    Restore Account
+                  </VListItemTitle>
+                </VListItem>
+
+                <VListItem
+                  v-else
+                  color="error"
+                  @click="deleteDebtorModal(item)"
+                >
+                  <template #prepend>
+                    <VIcon size="18">
+                      tabler-archive
+                    </VIcon>
+                  </template>
+                  <VListItemTitle class="font-weight-bold">
+                    Archive Account
+                  </VListItemTitle>
                 </VListItem>
               </VList>
             </VMenu>
@@ -245,29 +268,30 @@ const formatCurrency = (value: number) => {
 
           <template #bottom>
             <VDivider />
-            <div class="d-flex justify-space-between align-center flex-wrap ga-4 pa-4">
-              <div class="d-flex align-center ga-2">
-                <span class="text-caption text-medium-emphasis">Rows per page</span>
+            <div class="d-flex justify-space-between align-center flex-wrap ga-4 pa-4 bg-var-theme-surface">
+              <div class="d-flex align-center ga-3">
+                <span class="text-caption text-medium-emphasis font-weight-medium">Rows per page:</span>
                 <VSelect
                   :model-value="pagination.perPage"
                   :items="perPageOptions"
                   density="compact"
                   variant="outlined"
                   hide-details
-                  style="width: 80px"
+                  style="width: 85px"
                   @update:model-value="changePerPage"
                 />
               </div>
               <div class="d-flex align-center ga-4">
                 <span class="text-caption text-medium-emphasis">
-                  Page {{ pagination.currentPage }} of {{ pagination.lastPage }}
+                  Page <span class="text-high-emphasis font-weight-bold">{{ pagination.currentPage }}</span> of {{ pagination.lastPage }}
                 </span>
                 <VPagination
                   v-model="pagination.currentPage"
                   :length="pagination.lastPage"
                   :total-visible="5"
                   density="compact"
-                  @update:model-value="(page: number) => fetchAllDebtors(page)"
+                  active-color="primary"
+                  @update:model-value="(page) => fetchAllDebtors(page)"
                 />
               </div>
             </div>
@@ -303,18 +327,16 @@ const formatCurrency = (value: number) => {
   left: 0;
   background: v-bind(surfaceColor) !important;
   z-index: 1;
-  border-right: 1px solid rgba(var(--v-border-color), var(--v-border-opacity));
+  border-right: 1px solid rgba(var(--v-border-color), 0.12);
 }
 
-:deep(.deleted-row-style) td {
-  background-color: v-bind(`${errorColor}1F`) !important; /* Adding 1F hex for ~12% opacity */
+.deleted-row {
+  background-color: rgba(var(--v-theme-error,255,255,255), 0.04) !important;
 }
 
-.text-xxs {
-  font-size: 0.65rem;
-}
-
-.italic {
-  font-style: italic;
-}
+.text-xxs { font-size: 0.65rem; }
+.font-mono { font-family: 'Fira Code', 'Roboto Mono', monospace; }
+.tracking-widest { letter-spacing: 0.12em; }
+.border { border: 1px solid rgba(var(--v-border-color), 0.12) !important; }
+.opacity-60 { opacity: 0.6; }
 </style>

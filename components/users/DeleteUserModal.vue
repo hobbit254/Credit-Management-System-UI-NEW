@@ -1,23 +1,18 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { useTheme } from 'vuetify'
-import type { Supplier } from '@/schemas/suppliers' // Or User schema
+import type { User } from '@/schemas/users'
 
 const props = defineProps<{
   modelValue: boolean
   loading: boolean
-  supplier: Supplier | null // Adapted for Supplier context
+  user: User | null
 }>()
 
 const emit = defineEmits(['update:modelValue', 'confirm'])
 
 const theme = useTheme()
 const surfaceColor = computed(() => theme.current.value.colors.surface)
-
-// Safely compute a light overlay color without raw CSS variables
-const highlightBg = computed(() => {
-  return theme.current.value.dark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.03)'
-})
 
 const isOpen = computed({
   get: () => props.modelValue,
@@ -29,39 +24,36 @@ function closeModal() {
 }
 
 function handleConfirm() {
-  if (props.supplier)
-    emit('confirm', props.supplier)
+  if (props.user)
+    emit('confirm', props.user)
 }
 </script>
 
 <template>
   <VDialog
     v-model="isOpen"
-    max-width="450"
+    max-width="480"
     persistent
   >
-    <VCard class="overflow-hidden">
-      <VCardTitle class="d-flex align-center ga-3 pa-4 bg-error-lighten-5">
+    <VCard
+      class="border-t-lg border-error shadow-xl"
+      :style="{ backgroundColor: surfaceColor }"
+    >
+      <VCardTitle class="d-flex align-center ga-3 pa-4">
         <VAvatar
           color="error"
-          variant="elevated"
-          size="40"
-          class="elevation-1"
+          variant="tonal"
+          size="44"
+          rounded="lg"
         >
-          <VIcon
-            color="white"
-            size="22"
-          >
-            tabler-trash-x
+          <VIcon size="24">
+            tabler-user-off
           </VIcon>
         </VAvatar>
         <div class="d-flex flex-column">
-          <span class="text-h6 font-weight-bold text-error">Remove Partner</span>
-          <span
-            class="text-caption text-error font-weight-medium text-uppercase"
-            style="letter-spacing: 0.5px"
-          >
-            Destructive Action
+          <span class="text-h6 font-weight-black text-error">Terminate User Access</span>
+          <span class="text-caption text-medium-emphasis text-uppercase font-weight-bold tracking-widest">
+            Identity & Access Security
           </span>
         </div>
       </VCardTitle>
@@ -69,92 +61,106 @@ function handleConfirm() {
       <VDivider />
 
       <VCardText class="pa-6">
-        <p class="text-body-2 text-medium-emphasis mb-4">
-          Are you sure you want to remove this supplier? This action will archive their data and
-          <span class="text-high-emphasis font-weight-bold">disable all active procurement links</span> associated with them.
+        <p class="text-body-2 text-high-emphasis mb-5">
+          You are about to revoke all system access for this user. This action will archive their profile and terminate all active sessions immediately.
         </p>
 
         <VCard
-          variant="outlined"
-          class="pa-4 rounded-lg border-dashed"
-          :style="{ backgroundColor: highlightBg }"
+          variant="flat"
+          class="pa-4 rounded-lg border-dashed bg-light-error"
         >
-          <div class="d-flex align-center ga-3">
+          <div class="d-flex align-center ga-3 mb-4">
             <VAvatar
-              size="44"
+              size="46"
               color="error"
-              variant="tonal"
-              rounded="lg"
+              variant="elevated"
+              class="shadow-sm border border-white"
             >
-              <VIcon size="24">
-                tabler-building-store
-              </VIcon>
+              <span class="text-h6 font-weight-bold text-white">
+                {{ props.user?.full_name?.charAt(0) }}
+              </span>
             </VAvatar>
 
             <div class="d-flex flex-column overflow-hidden">
-              <span class="text-body-1 font-weight-bold text-high-emphasis text-truncate">
-                {{ props.supplier?.supplier_name }}
+              <span class="text-body-1 font-weight-black text-high-emphasis text-truncate">
+                {{ props.user?.full_name }}
               </span>
-              <span class="text-xxs text-medium-emphasis font-mono">
-                ID: {{ props.supplier?.supplier_uuid?.split('-')[0] }}...
-              </span>
+              <div class="d-flex align-center ga-1">
+                <VIcon
+                  size="12"
+                  color="medium-emphasis"
+                >
+                  tabler-fingerprint
+                </VIcon>
+                <span class="text-xxs font-mono text-medium-emphasis text-truncate">
+                  {{ props.user?.user_uuid }}
+                </span>
+              </div>
             </div>
           </div>
 
-          <VDivider class="my-3" />
+          <VDivider class="mb-4 border-opacity-25" />
 
-          <div class="d-flex justify-space-between align-center">
-            <div class="d-flex flex-column">
-              <span class="text-xxs text-uppercase font-weight-bold text-medium-emphasis">Shop Name</span>
-              <span class="text-caption font-weight-medium">{{ props.supplier?.supplier_shop_name || 'N/A' }}</span>
+          <div class="d-flex justify-space-between align-end">
+            <div class="d-flex flex-column ga-1">
+              <span class="text-xxs text-uppercase font-weight-black text-disabled tracking-widest">Registered Email</span>
+              <span class="text-caption font-weight-bold text-medium-emphasis font-mono">
+                {{ props.user?.email || 'N/A' }}
+              </span>
             </div>
             <VChip
               size="x-small"
               color="error"
               variant="flat"
-              class="font-weight-bold"
+              label
+              class="font-weight-black text-uppercase"
             >
-              ARCHIVE
+              {{ props.user?.roles?.[0]?.role_name || 'Standard User' }}
             </VChip>
           </div>
         </VCard>
 
-        <div class="mt-4 d-flex ga-2 align-start text-error">
-          <VIcon
-            size="16"
-            class="mt-1"
-          >
-            tabler-alert-circle
-          </VIcon>
-          <span class="text-caption font-weight-medium italic">
-            Records can only be restored by a System Administrator.
+        <VAlert
+          type="error"
+          variant="tonal"
+          density="compact"
+          class="mt-5 rounded-lg border-none"
+        >
+          <template #prepend>
+            <VIcon size="20">
+              tabler-shield-lock
+            </VIcon>
+          </template>
+          <span class="text-caption font-weight-medium">
+            This account will be moved to the "Archived" state. Audit logs associated with this user will be preserved.
           </span>
-        </div>
+        </VAlert>
       </VCardText>
 
       <VDivider />
 
       <VCardActions class="pa-4 bg-var-theme-background">
-        <VSpacer />
-
         <VBtn
           variant="text"
-          class="text-none"
+          color="secondary"
+          class="font-weight-bold"
           :disabled="props.loading"
           @click="closeModal"
         >
           Cancel
         </VBtn>
-
+        <VSpacer />
         <VBtn
           color="error"
           variant="elevated"
-          prepend-icon="tabler-trash"
-          class="text-none px-6"
+          min-width="150"
           :loading="props.loading"
           @click="handleConfirm"
         >
-          Confirm Delete
+          <VIcon start>
+            tabler-trash-x
+          </VIcon>
+          Confirm Removal
         </VBtn>
       </VCardActions>
     </VCard>
@@ -162,25 +168,31 @@ function handleConfirm() {
 </template>
 
 <style scoped>
+.border-t-lg {
+  border-top: 6px solid rgb(var(--v-theme-error,255,255,255)) !important;
+}
+
 .border-dashed {
-  border-style: dashed !important;
-  border-width: 1.5px !important;
+  border: 1px dashed rgba(var(--v-theme-error,255,255,255), 0.3) !important;
+}
+
+.bg-light-error {
+  background-color: rgba(var(--v-theme-error,255,255,255), 0.04) !important;
 }
 
 .text-xxs {
   font-size: 0.65rem;
 }
 
-.italic {
-  font-style: italic;
+.font-mono {
+  font-family: 'Fira Code', 'Roboto Mono', monospace;
+}
+
+.tracking-widest {
+  letter-spacing: 0.12em;
 }
 
 .v-card {
-  background-color: v-bind(surfaceColor);
-}
-
-/* Specific styling for the header background without using variables */
-.bg-error-lighten-5 {
-  background-color: #FFF5F5 !important;
+  border-radius: 12px !important;
 }
 </style>

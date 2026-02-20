@@ -77,7 +77,6 @@ export default defineNuxtPlugin(nuxtApp => {
         message = 'Server error — please try later'
       }
 
-      console.log(response)
       showToast({
         title: 'Error',
         text: message,

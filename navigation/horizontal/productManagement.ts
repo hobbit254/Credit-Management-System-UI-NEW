@@ -1,24 +1,23 @@
 export default [
   {
-    title: 'Product Management',
-    icon: { icon: 'tabler-package' },
+    title: 'Inventory & Catalog', // More professional group name
+    icon: { icon: 'tabler-box-seam' },
     children: [
       {
-        title: 'Category',
+        title: 'Categories',
         to: 'categories',
-        icon: { icon: 'tabler-category' },
+        icon: { icon: 'tabler-hierarchy-2', size: 20 },
       },
       {
         title: 'Products',
         to: 'products',
-        icon: { icon: 'tabler-shopping-cart' },
+        icon: { icon: 'tabler-package', size: 20 },
       },
       {
-        title: 'Product Inventory',
+        title: 'Stock Management', // More action-oriented than "Product Inventory"
         to: 'product-inventory',
-        icon: { icon: 'tabler-clipboard-list' },
+        icon: { icon: 'tabler-building-warehouse', size: 20 },
       },
     ],
   },
-
 ]

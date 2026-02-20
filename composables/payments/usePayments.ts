@@ -1,7 +1,7 @@
 import type { AxiosInstance } from 'axios'
 import { useAlert } from '@/composables/alerts/useAlert'
 import type { Pagination } from '@/schemas/pagination'
-import type {NewPayment, Payment} from '@/schemas/payments'
+import type { NewPayment, Payment } from '@/schemas/payments'
 
 export function usePayments() {
   const { $api } = useNuxtApp() as unknown as { $api: AxiosInstance }

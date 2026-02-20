@@ -1,28 +1,19 @@
 <script setup lang="ts">
+import { computed, onMounted } from 'vue'
+import { useTheme } from 'vuetify'
 import { useProductInventory } from '@/composables/product-inventory/useProductInventory'
 
-const perPageOptions = [5, 10, 25, 50, 100]
-
 const {
-  loading,
-  showToast,
-  productInventories,
-  fetchAllProductInventory,
-  pagination,
-  openAdd,
-  newProductInventory,
-  addProductInventory,
-  createProductInventory,
-  editProductInventory,
-  openEdit,
-  productInventoryToEdit,
-  updateProductInventory,
-  deleteProductInventory,
-  deleteProductInventoryModal,
-  openDelete,
-  productInventoryToDelete,
-  restoreProductInventory,
+  loading, showToast, productInventories, fetchAllProductInventory, pagination,
+  openAdd, newProductInventory, addProductInventory, createProductInventory,
+  editProductInventory, openEdit, productInventoryToEdit, updateProductInventory,
+  deleteProductInventory, deleteProductInventoryModal, openDelete,
+  productInventoryToDelete, restoreProductInventory,
 } = useProductInventory()
+
+const theme = useTheme()
+const surfaceColor = computed(() => theme.current.value.colors.surface)
+const errorColor = computed(() => theme.current.value.colors.error)
 
 onMounted(async () => {
   loading.value = true
@@ -33,22 +24,6 @@ onMounted(async () => {
     loading.value = false
   }
 })
-
-function changePerPage(value: number) {
-  pagination.value.perPage = value
-  pagination.value.currentPage = 1
-  fetchAllProductInventory()
-}
-
-function copyUuid(uuid: string) {
-  navigator.clipboard.writeText(uuid)
-  showToast({
-    title: 'Copied',
-    text: 'UUID copied to clipboard',
-    color: 'success',
-    icon: '$success',
-  })
-}
 
 const statusColorMap: Record<string, string> = {
   InStock: 'success',
@@ -69,22 +44,32 @@ const statusIconMap: Record<string, string> = {
 }
 
 const headers = [
-  { title: 'Product', key: 'product_name' },
-  { title: 'Serial Number', key: 'serial_number' },
-  { title: 'Category', key: 'category_name' },
-  { title: 'Supplier', key: 'supplier_name' },
-  { title: 'Default Price', key: 'default_price' },
-  { title: 'Status', key: 'status' },
-  { title: 'Active', key: 'active' },
-  { title: 'Product Active Status', key: 'product_active_status' },
-  { title: 'Created', key: 'created_at' },
-  { title: 'Updated', key: 'updated_at' },
-  { title: 'Deleted', key: 'deleted_at' },
-  { title: 'Actions', key: 'actions' },
+  { title: 'Item Identity', key: 'product_name', fixed: true },
+  { title: 'Source / Supplier', key: 'supplier_name' },
+  { title: 'Valuation', key: 'default_price', align: 'end' },
+  { title: 'Stock Health', key: 'status', align: 'center' },
+  { title: 'Lifecycle', key: 'updated_at' },
+  { title: 'Actions', key: 'actions', sortable: false, align: 'end' },
 ]
 
 function getRowProps({ item }: { item: any }) {
-  return item.deleted_at !== null ? { class: 'deleted-row' } : {}
+  return item.deleted_at !== null ? { class: 'deleted-row-style italic opacity-75' } : {}
+}
+
+function changePerPage(value: number) {
+  pagination.value.perPage = value
+  pagination.value.currentPage = 1
+  fetchAllProductInventory()
+}
+
+function copyUuid(uuid: string) {
+  navigator.clipboard.writeText(uuid)
+  showToast({
+    title: 'Copied',
+    text: 'Inventory ID copied',
+    color: 'success',
+    icon: 'tabler-clipboard-check',
+  })
 }
 </script>
 
@@ -94,17 +79,25 @@ function getRowProps({ item }: { item: any }) {
       cols="12"
       class="h-100 d-flex"
     >
-      <VCard class="d-flex flex-column flex-grow-1">
+      <VCard class="d-flex flex-column flex-grow-1 border">
         <VCardTitle class="d-flex justify-space-between align-center pa-4">
-          <div class="d-flex align-center ga-2">
-            <VIcon color="primary">
-              tabler-package
-            </VIcon>
-            <span class="text-h6 font-weight-bold">Product Inventory</span>
+          <div class="d-flex align-center ga-3">
+            <VAvatar
+              color="primary"
+              variant="tonal"
+              size="40"
+            >
+              <VIcon>tabler-building-warehouse</VIcon>
+            </VAvatar>
+            <div class="d-flex flex-column">
+              <span class="text-h6 font-weight-bold">Stock Management</span>
+              <span class="text-caption text-medium-emphasis">Track serialized units, suppliers, and sales status</span>
+            </div>
           </div>
           <VBtn
             color="primary"
-            prepend-icon="tabler-plus"
+            prepend-icon="tabler-barcode"
+            variant="elevated"
             @click="addProductInventory"
           >
             Add Inventory
@@ -118,281 +111,190 @@ function getRowProps({ item }: { item: any }) {
           :items="productInventories"
           :loading="loading"
           item-key="inventory_uuid"
-          class="flex-grow-1"
+          class="flex-grow-1 inventory-table"
           :items-per-page="-1"
           :row-props="getRowProps"
+          hover
         >
-          <!-- Product -->
           <template #item.product_name="{ item }">
-            <div class="d-flex align-center ga-2">
-              <VAvatar
-                size="32"
-                color="primary"
-                variant="tonal"
-              >
-                <span class="text-caption font-weight-bold">
-                  {{ item.product_name?.charAt(0)?.toUpperCase() ?? '?' }}
+            <div class="d-flex align-center ga-3 py-2">
+              <div class="d-flex flex-column overflow-hidden">
+                <span class="text-body-2 font-weight-bold text-high-emphasis text-truncate">
+                  {{ item.product_name }}
                 </span>
-              </VAvatar>
-              <div class="d-flex flex-column">
-                <span class="font-weight-medium text-body-2">{{ item.product_name ?? '—' }}</span>
-                <div class="d-flex align-center ga-1 mt-1">
+                <div class="d-flex align-center ga-2 mt-1">
                   <VChip
-                    v-if="item.product_brand"
                     size="x-small"
+                    variant="flat"
                     color="secondary"
-                    variant="tonal"
+                    class="font-weight-bold"
                   >
-                    {{ item.product_brand }}
+                    SN: {{ item.serial_number || 'N/A' }}
                   </VChip>
-                  <VChip
-                    v-if="item.product_model_number"
-                    size="x-small"
-                    color="info"
-                    variant="tonal"
-                  >
-                    {{ item.product_model_number }}
-                  </VChip>
+                  <span class="text-xxs text-disabled text-truncate">{{ item.category_name }}</span>
                 </div>
               </div>
             </div>
           </template>
 
-          <!-- Serial Number -->
-          <template #item.serial_number="{ item }">
-            <VChip
-              size="small"
-              variant="outlined"
-              color="secondary"
-            >
-              <VIcon
-                start
-                size="12"
-              >
-                tabler-hash
-              </VIcon>
-              {{ item.serial_number ?? '—' }}
-            </VChip>
-          </template>
-
-          <!-- Category -->
-          <template #item.category_name="{ item }">
-            <VChip
-              size="small"
-              color="info"
-              variant="tonal"
-            >
-              <VIcon
-                start
-                size="12"
-              >
-                tabler-tag
-              </VIcon>
-              {{ item.category_name ?? '—' }}
-            </VChip>
-          </template>
-
-          <!-- Supplier -->
           <template #item.supplier_name="{ item }">
             <div class="d-flex align-center ga-2">
               <VAvatar
-                size="28"
+                size="26"
                 color="warning"
                 variant="tonal"
               >
-                <span class="text-caption font-weight-bold">
-                  {{ item.supplier_name?.charAt(0)?.toUpperCase() ?? '?' }}
-                </span>
+                <span class="text-xxs font-weight-bold">{{ item.supplier_name?.charAt(0) }}</span>
               </VAvatar>
               <div class="d-flex flex-column">
-                <span class="text-body-2">{{ item.supplier_name ?? '—' }}</span>
-                <span
-                  v-if="item.supplier_shop_name"
-                  class="text-caption text-medium-emphasis"
-                >
-                  {{ item.supplier_shop_name }}
-                </span>
+                <span class="text-caption font-weight-medium text-high-emphasis">{{ item.supplier_name }}</span>
+                <span class="text-xxs text-disabled">{{ item.supplier_shop_name }}</span>
               </div>
             </div>
           </template>
 
-          <!-- Default Price -->
           <template #item.default_price="{ item }">
-            <div class="d-flex align-center ga-1">
-              <span class="text-caption font-weight-bold text-success">KSH</span>
-              <span class="font-weight-medium text-body-2">
-                {{ item.default_price ? Number(item.default_price).toLocaleString() : '—' }}
+            <div class="d-flex flex-column align-end">
+              <span class="text-body-2 font-weight-bold font-mono">
+                {{ item.default_price ? Number(item.default_price).toLocaleString() : '0.00' }}
               </span>
+              <span class="text-xxs text-disabled font-weight-bold uppercase">KSH</span>
             </div>
           </template>
 
-          <!-- Status -->
           <template #item.status="{ item }">
-            <VChip
-              :color="statusColorMap[item.status] ?? 'secondary'"
-              size="small"
-              variant="tonal"
-            >
-              <VIcon
-                start
-                size="13"
+            <div class="d-flex flex-column align-center ga-1">
+              <VChip
+                :color="statusColorMap[item.status] ?? 'secondary'"
+                size="x-small"
+                variant="flat"
+                class="font-weight-bold"
               >
-                {{ statusIconMap[item.status] ?? 'tabler-circle' }}
-              </VIcon>
-              {{ item.status ?? '—' }}
-            </VChip>
-          </template>
-
-          <!-- Active -->
-          <template #item.active="{ item }">
-            <StatusBadge :active="item.active" />
-          </template>
-
-          <template #item.product_active_status="{ item }">
-            <StatusBadge :active="item.product_active_status" />
-          </template>
-
-          <!-- Dates -->
-          <template #item.created_at="{ item }">
-            <div class="d-flex align-center ga-1 text-caption text-medium-emphasis">
-              <VIcon size="13">
-                tabler-calendar
-              </VIcon>
-              <TableDate :value="item.created_at" />
+                <template #prepend>
+                  <VIcon
+                    size="12"
+                    start
+                  >
+                    {{ statusIconMap[item.status] ?? 'tabler-circle' }}
+                  </VIcon>
+                </template>
+                {{ item.status }}
+              </VChip>
+              <div class="d-flex align-center ga-1">
+                <StatusBadge :active="item.active" />
+                <VIcon
+                  v-if="item.product_active_status === 0"
+                  size="12"
+                  color="error"
+                  icon="tabler-alert-triangle"
+                />
+              </div>
             </div>
           </template>
 
           <template #item.updated_at="{ item }">
-            <div class="d-flex align-center ga-1 text-caption text-medium-emphasis">
-              <VIcon size="13">
-                tabler-clock-edit
-              </VIcon>
-              <TableDate :value="item.updated_at" />
-            </div>
-          </template>
-
-          <template #item.deleted_at="{ item }">
-            <div
-              v-if="item.deleted_at"
-              class="d-flex align-center ga-1 text-caption text-error"
-            >
-              <VIcon
-                size="13"
-                color="error"
+            <div class="d-flex flex-column ga-1 text-xxs text-medium-emphasis">
+              <div class="d-flex align-center ga-1">
+                <VIcon size="12">
+                  tabler-clock-play
+                </VIcon>
+                <TableDate :value="item.created_at" />
+              </div>
+              <div
+                v-if="item.deleted_at"
+                class="d-flex align-center ga-1 text-error"
               >
-                tabler-trash
-              </VIcon>
-              <TableDate :value="item.deleted_at" />
+                <VIcon size="12">
+                  tabler-trash-x
+                </VIcon>
+                <TableDate :value="item.deleted_at" />
+              </div>
             </div>
-            <span
-              v-else
-              class="text-medium-emphasis"
-            >—</span>
           </template>
 
-          <!-- Actions -->
           <template #item.actions="{ item }">
-            <VMenu>
-              <template #activator="{ props }">
+            <VMenu location="bottom end">
+              <template #activator="{ props: menuProps }">
                 <VBtn
-                  icon="tabler-dots"
+                  icon="tabler-dots-vertical"
                   variant="text"
                   size="small"
-                  v-bind="props"
+                  v-bind="menuProps"
                 />
               </template>
               <VList density="compact">
-                <VListSubheader>Actions</VListSubheader>
-
                 <VListItem @click="copyUuid(item.inventory_uuid)">
-                  <div class="d-flex align-center ga-2">
-                    <VIcon size="16">
-                      tabler-copy
+                  <template #prepend>
+                    <VIcon size="18">
+                      tabler-fingerprint
                     </VIcon>
-                    <span>Copy UUID</span>
-                  </div>
+                  </template>
+                  <VListItemTitle>Copy UUID</VListItemTitle>
                 </VListItem>
-
-                <VDivider />
-
+                <VDivider class="my-1" />
                 <VListItem @click="editProductInventory(item)">
-                  <div class="d-flex align-center ga-2">
-                    <VIcon size="16">
+                  <template #prepend>
+                    <VIcon size="18">
                       tabler-edit
                     </VIcon>
-                    <span>Edit Inventory</span>
-                  </div>
+                  </template>
+                  <VListItemTitle>Adjust Stock</VListItemTitle>
                 </VListItem>
-
                 <VListItem
                   v-if="item.deleted_at !== null"
+                  color="success"
                   @click="restoreProductInventory(item)"
                 >
-                  <div class="d-flex align-center ga-2">
-                    <VIcon
-                      size="16"
-                      color="success"
-                    >
+                  <template #prepend>
+                    <VIcon size="18">
                       tabler-restore
                     </VIcon>
-                    <span class="text-success">Restore Inventory</span>
-                  </div>
+                  </template>
+                  <VListItemTitle>Restore Item</VListItemTitle>
                 </VListItem>
-
                 <VListItem
                   v-else
+                  color="error"
                   @click="deleteProductInventoryModal(item)"
                 >
-                  <div class="d-flex align-center ga-2">
-                    <VIcon
-                      size="16"
-                      color="error"
-                    >
-                      tabler-trash
+                  <template #prepend>
+                    <VIcon size="18">
+                      tabler-archive
                     </VIcon>
-                    <span class="text-error">Delete Inventory</span>
-                  </div>
+                  </template>
+                  <VListItemTitle>Remove Item</VListItemTitle>
                 </VListItem>
               </VList>
             </VMenu>
           </template>
 
-          <!-- No data -->
-          <template #no-data>
-            <div class="d-flex flex-column align-center justify-center pa-6 ga-2">
-              <VIcon
-                size="40"
-                color="secondary"
-              >
-                tabler-package-off
-              </VIcon>
-              <span class="text-body-2 text-medium-emphasis">No product inventory found.</span>
-            </div>
-          </template>
-
-          <!-- Bottom Pagination Slot -->
           <template #bottom>
             <VDivider />
-            <div class="d-flex justify-space-between align-center flex-wrap ga-4 pa-4">
+            <div class="d-flex justify-space-between align-center flex-wrap ga-4 pa-4 bg-var-theme-surface">
               <div class="d-flex align-center ga-2">
-                <span class="text-medium-emphasis text-sm">Rows per page</span>
+                <span class="text-caption text-medium-emphasis">Rows per page</span>
                 <VSelect
                   :model-value="pagination.perPage"
                   :items="perPageOptions"
                   density="compact"
                   variant="outlined"
-                  style="width: 90px"
+                  hide-details
+                  style="width: 80px"
                   @update:model-value="changePerPage"
                 />
               </div>
-              <span class="text-medium-emphasis text-sm">
-                Page {{ pagination.currentPage }} of {{ pagination.lastPage }}
-              </span>
-              <VPagination
-                v-model="pagination.currentPage"
-                :length="pagination.lastPage"
-                @update:model-value="(page: number) => fetchAllProductInventory(page)"
-              />
+              <div class="d-flex align-center ga-4">
+                <span class="text-caption text-medium-emphasis">
+                  Page {{ pagination.currentPage }} of {{ pagination.lastPage }}
+                </span>
+                <VPagination
+                  v-model="pagination.currentPage"
+                  :length="pagination.lastPage"
+                  :total-visible="5"
+                  density="compact"
+                  @update:model-value="(page: number) => fetchAllProductInventory(page)"
+                />
+              </div>
             </div>
           </template>
         </VDataTable>
@@ -421,15 +323,23 @@ function getRowProps({ item }: { item: any }) {
 </template>
 
 <style scoped>
-:deep(.deleted-row) td {
-  background-color: rgba(255, 82, 82, 0.12) !important;
+.inventory-table :deep(td:first-child) {
+  position: sticky;
+  left: 0;
+  background: v-bind(surfaceColor) !important;
+  z-index: 1;
+  border-right: 1px solid rgba(var(--v-border-color), var(--v-border-opacity));
 }
 
-:deep(.deleted-row:hover) td {
-  background-color: rgba(255, 82, 82, 0.22) !important;
+:deep(.deleted-row-style) td {
+  background-color: v-bind(`${errorColor}1F`) !important;
 }
 
-:deep(.v-data-table__tr:hover) td {
-  background-color: rgba(0, 0, 0, 0.04) !important;
+.text-xxs {
+  font-size: 0.65rem;
+}
+
+.font-mono {
+  font-family: 'Fira Code', monospace;
 }
 </style>

@@ -1,9 +1,9 @@
 <script setup lang="ts">
+import { computed, onMounted, ref } from 'vue'
+import { useTheme } from 'vuetify'
 import { useTransaction } from '@/composables/transactions/useTransaction'
 import type { TransactionItem } from '@/schemas/transactions'
 import { usePayments } from '@/composables/payments/usePayments'
-
-const perPageOptions = [5, 10, 25, 50, 100]
 
 const {
   transactions,
@@ -19,32 +19,69 @@ const {
   updateTransactionStatus,
 } = useTransaction()
 
-const { updatePaymentStatus } = usePayments()
+const { updatePaymentStatus, createPayment } = usePayments()
+const theme = useTheme()
+const surfaceColor = computed(() => theme.current.value.colors.surface)
 
-function handleUpdatePaymentStatus(paymentUuid: string, status: string) {
-  updatePaymentStatus(paymentUuid, status)
-}
-
+// Modal States
 const openItemsModal = ref(false)
 const selectedItems = ref<TransactionItem[]>([])
 const selectedTransactionUuid = ref('')
-
 const openPaymentsModal = ref(false)
 const selectedPayments = ref<any[]>([])
 const selectedPaymentTransactionUuid = ref('')
+const openCreatePaymentModal = ref(false)
+const selectedTransactionForPayment = ref('')
 
 const transactionStatusOptions = ['UnPaid', 'Partially_Paid', 'Paid', 'Closed_With_Returns']
+const perPageOptions = [5, 10, 25, 50, 100]
 
-function viewItems(item: any) {
+// Logic Functions
+const viewItems = (item: any) => {
   selectedItems.value = item.items
   selectedTransactionUuid.value = item.transaction_uuid
   openItemsModal.value = true
 }
 
-function viewPayments(item: any) {
+const viewPayments = (item: any) => {
   selectedPayments.value = item.payments ?? []
   selectedPaymentTransactionUuid.value = item.transaction_uuid
   openPaymentsModal.value = true
+}
+
+const addPaymentForTransaction = (item: any) => {
+  selectedTransactionForPayment.value = item.transaction_uuid
+  openCreatePaymentModal.value = true
+}
+
+const changePerPage = (value: number) => {
+  pagination.value.perPage = value
+  pagination.value.currentPage = 1
+  fetchAllTransactions()
+}
+
+const copyUuid = (uuid: string) => {
+  navigator.clipboard.writeText(uuid)
+  showToast({ title: 'Copied', text: 'Transaction ID copied', color: 'success', icon: 'tabler-copy' })
+}
+
+// Progress based on payments_sum_amount
+const calculateProgress = (item: any) => {
+  const expected = Number(item.total_expected) || 0
+  const collected = Number(item.payments_sum_amount) || 0
+  if (expected === 0)
+    return 0
+
+  return Math.min(Math.round((collected / expected) * 100), 100)
+}
+
+function handleUpdatePaymentStatus(paymentUuid: string, status: string) {
+  updatePaymentStatus(paymentUuid, status)
+}
+
+async function handleCreatePayment(payment: any) {
+  await createPayment(payment)
+  openCreatePaymentModal.value = false
 }
 
 async function handleUpdateItemStatus(item: TransactionItem, newStatus: string) {
@@ -53,18 +90,19 @@ async function handleUpdateItemStatus(item: TransactionItem, newStatus: string) 
   const found = selectedItems.value.find(i => i.transaction_item_uuid === item.transaction_item_uuid)
   if (found)
     found.status = newStatus
-
-  showToast({
-    title: 'Updated',
-    text: 'Item status updated successfully',
-    color: 'success',
-    icon: '$success',
-  })
+  showToast({ title: 'Updated', text: 'Item status updated successfully', color: 'success', icon: 'tabler-check' })
 }
 
-async function handleUpdateTransactionStatus(item: any, newStatus: string) {
-  await updateTransactionStatus(item.transaction_uuid, newStatus)
-}
+const headers = [
+  { title: 'Transaction', key: 'transaction_type', fixed: true },
+  { title: 'Status', key: 'status', width: '150px' },
+  { title: 'Parties Involved', key: 'debtor.debtor_name' },
+  { title: 'Staffing', key: 'staff' },
+  { title: 'Financials (KES)', key: 'total_expected', align: 'end' },
+  { title: 'Inventory', key: 'items', align: 'center' },
+  { title: 'Activity', key: 'created_at' },
+  { title: 'Actions', key: 'actions', sortable: false, align: 'end' },
+] as const
 
 onMounted(async () => {
   loading.value = true
@@ -75,45 +113,6 @@ onMounted(async () => {
     loading.value = false
   }
 })
-
-function changePerPage(value: number) {
-  pagination.value.perPage = value
-  pagination.value.currentPage = 1
-  fetchAllTransactions()
-}
-
-const openCreatePaymentModal = ref(false)
-const selectedTransactionForPayment = ref('')
-
-function addPaymentForTransaction(item: any) {
-  selectedTransactionForPayment.value = item.transaction_uuid
-  openCreatePaymentModal.value = true
-}
-
-function copyUuid(uuid: string) {
-  navigator.clipboard.writeText(uuid)
-  showToast({
-    title: 'Copied',
-    text: 'UUID copied to clipboard',
-    color: 'success',
-    icon: '$success',
-  })
-}
-
-const headers = [
-  { title: 'Transaction Type', key: 'transaction_type' },
-  { title: 'Status', key: 'status' },
-  { title: 'Debtor', key: 'debtor.debtor_name' },
-  { title: 'Clerk', key: 'clerk.full_name' },
-  { title: 'Runner', key: 'runner.full_name' },
-  { title: 'Sales Person', key: 'sales_person.debtor_name' },
-  { title: 'Expected Amount', key: 'total_expected' },
-  { title: 'Payments', key: 'payments' },
-  { title: 'Transaction Items', key: 'items' },
-  { title: 'Created', key: 'created_at' },
-  { title: 'Updated', key: 'updated_at' },
-  { title: 'Actions', key: 'actions' },
-]
 </script>
 
 <template>
@@ -122,21 +121,41 @@ const headers = [
       cols="12"
       class="h-100 d-flex"
     >
-      <VCard class="d-flex flex-column flex-grow-1">
+      <VCard class="d-flex flex-column flex-grow-1 border shadow-sm">
         <VCardTitle class="d-flex justify-space-between align-center pa-4">
-          <div class="d-flex align-center ga-2">
-            <VIcon color="primary">
-              tabler-receipt
-            </VIcon>
-            <span class="text-h6 font-weight-bold">Transactions</span>
+          <div class="d-flex align-center ga-3">
+            <VAvatar
+              color="primary"
+              variant="tonal"
+              size="42"
+              rounded="lg"
+            >
+              <VIcon size="24">
+                tabler-receipt-2
+              </VIcon>
+            </VAvatar>
+            <div class="d-flex flex-column">
+              <span class="text-h6 font-weight-bold">Transaction Ledger</span>
+              <span class="text-caption text-medium-emphasis">Audit payments and collection progress</span>
+            </div>
           </div>
-          <VBtn
-            color="primary"
-            prepend-icon="tabler-plus"
-            @click="addTransaction"
-          >
-            Add Transaction
-          </VBtn>
+          <div class="d-flex align-center ga-2">
+            <VBtn
+              variant="tonal"
+              color="secondary"
+              :loading="loading"
+              icon="tabler-refresh"
+              @click="fetchAllTransactions"
+            />
+            <VBtn
+              color="primary"
+              prepend-icon="tabler-plus"
+              variant="elevated"
+              @click="addTransaction"
+            >
+              New Transaction
+            </VBtn>
+          </div>
         </VCardTitle>
 
         <VDivider />
@@ -145,296 +164,263 @@ const headers = [
           :headers="headers"
           :items="transactions"
           :loading="loading"
-          item-key="transaction_uuid"
-          class="flex-grow-1"
-          :items-per-page="-1"
+          class="flex-grow-1 transaction-table"
+          :items-per-page="pagination.perPage"
+          hover
         >
-          <!-- Transaction Type -->
           <template #item.transaction_type="{ item }">
-            <VChip
-              :color="item.transaction_type === 'Sale' ? 'primary' : 'warning'"
-              size="small"
-              variant="tonal"
-            >
-              <VIcon
-                start
-                size="14"
+            <div class="d-flex flex-column ga-1 py-2">
+              <VChip
+                :color="item.transaction_type === 'Sale' ? 'primary' : 'warning'"
+                size="x-small"
+                variant="flat"
+                label
+                class="font-weight-bold"
               >
-                {{ item.transaction_type === 'Sale' ? 'tabler-shopping-cart' : 'tabler-credit-card' }}
-              </VIcon>
-              {{ item.transaction_type }}
-            </VChip>
+                {{ item.transaction_type.toUpperCase() }}
+              </VChip>
+              <span class="text-xxs font-mono text-disabled">#{{ item.transaction_uuid.split('-')[0] }}</span>
+            </div>
           </template>
 
-          <!-- Status -->
           <template #item.status="{ item }">
-            <VMenu>
-              <template #activator="{ props }">
+            <VMenu location="bottom center">
+              <template #activator="{ props: menuProps }">
                 <VChip
-                  :color="item.status === 'Paid' ? 'success' : item.status === 'Closed_With_Returns' ? 'info' : item.status === 'Partially_Paid' ? 'warning' : 'error'"
-                  size="small"
+                  :color="item.status === 'Paid' ? 'success' : item.status === 'Partially_Paid' ? 'warning' : 'error'"
                   variant="tonal"
-                  class="cursor-pointer"
-                  v-bind="props"
+                  size="small"
+                  class="cursor-pointer font-weight-medium"
+                  v-bind="menuProps"
                 >
-                  <VIcon
-                    start
-                    size="14"
-                  >
-                    {{ item.status === 'Paid' ? 'tabler-circle-check' : item.status === 'Closed_With_Returns' ? 'tabler-circle-minus' : item.status === 'Partially_Paid' ? 'tabler-clock' : 'tabler-circle-x' }}
-                  </VIcon>
-                  {{ item.status?.replace(/_/g, ' ') }}
+                  {{ item.status.replace(/_/g, ' ') }}
                   <VIcon
                     end
                     size="12"
                   >
-                    tabler-pencil
+                    tabler-chevron-down
                   </VIcon>
                 </VChip>
               </template>
               <VList density="compact">
-                <VListSubheader>Change Status</VListSubheader>
                 <VListItem
                   v-for="status in transactionStatusOptions"
                   :key="status"
-                  :disabled="item.status === status"
-                  @click="handleUpdateTransactionStatus(item, status)"
+                  @click="updateTransactionStatus(item.transaction_uuid, status)"
                 >
-                  <div class="d-flex align-center ga-2">
-                    <VIcon
-                      :color="status === 'Paid' ? 'success' : status === 'Closed_With_Returns' ? 'info' : status === 'Partially_Paid' ? 'warning' : 'error'"
-                      size="16"
-                    >
-                      {{ status === 'Paid' ? 'tabler-circle-check' : status === 'Closed_With_Returns' ? 'tabler-circle-minus' : status === 'Partially_Paid' ? 'tabler-clock' : 'tabler-circle-x' }}
-                    </VIcon>
-                    <span>{{ status.replace(/_/g, ' ') }}</span>
-                    <VIcon
-                      v-if="item.status === status"
-                      size="12"
-                      color="primary"
-                    >
-                      tabler-check
-                    </VIcon>
-                  </div>
+                  <VListItemTitle class="text-caption">
+                    {{ status.replace(/_/g, ' ') }}
+                  </VListItemTitle>
                 </VListItem>
               </VList>
             </VMenu>
           </template>
 
-          <!-- Debtor -->
           <template #item.debtor.debtor_name="{ item }">
-            <div class="d-flex align-center ga-2">
-              <VAvatar
-                size="30"
-                color="primary"
-                variant="tonal"
-              >
-                <span class="text-caption font-weight-bold">
-                  {{ item.debtor?.debtor_name?.charAt(0)?.toUpperCase() ?? '?' }}
-                </span>
-              </VAvatar>
-              <div class="d-flex flex-column">
-                <span class="font-weight-medium text-body-2">{{ item.debtor?.debtor_name ?? '—' }}</span>
-                <span class="text-caption text-medium-emphasis">{{ item.debtor?.debtor_phone ?? '' }}</span>
+            <div class="d-flex flex-column ga-1">
+              <div class="d-flex align-center ga-2">
+                <VIcon
+                  size="14"
+                  color="primary"
+                >
+                  tabler-user-dollar
+                </VIcon>
+                <span class="text-body-2 font-weight-bold text-high-emphasis">{{ item.debtor?.debtor_name }}</span>
+              </div>
+              <div class="d-flex align-center ga-2 text-xxs text-medium-emphasis">
+                <VIcon size="12">
+                  tabler-briefcase
+                </VIcon>
+                <span>SP: {{ item.sales_person?.debtor_name || 'Direct' }}</span>
               </div>
             </div>
           </template>
 
-          <!-- Clerk -->
-          <template #item.clerk.full_name="{ item }">
-            <div class="d-flex align-center ga-2">
-              <VAvatar
-                size="28"
-                color="secondary"
-                variant="tonal"
-              >
-                <span class="text-caption">
-                  {{ item.clerk?.full_name?.charAt(0)?.toUpperCase() ?? '?' }}
-                </span>
-              </VAvatar>
-              <span class="text-body-2">{{ item.clerk?.full_name ?? '—' }}</span>
-            </div>
-          </template>
-
-          <!-- Runner -->
-          <template #item.runner.full_name="{ item }">
-            <div class="d-flex align-center ga-2">
-              <VAvatar
-                size="28"
-                color="info"
-                variant="tonal"
-              >
-                <span class="text-caption">
-                  {{ item.runner?.full_name?.charAt(0)?.toUpperCase() ?? '?' }}
-                </span>
-              </VAvatar>
-              <span class="text-body-2">{{ item.runner?.full_name ?? '—' }}</span>
-            </div>
-          </template>
-
-          <!-- Sales Person -->
-          <template #item.sales_person.debtor_name="{ item }">
-            <div class="d-flex align-center ga-2">
-              <VAvatar
-                size="28"
-                color="warning"
-                variant="tonal"
-              >
-                <span class="text-caption">
-                  {{ item.sales_person?.debtor_name?.charAt(0)?.toUpperCase() ?? '?' }}
-                </span>
-              </VAvatar>
-              <span class="text-body-2">{{ item.sales_person?.debtor_name ?? '—' }}</span>
-            </div>
-          </template>
-
-          <!-- Total Expected Amount -->
-          <template #item.total_expected="{ item }">
-            <div class="d-flex align-center ga-1">
-              <span class="text-caption font-weight-bold text-success">KES</span>
-              <span class="font-weight-medium text-body-2">
-                {{ item.total_expected ? Number(item.total_expected).toLocaleString() : '—' }}
-              </span>
-            </div>
-          </template>
-
-          <!-- Payments -->
-          <template #item.payments="{ item }">
-            <div
-              class="d-flex align-center ga-1 cursor-pointer"
-              @click="viewPayments(item)"
-            >
-              <template v-if="item.payments?.length">
-                <VChip
-                  v-for="payment in item.payments.slice(0, 2)"
-                  :key="payment.payment_uuid"
-                  :color="payment.status === 'COMPLETED' ? 'success' : payment.status === 'PENDING' ? 'warning' : 'error'"
-                  size="small"
-                  variant="tonal"
-                >
-                  <VIcon
-                    start
-                    size="12"
-                  >
-                    {{ payment.payment_method === 'Cash' ? 'tabler-cash' : payment.payment_method === 'M-pesa' ? 'tabler-phone' : 'tabler-building-bank' }}
-                  </VIcon>
-                  {{ payment.amount.toLocaleString() }}
-                </VChip>
-                <VChip
-                  v-if="item.payments.length > 2"
-                  size="small"
+          <template #item.staff="{ item }">
+            <div class="d-flex flex-column ga-2 py-1">
+              <div class="d-flex align-center ga-2">
+                <VAvatar
+                  size="22"
                   color="secondary"
                   variant="tonal"
+                  class="border"
                 >
-                  +{{ item.payments.length - 2 }} more
-                </VChip>
-              </template>
-              <span
-                v-else
-                class="text-medium-emphasis text-body-2"
-              >—</span>
+                  <span class="text-xxs font-weight-bold">{{ item.clerk?.full_name?.charAt(0) }}</span>
+                </VAvatar>
+                <div class="d-flex flex-column">
+                  <span
+                    class="text-xxs text-disabled font-weight-bold uppercase"
+                    style="line-height: 1;"
+                  >Clerk</span>
+                  <span
+                    class="text-caption text-high-emphasis font-weight-medium text-truncate"
+                    style="max-width: 120px;"
+                  >
+                    {{ item.clerk?.full_name || '—' }}
+                  </span>
+                </div>
+              </div>
+
+              <div class="d-flex align-center ga-2">
+                <VAvatar
+                  size="22"
+                  color="info"
+                  variant="tonal"
+                  class="border"
+                >
+                  <span class="text-xxs font-weight-bold">{{ item.runner?.full_name?.charAt(0) }}</span>
+                </VAvatar>
+                <div class="d-flex flex-column">
+                  <span
+                    class="text-xxs text-disabled font-weight-bold uppercase"
+                    style="line-height: 1;"
+                  >Runner</span>
+                  <span
+                    class="text-caption text-high-emphasis font-weight-medium text-truncate"
+                    style="max-width: 120px;"
+                  >
+                    {{ item.runner?.full_name || '—' }}
+                  </span>
+                </div>
+              </div>
             </div>
           </template>
 
-          <!-- Items -->
+          <template #item.total_expected="{ item }">
+            <div class="d-flex flex-column align-end ga-1 py-1">
+              <div class="d-flex align-center ga-2">
+                <span class="text-xxs text-disabled font-weight-bold">TOTAL EXPECTED:</span>
+                <span class="text-body-2 font-weight-bold text-high-emphasis font-mono">
+                  {{ Number(item.total_expected).toLocaleString() }}
+                </span>
+              </div>
+              <div
+                class="d-flex align-center ga-2 border-t pt-1"
+                style="border-top: 1px dashed rgba(var(--v-border-color), 0.3) !important;"
+              >
+                <span class="text-xxs text-disabled font-weight-bold">TOTAL PAID:</span>
+                <span class="text-body-2 font-weight-bold text-success font-mono">
+                  {{ Number(item.payments_sum_amount || 0).toLocaleString() }}
+                </span>
+              </div>
+
+              <VProgressLinear
+                :model-value="calculateProgress(item)"
+                :color="calculateProgress(item) === 100 ? 'success' : 'warning'"
+                height="8"
+                rounded
+                style="width: 100px"
+                class="mt-1"
+              >
+                <template #default="{ value }">
+                  <span
+                    class="text-white font-weight-black"
+                    style="font-size: 8px;"
+                  >{{ Math.ceil(value) }}%</span>
+                </template>
+              </VProgressLinear>
+            </div>
+          </template>
+
           <template #item.items="{ item }">
-            <VChip
-              size="small"
-              color="secondary"
+            <VBtn
               variant="tonal"
-              class="cursor-pointer"
+              size="x-small"
+              color="secondary"
+              rounded="pill"
+              prepend-icon="tabler-box"
               @click="viewItems(item)"
             >
-              <VIcon
-                start
-                size="14"
-              >
-                tabler-package
-              </VIcon>
-              {{ item.items?.length ?? 0 }} item(s)
-            </VChip>
+              {{ item.items?.length || 0 }}
+            </VBtn>
           </template>
 
-          <!-- Dates -->
           <template #item.created_at="{ item }">
-            <div class="d-flex align-center ga-1 text-caption text-medium-emphasis">
-              <VIcon size="13">
-                tabler-calendar
-              </VIcon>
-              <TableDate :value="item.created_at" />
+            <div class="d-flex flex-column text-xxs text-medium-emphasis">
+              <div class="d-flex align-center ga-1">
+                <VIcon size="12">
+                  tabler-calendar-event
+                </VIcon><TableDate :value="item.created_at" />
+              </div>
+              <div class="d-flex align-center ga-1">
+                <VIcon size="12">
+                  tabler-history
+                </VIcon><TableDate :value="item.updated_at" />
+              </div>
             </div>
           </template>
-          <template #item.updated_at="{ item }">
-            <div class="d-flex align-center ga-1 text-caption text-medium-emphasis">
-              <VIcon size="13">
-                tabler-clock-edit
-              </VIcon>
-              <TableDate :value="item.updated_at" />
-            </div>
-          </template>
-          <!-- Actions -->
+
           <template #item.actions="{ item }">
-            <VMenu>
-              <template #activator="{ props }">
+            <VMenu location="bottom end">
+              <template #activator="{ props: menuProps }">
                 <VBtn
-                  icon="tabler-dots"
+                  icon="tabler-dots-vertical"
                   variant="text"
-                  v-bind="props"
+                  size="small"
+                  v-bind="menuProps"
                 />
               </template>
-              <VList>
-                <VListSubheader>Actions</VListSubheader>
-
-                <VListItem @click="copyUuid(item.transaction_uuid)">
-                  <VIcon>tabler-copy</VIcon>
-                  <span class="ms-2">Copy UUID</span>
+              <VList density="compact">
+                <VListItem
+                  color="success"
+                  @click="addPaymentForTransaction(item)"
+                >
+                  <template #prepend>
+                    <VIcon size="18">
+                      tabler-cash-banknote
+                    </VIcon>
+                  </template>
+                  <VListItemTitle>Record Payment</VListItemTitle>
                 </VListItem>
-
-                <VDivider />
-
-                <VListItem @click="addPaymentForTransaction(item)">
-                  <VIcon>tabler-credit-card</VIcon>
-                  <span class="ms-2">Add Payment</span>
-                </VListItem>
-
-                <VDivider />
-
                 <VListItem @click="viewPayments(item)">
-                  <VIcon>tabler-eye</VIcon>
-                  <span class="ms-2">View Payments</span>
+                  <template #prepend>
+                    <VIcon size="18">
+                      tabler-receipt
+                    </VIcon>
+                  </template>
+                  <VListItemTitle>Payment History</VListItemTitle>
                 </VListItem>
-
-                <VListItem @click="viewItems(item)">
-                  <VIcon>tabler-package</VIcon>
-                  <span class="ms-2">View Items</span>
+                <VDivider class="my-1" />
+                <VListItem @click="copyUuid(item.transaction_uuid)">
+                  <template #prepend>
+                    <VIcon size="18">
+                      tabler-copy
+                    </VIcon>
+                  </template>
+                  <VListItemTitle>Copy ID</VListItemTitle>
                 </VListItem>
               </VList>
             </VMenu>
           </template>
 
-          <!-- Bottom Pagination Slot -->
           <template #bottom>
             <VDivider />
             <div class="d-flex justify-space-between align-center flex-wrap ga-4 pa-4">
-              <div class="d-flex align-center ga-2">
-                <span class="text-medium-emphasis text-sm">Rows per page</span>
+              <div class="d-flex align-center ga-3">
+                <span class="text-caption text-medium-emphasis font-weight-medium">Items per page:</span>
                 <VSelect
                   :model-value="pagination.perPage"
                   :items="perPageOptions"
                   density="compact"
                   variant="outlined"
-                  style="width: 90px"
+                  hide-details
+                  style="width: 85px"
                   @update:model-value="changePerPage"
                 />
               </div>
-              <span class="text-medium-emphasis text-sm">
-                Page {{ pagination.currentPage }} of {{ pagination.lastPage }}
-              </span>
-              <VPagination
-                v-model="pagination.currentPage"
-                :length="pagination.lastPage"
-                @update:model-value="(page: number) => fetchAllTransactions(page)"
-              />
+              <div class="d-flex align-center ga-4">
+                <span class="text-caption text-medium-emphasis">
+                  Page <span class="text-high-emphasis font-weight-bold">{{ pagination.currentPage }}</span> of {{ pagination.lastPage }}
+                </span>
+                <VPagination
+                  v-model="pagination.currentPage"
+                  :length="pagination.lastPage"
+                  :total-visible="5"
+                  density="compact"
+                  active-color="primary"
+                  @update:model-value="(page) => fetchAllTransactions(page)"
+                />
+              </div>
             </div>
           </template>
         </VDataTable>
@@ -448,14 +434,12 @@ const headers = [
     :transaction-uuid="selectedTransactionUuid"
     @update-status="handleUpdateItemStatus"
   />
-
   <TransactionPaymentsModal
     v-model="openPaymentsModal"
     :payments="selectedPayments"
     :transaction-uuid="selectedPaymentTransactionUuid"
     @update:status="handleUpdatePaymentStatus"
   />
-
   <CreateTransactionModal
     v-model:model-value="openAdd"
     v-model:transaction="newTransaction"
@@ -466,20 +450,21 @@ const headers = [
     v-model="openCreatePaymentModal"
     :loading="loading"
     :preset-transaction-uuid="selectedTransactionForPayment"
-    @confirm="createTransaction"
+    @confirm="handleCreatePayment"
   />
 </template>
 
 <style scoped>
-:deep(.deleted-row) td {
-  background-color: rgba(255, 82, 82, 0.12) !important;
+.transaction-table :deep(td:first-child) {
+  position: sticky;
+  left: 0;
+  background: v-bind(surfaceColor) !important;
+  z-index: 1;
+  border-right: 1px solid rgba(var(--v-border-color), var(--v-border-opacity));
 }
-
-:deep(.deleted-row:hover) td {
-  background-color: rgba(255, 82, 82, 0.22) !important;
-}
-
-:deep(.v-data-table__tr:hover) td {
-  background-color: rgba(0, 0, 0, 0.04) !important;
-}
+.text-xxs { font-size: 0.65rem; }
+.font-mono { font-family: 'Fira Code', 'Roboto Mono', monospace; }
+.border { border: 1px solid rgba(var(--v-border-color), 0.12) !important; }
+.ga-n2 { margin-left: 8px; }
+:deep(.v-progress-linear__content) { justify-content: center; }
 </style>

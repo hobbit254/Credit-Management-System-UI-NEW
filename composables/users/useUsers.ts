@@ -65,6 +65,24 @@ export function useUsers() {
     return result
   }
 
+  const activeUser = ref<User | null>(null)
+
+  const fetchActiveUser = async () => {
+    const { data } = await $api.get('users/me')
+    let result: User | null = null
+
+    if (Array.isArray(data))
+      result = data[0] ?? null
+    else if (data && Array.isArray(data.data))
+      result = data.data[0] ?? null
+    else if (data && data.data)
+      result = data.data
+
+    activeUser.value = result
+
+    return result
+  }
+
   const openAdd = ref(false)
 
   const newUser = ref<NewUser>({
@@ -239,5 +257,7 @@ export function useUsers() {
     activateUser,
     deactivateUser,
     fetchAllActiveUsers,
+    fetchActiveUser,
+    activeUser,
   }
 }

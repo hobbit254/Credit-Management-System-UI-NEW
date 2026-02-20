@@ -11,7 +11,6 @@ const props = defineProps<{
 
 const emit = defineEmits(['update:modelValue', 'confirm'])
 
-// Theme logic for CSS variable safety
 const theme = useTheme()
 const surfaceColor = computed(() => theme.current.value.colors.surface)
 
@@ -29,6 +28,7 @@ const localSupplierName = ref('')
 const localSupplierShopName = ref('')
 const localSupplierPhone = ref('')
 
+// Initialize local state when supplier changes
 watch(
   () => props.supplier,
   newSupplier => {
@@ -61,105 +61,132 @@ function handleConfirm() {
     scrollable
     persistent
   >
-    <VCard :style="{ backgroundColor: surfaceColor }">
-      <VCardTitle class="d-flex align-center ga-3 pa-4">
+    <VCard
+      class="border shadow-lg"
+      :style="{ backgroundColor: surfaceColor }"
+    >
+      <VCardTitle class="d-flex align-center ga-3 pa-4 bg-var-theme-surface">
         <VAvatar
-          color="secondary"
+          color="info"
           variant="tonal"
-          size="40"
+          size="44"
+          rounded="lg"
         >
-          <VIcon>tabler-edit-circle</VIcon>
+          <VIcon size="24">
+            tabler-edit-circle
+          </VIcon>
         </VAvatar>
         <div class="d-flex flex-column">
-          <span class="text-h6 font-weight-bold">Update Partner Details</span>
-          <span class="text-caption text-medium-emphasis">Modify supplier profile and contact info</span>
+          <span class="text-h6 font-weight-black">Update Partner</span>
+          <span class="text-caption text-medium-emphasis">Refine supplier profile and contact info</span>
         </div>
+        <VSpacer />
+        <VBtn
+          icon="tabler-x"
+          variant="text"
+          size="small"
+          density="comfortable"
+          @click="closeModal"
+        />
       </VCardTitle>
 
       <VDivider />
 
-      <VCardText class="pa-4">
+      <VCardText class="pa-5">
         <VForm @submit.prevent="handleConfirm">
-          <VRow dense>
+          <VRow>
             <VCol
               cols="12"
-              class="mb-4"
+              class="mb-2"
             >
-              <div class="pa-3 rounded bg-var-theme-background border-dashed d-flex justify-space-between align-center">
+              <div class="pa-4 rounded-lg bg-light-info border-dashed d-flex justify-space-between align-center">
                 <div class="d-flex flex-column ga-1">
-                  <span class="text-xxs text-uppercase font-weight-bold text-medium-emphasis">Supplier UUID</span>
-                  <code class="text-xs text-primary">{{ props.supplier?.supplier_uuid }}</code>
+                  <div class="d-flex align-center ga-1">
+                    <VIcon
+                      size="12"
+                      color="primary"
+                    >
+                      tabler-fingerprint
+                    </VIcon>
+                    <span class="text-xxs text-uppercase font-weight-black text-disabled tracking-widest">System UUID</span>
+                  </div>
+                  <code class="text-xs font-weight-bold text-primary">{{ props.supplier?.supplier_uuid }}</code>
                 </div>
                 <VChip
-                  size="x-small"
+                  size="small"
                   :color="props.supplier?.active ? 'success' : 'error'"
-                  variant="tonal"
+                  variant="flat"
                   label
-                  class="text-uppercase"
+                  class="text-uppercase font-weight-bold"
                 >
-                  {{ props.supplier?.active ? 'Active Partner' : 'Inactive' }}
+                  {{ props.supplier?.active ? 'Active' : 'Inactive' }}
                 </VChip>
               </div>
             </VCol>
 
-            <VCol cols="12">
-              <p class="text-caption text-medium-emphasis font-weight-medium mb-1 text-uppercase">
-                Core Identity
-              </p>
+            <VCol
+              cols="12"
+              class="pb-0"
+            >
+              <div class="d-flex align-center ga-2 mb-3">
+                <VIcon
+                  size="16"
+                  color="info"
+                >
+                  tabler-id-badge-2
+                </VIcon>
+                <span class="text-xxs font-weight-black text-uppercase tracking-widest text-disabled">
+                  Core Identity
+                </span>
+              </div>
             </VCol>
 
             <VCol cols="12">
               <AppTextField
                 v-model="localSupplierName"
-                label="Representative Name*"
-                placeholder="Enter representative name"
-              >
-                <template #prepend-inner>
-                  <VIcon size="18">
-                    tabler-user-edit
-                  </VIcon>
-                </template>
-              </AppTextField>
+                label="Representative Name"
+                placeholder="Enter full name"
+                persistent-placeholder
+                prepend-inner-icon="tabler-user-edit"
+              />
             </VCol>
 
-            <VCol
-              cols="12"
-              class="mt-2"
-            >
+            <VCol cols="12">
               <AppTextField
                 v-model="localSupplierShopName"
-                label="Business / Shop Name*"
-                placeholder="Enter business name"
-              >
-                <template #prepend-inner>
-                  <VIcon size="18">
-                    tabler-building-store
-                  </VIcon>
-                </template>
-              </AppTextField>
+                label="Business / Shop Name"
+                placeholder="Official shop name"
+                persistent-placeholder
+                prepend-inner-icon="tabler-building-store"
+              />
             </VCol>
 
             <VCol
               cols="12"
-              class="mt-4"
+              class="pt-4 pb-0"
             >
-              <p class="text-caption text-medium-emphasis font-weight-medium mb-1 text-uppercase">
-                Communication
-              </p>
+              <div class="d-flex align-center ga-2 mb-3">
+                <VIcon
+                  size="16"
+                  color="info"
+                >
+                  tabler-device-mobile-message
+                </VIcon>
+                <span class="text-xxs font-weight-black text-uppercase tracking-widest text-disabled">
+                  Communication
+                </span>
+              </div>
             </VCol>
 
             <VCol cols="12">
               <AppTextField
                 v-model="localSupplierPhone"
                 label="Contact Phone Number"
-                placeholder="Enter phone number"
-              >
-                <template #prepend-inner>
-                  <VIcon size="18">
-                    tabler-phone
-                  </VIcon>
-                </template>
-              </AppTextField>
+                placeholder="e.g. 0712 345 678"
+                type="tel"
+                persistent-placeholder
+                prepend-inner-icon="tabler-phone"
+              />
             </VCol>
           </VRow>
         </VForm>
@@ -167,26 +194,28 @@ function handleConfirm() {
 
       <VDivider />
 
-      <VCardActions class="pa-3">
-        <VSpacer />
-
+      <VCardActions class="pa-4 bg-var-theme-background">
         <VBtn
-          variant="plain"
-          prepend-icon="tabler-x"
+          variant="text"
+          color="secondary"
+          class="font-weight-bold"
           :disabled="props.loading"
           @click="closeModal"
         >
           Cancel
         </VBtn>
-
+        <VSpacer />
         <VBtn
-          color="primary"
-          variant="tonal"
-          prepend-icon="tabler-refresh"
+          color="info"
+          variant="elevated"
+          min-width="160"
           :loading="props.loading"
           @click="handleConfirm"
         >
-          Update Supplier
+          <VIcon start>
+            tabler-refresh
+          </VIcon>
+          Update Details
         </VBtn>
       </VCardActions>
     </VCard>
@@ -195,19 +224,26 @@ function handleConfirm() {
 
 <style scoped>
 .border-dashed {
-  border: 1px dashed rgba(var(--v-border-color), var(--v-border-opacity));
+  border: 1px dashed rgba(var(--v-border-color), 0.2) !important;
+}
+
+.bg-light-info {
+  background-color: rgba(var(--v-theme-info,255,255,255), 0.04);
 }
 
 .text-xxs {
   font-size: 0.65rem;
 }
 
-/* Variable-safe background binding */
-.v-card {
-  background-color: v-bind(surfaceColor);
+.tracking-widest {
+  letter-spacing: 0.12em;
 }
 
-.bg-var-theme-background {
-  background-color: rgba(var(--v-theme-on-surface,255,255,255), 0.04);
+.v-card {
+  border-radius: 12px !important;
+}
+
+:deep(.v-field__outline) {
+  --v-field-border-opacity: 0.08;
 }
 </style>

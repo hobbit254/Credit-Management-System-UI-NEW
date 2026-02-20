@@ -1,8 +1,7 @@
 export default [
   {
-    title: 'Dashboard',
-    icon: { icon: 'tabler-smart-home' },
+    title: 'Overview', // "Overview" or "Analytics" often feels more modern than "Dashboard"
     to: 'dashboard',
+    icon: { icon: 'tabler-layout-dashboard' },
   },
-
 ]

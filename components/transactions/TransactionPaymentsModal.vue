@@ -86,7 +86,7 @@ const totalAmount = computed(() =>
                 start
                 size="14"
               >
-                {{ item.payment_method === 'Cash' ? 'tabler-cash' : item.payment_method === 'M-pesa' ? 'tabler-phone' : item.payment_method === 'Bank' ? 'tabler-building-bank' : 'tabler-receipt' }}
+                {{ item.payment_method === 'Cash' ? 'tabler-cash' : item.payment_method === 'M-Pesa' ? 'tabler-phone' : item.payment_method === 'Bank' ? 'tabler-building-bank' : 'tabler-receipt' }}
               </VIcon>
               {{ item.payment_method }}
             </VChip>

@@ -67,46 +67,73 @@ const debtorTypes = [
 <template>
   <VDialog
     v-model="isOpen"
-    max-width="550"
+    max-width="580"
     scrollable
     persistent
   >
-    <VCard :style="{ backgroundColor: surfaceColor }">
-      <VCardTitle class="d-flex align-center ga-3 pa-4">
+    <VCard
+      class="border shadow-lg"
+      :style="{ backgroundColor: surfaceColor }"
+    >
+      <VCardTitle class="d-flex align-center ga-3 pa-4 bg-var-theme-surface">
         <VAvatar
           color="info"
           variant="tonal"
-          size="40"
+          size="44"
+          rounded="lg"
         >
-          <VIcon>tabler-user-cog</VIcon>
+          <VIcon size="24">
+            tabler-user-cog
+          </VIcon>
         </VAvatar>
         <div class="d-flex flex-column">
-          <span class="text-h6 font-weight-bold">Update Debtor Profile</span>
+          <span class="text-h6 font-weight-black">Update Debtor Profile</span>
           <span class="text-caption text-medium-emphasis">Modify account identity and credit terms</span>
         </div>
+        <VSpacer />
+        <VBtn
+          icon="tabler-x"
+          variant="text"
+          size="small"
+          density="comfortable"
+          @click="closeModal"
+        />
       </VCardTitle>
 
       <VDivider />
 
-      <VCardText class="pa-4">
+      <VCardText class="pa-5">
         <VForm @submit.prevent="handleConfirm">
-          <VRow dense>
+          <VRow>
             <VCol
               cols="12"
-              class="mb-4"
+              class="mb-2"
             >
-              <div class="pa-3 rounded bg-var-theme-background border-dashed">
-                <div class="d-flex justify-space-between align-center mb-1">
-                  <span class="text-xxs text-uppercase font-weight-bold text-medium-emphasis">System Reference</span>
-                  <span class="text-xxs font-mono text-medium-emphasis">{{ props.debtor?.debtor_uuid?.split('-')[0] }}...</span>
+              <div class="pa-4 rounded-lg bg-light-info border-dashed">
+                <div class="d-flex justify-space-between align-center mb-2">
+                  <div class="d-flex align-center ga-1">
+                    <VIcon
+                      size="12"
+                      color="info"
+                    >
+                      tabler-fingerprint
+                    </VIcon>
+                    <span class="text-xxs text-uppercase font-weight-black text-disabled tracking-widest">System Reference</span>
+                  </div>
+                  <code class="text-xs font-weight-bold text-info font-mono">
+                    {{ props.debtor?.debtor_uuid }}
+                  </code>
                 </div>
                 <div class="d-flex justify-space-between align-center">
-                  <span class="text-caption font-weight-bold">{{ localDebtorName || 'New Debtor' }}</span>
+                  <span class="text-body-2 font-weight-black text-high-emphasis">
+                    {{ localDebtorName || 'Unidentified Debtor' }}
+                  </span>
                   <VChip
                     size="x-small"
                     color="info"
                     variant="flat"
                     label
+                    class="font-weight-black uppercase"
                   >
                     {{ localDebtorType }}
                   </VChip>
@@ -114,101 +141,104 @@ const debtorTypes = [
               </div>
             </VCol>
 
+            <VCol
+              cols="12"
+              class="pb-0 mt-2"
+            >
+              <div class="d-flex align-center ga-2 mb-3">
+                <VIcon
+                  size="16"
+                  color="info"
+                >
+                  tabler-id-badge-2
+                </VIcon>
+                <span class="text-xxs font-weight-black text-uppercase tracking-widest text-disabled">
+                  Profile Identity
+                </span>
+              </div>
+            </VCol>
+
             <VCol cols="12">
-              <p class="text-caption text-medium-emphasis font-weight-medium mb-1 text-uppercase">
-                Profile Identity
-              </p>
               <AppTextField
                 v-model="localDebtorName"
-                label="Full Name*"
-                placeholder="Debtor full name"
-              >
-                <template #prepend-inner>
-                  <VIcon size="18">
-                    tabler-user-edit
-                  </VIcon>
-                </template>
-              </AppTextField>
+                label="Legal Full Name"
+                placeholder="Enter full name"
+                prepend-inner-icon="tabler-user-edit"
+                persistent-placeholder
+              />
             </VCol>
 
             <VCol
               cols="12"
               md="6"
-              class="mt-2"
             >
               <AppTextField
                 v-model="localDebtorEmail"
-                label="Email"
+                label="Email Address"
                 type="email"
-                placeholder="Email address"
-              >
-                <template #prepend-inner>
-                  <VIcon size="18">
-                    tabler-mail
-                  </VIcon>
-                </template>
-              </AppTextField>
+                placeholder="email@example.com"
+                prepend-inner-icon="tabler-mail"
+                persistent-placeholder
+              />
             </VCol>
 
             <VCol
               cols="12"
               md="6"
-              class="mt-2"
             >
               <AppTextField
                 v-model="localDebtorPhone"
-                label="Phone"
-                placeholder="Contact number"
-              >
-                <template #prepend-inner>
-                  <VIcon size="18">
-                    tabler-phone
-                  </VIcon>
-                </template>
-              </AppTextField>
+                label="Phone Number"
+                placeholder="07XX XXX XXX"
+                prepend-inner-icon="tabler-phone"
+                persistent-placeholder
+              />
             </VCol>
 
             <VCol
               cols="12"
-              class="mt-4"
+              class="pt-4 pb-0"
             >
-              <p class="text-caption text-medium-emphasis font-weight-medium mb-1 text-uppercase">
-                Financial Configuration
-              </p>
+              <div class="d-flex align-center ga-2 mb-3">
+                <VIcon
+                  size="16"
+                  color="info"
+                >
+                  tabler-coin-bitcoin
+                </VIcon>
+                <span class="text-xxs font-weight-black text-uppercase tracking-widest text-disabled">
+                  Financial Configuration
+                </span>
+              </div>
             </VCol>
 
-            <VCol cols="12">
+            <VCol
+              cols="12"
+              md="6"
+            >
               <AppSelect
                 v-model="localDebtorType"
                 :items="debtorTypes"
-                label="Account Type*"
-                placeholder="Select debtor type"
-              >
-                <template #prepend-inner>
-                  <VIcon size="18">
-                    tabler-category-2
-                  </VIcon>
-                </template>
-              </AppSelect>
+                label="Account Type"
+                placeholder="Select type"
+                prepend-inner-icon="tabler-category-2"
+              />
             </VCol>
 
             <VCol
               cols="12"
-              class="mt-2"
+              md="6"
             >
               <AppTextField
                 v-model="localCreditLimit"
-                label="Credit Limit*"
+                label="Credit Limit"
                 type="number"
-                placeholder="0.00"
-                prefix="$"
-              >
-                <template #prepend-inner>
-                  <VIcon size="18">
-                    tabler-coin
-                  </VIcon>
-                </template>
-              </AppTextField>
+                placeholder="0"
+                prefix="KES"
+                prepend-inner-icon="tabler-coin"
+                persistent-placeholder
+                class="font-mono font-weight-bold"
+              />
             </VCol>
           </VRow>
         </VForm>
@@ -216,25 +246,27 @@ const debtorTypes = [
 
       <VDivider />
 
-      <VCardActions class="pa-4">
-        <VSpacer />
-
+      <VCardActions class="pa-4 bg-var-theme-background">
         <VBtn
-          variant="plain"
-          prepend-icon="tabler-x"
+          variant="text"
+          color="secondary"
+          class="font-weight-bold"
           :disabled="props.loading"
           @click="closeModal"
         >
           Cancel
         </VBtn>
-
+        <VSpacer />
         <VBtn
-          color="primary"
-          variant="tonal"
-          prepend-icon="tabler-refresh"
+          color="info"
+          variant="elevated"
+          min-width="160"
           :loading="props.loading"
           @click="handleConfirm"
         >
+          <VIcon start>
+            tabler-refresh
+          </VIcon>
           Update Profile
         </VBtn>
       </VCardActions>
@@ -244,18 +276,30 @@ const debtorTypes = [
 
 <style scoped>
 .border-dashed {
-  border: 1px dashed rgba(var(--v-border-color), var(--v-border-opacity));
+  border: 1px dashed rgba(var(--v-border-color), 0.2) !important;
 }
 
-.bg-var-theme-background {
-  background-color: rgba(var(--v-theme-on-surface,255,255,255), 0.04);
+.bg-light-info {
+  background-color: rgba(var(--v-theme-info,255,255,255), 0.04) !important;
 }
 
 .text-xxs {
   font-size: 0.65rem;
 }
 
+.tracking-widest {
+  letter-spacing: 0.12em;
+}
+
+.font-mono {
+  font-family: 'Fira Code', monospace;
+}
+
 .v-card {
-  background-color: v-bind(surfaceColor);
+  border-radius: 12px !important;
+}
+
+:deep(.v-field__outline) {
+  --v-field-border-opacity: 0.08;
 }
 </style>

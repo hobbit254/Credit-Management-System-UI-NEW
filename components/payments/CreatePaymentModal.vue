@@ -19,7 +19,7 @@ const isOpen = computed({
   set: value => emit('update:modelValue', value),
 })
 
-const paymentMethodOptions = ['Cash', 'M-pesa', 'Bank', 'Cheque']
+const paymentMethodOptions = ['Cash', 'M-Pesa', 'Bank', 'Cheque']
 
 const { transactions, fetchAllTransactions } = useTransaction()
 const loadingTransactions = ref(false)
@@ -232,7 +232,7 @@ const selectedTransaction = computed(() =>
               >
                 <template #prepend-inner>
                   <VIcon size="18">
-                    {{ localPayment.payment_method === 'Cash' ? 'tabler-cash' : localPayment.payment_method === 'M-pesa' ? 'tabler-phone' : localPayment.payment_method === 'Bank' ? 'tabler-building-bank' : 'tabler-receipt' }}
+                    {{ localPayment.payment_method === 'Cash' ? 'tabler-cash' : localPayment.payment_method === 'M-Pesa' ? 'tabler-phone' : localPayment.payment_method === 'Bank' ? 'tabler-building-bank' : 'tabler-receipt' }}
                   </VIcon>
                 </template>
               </AppAutocomplete>

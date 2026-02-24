@@ -26,6 +26,17 @@ export default [
     ],
   },
   {
+    title: 'Activity Monitoring', // New section for system transparency
+    icon: { icon: 'tabler-activity' },
+    children: [
+      {
+        title: 'Audit Logs',
+        to: 'audit-logs',
+        icon: { icon: 'tabler-receipt-search', size: 20 },
+      },
+    ],
+  },
+  {
     title: 'Directory', // Focused on external entities
     icon: { icon: 'tabler-address-book' },
     children: [

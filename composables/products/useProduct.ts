@@ -42,25 +42,37 @@ export function useProduct() {
       if (options?.perPage)
         pagination.value.perPage = options.perPage
 
-      const { data } = await $api.get('products', {
+      const response = await $api.get('products', {
         params: {
           page: pagination.value.currentPage,
           per_page: pagination.value.perPage,
         },
       })
 
-      const payload = data.value ?? data
+      // 1. Get the top-level payload
+      const payload = response.data?.value ?? response.data
 
-      const [rows, pageInfo] = Array.isArray(payload.data)
-        ? payload.data
-        : [payload.data.rows, payload.data.pagination]
+      // 2. Parse the specific structure shown in your log
+      // Structure: payload.data.data (rows) and payload.data.meta (meta)
+      if (payload && payload.status === 'success' && payload.data) {
+        const innerData = payload.data
 
-      products.value = rows ?? []
-      pagination.value = {
-        total: pageInfo.total,
-        perPage: pagination.value.perPage,
-        currentPage: pageInfo.currentPage,
-        lastPage: pageInfo.lastPage,
+        // Assign the products (rows)
+        products.value = innerData.data ?? []
+
+        // Assign the pagination (meta)
+        if (innerData.meta) {
+          pagination.value = {
+            total: Number(innerData.meta.total ?? 0),
+            perPage: Number(innerData.meta.perPage ?? pagination.value.perPage),
+            currentPage: Number(innerData.meta.currentPage ?? 1),
+            lastPage: Number(innerData.meta.lastPage ?? 1),
+          }
+        }
+      }
+      else {
+        console.warn('Data structure mismatch or status not success', payload)
+        products.value = []
       }
     })
   }

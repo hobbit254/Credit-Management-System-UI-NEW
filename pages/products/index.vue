@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { useTheme } from 'vuetify'
 import { useProduct } from '@/composables/products/useProduct'
 
@@ -25,11 +25,11 @@ onMounted(async () => {
   }
 })
 
-// --- New State ---
+// --- State ---
 const isImportModalOpen = ref(false)
 const csvFile = ref<File | null>(null)
 
-// --- New Methods ---
+// --- Methods ---
 const refreshData = async () => {
   await fetchAllProducts({
     page: pagination.value.currentPage,
@@ -40,7 +40,6 @@ const refreshData = async () => {
 const handleCsvUpload = async () => {
   if (!csvFile.value)
     return
-
   await importProductsCsv(csvFile.value)
   isImportModalOpen.value = false
   csvFile.value = null
@@ -68,13 +67,22 @@ const headers = [
   { title: 'Product Identity', key: 'product_name', fixed: true },
   { title: 'Category', key: 'category_name' },
   { title: 'Price (KES)', key: 'default_price', align: 'end' },
+  { title: 'In Stock', key: 'inventory_total', align: 'center' },
   { title: 'Status', key: 'active', align: 'center' },
   { title: 'Last Activity', key: 'updated_at' },
   { title: 'Actions', key: 'actions', sortable: false, align: 'end' },
 ] as const
 
 function getRowProps({ item }: { item: any }) {
-  return item.deleted_at !== null ? { class: 'deleted-row-style italic' } : {}
+  const classes = []
+  if (item?.deleted_at)
+    classes.push('deleted-row-style italic')
+
+  // Use nullish coalescing to prevent undefined errors
+  if (item && Number(item.inventory_total ?? 0) === 0)
+    classes.push('out-of-stock')
+
+  return { class: classes.join(' ') }
 }
 </script>
 
@@ -96,7 +104,7 @@ function getRowProps({ item }: { item: any }) {
             </VAvatar>
             <div class="d-flex flex-column">
               <span class="text-h6 font-weight-bold">Product Catalog</span>
-              <span class="text-caption text-medium-emphasis">Manage stock items, pricing, and classifications</span>
+              <span class="text-caption text-medium-emphasis">Manage stock items and pricing</span>
             </div>
           </div>
           <div class="d-flex align-center ga-2">
@@ -109,7 +117,6 @@ function getRowProps({ item }: { item: any }) {
             >
               Refresh Page
             </VBtn>
-
             <VBtn
               color="secondary"
               variant="tonal"
@@ -154,12 +161,10 @@ function getRowProps({ item }: { item: any }) {
                 </VIcon>
               </VAvatar>
               <div class="d-flex flex-column overflow-hidden">
-                <span class="text-body-2 font-weight-bold text-high-emphasis text-truncate">
-                  {{ item.product_name }}
-                </span>
+                <span class="text-body-2 font-weight-bold text-high-emphasis text-truncate">{{ item?.product_name }}</span>
                 <div class="d-flex align-center ga-1 mt-1">
                   <VChip
-                    v-if="item.product_brand"
+                    v-if="item?.product_brand"
                     size="x-small"
                     variant="outlined"
                     class="text-xxs"
@@ -167,7 +172,7 @@ function getRowProps({ item }: { item: any }) {
                     {{ item.product_brand }}
                   </VChip>
                   <span class="text-xxs text-disabled font-mono">
-                    {{ item.product_model_number || item.product_uuid.split('-')[0] }}
+                    {{ item?.product_model_number || item?.product_uuid?.split('-')[0] }}
                   </span>
                 </div>
               </div>
@@ -176,7 +181,7 @@ function getRowProps({ item }: { item: any }) {
 
           <template #item.category_name="{ item }">
             <VChip
-              v-if="item.category_name"
+              v-if="item?.category_name"
               size="x-small"
               color="info"
               variant="tonal"
@@ -193,12 +198,48 @@ function getRowProps({ item }: { item: any }) {
 
           <template #item.default_price="{ item }">
             <span class="font-weight-bold font-mono text-body-2 text-high-emphasis">
-              {{ item.default_price ? Number(item.default_price).toLocaleString() : '0.00' }}
+              {{ item?.default_price ? Number(item.default_price).toLocaleString() : '0.00' }}
             </span>
           </template>
 
+          <template #item.inventory_total="{ item }">
+            <div class="d-flex flex-column align-center">
+              <div class="d-flex align-center ga-1">
+                <span
+                  class="font-weight-black text-body-2"
+                  :class="Number(item?.inventory_total ?? 0) < 10 ? 'text-error' : 'text-high-emphasis'"
+                >
+                  {{ item?.inventory_total ?? 0 }}
+                </span>
+
+                <VTooltip
+                  v-if="Number(item?.inventory_total ?? 0) < 10"
+                  location="top"
+                  :text="(item?.inventory_total ?? 0) == 0 ? 'Out of Stock' : 'Low Stock Warning'"
+                >
+                  <template #activator="{ props }">
+                    <VIcon
+                      v-bind="props"
+                      size="16"
+                      color="error"
+                      class="animate-pulse"
+                    >
+                      {{ Number(item?.inventory_total ?? 0) === 0 ? 'tabler-alert-octagon' : 'tabler-alert-triangle' }}
+                    </VIcon>
+                  </template>
+                </VTooltip>
+              </div>
+              <span
+                v-if="Number(item?.inventory_total ?? 0) < 10"
+                class="text-xxs text-error font-weight-bold"
+              >
+                {{ Number(item?.inventory_total ?? 0) === 0 ? 'RESTOCK NOW' : 'LOW STOCK' }}
+              </span>
+            </div>
+          </template>
+
           <template #item.active="{ item }">
-            <StatusBadge :active="item.active" />
+            <StatusBadge :active="item?.active" />
           </template>
 
           <template #item.updated_at="{ item }">
@@ -207,10 +248,10 @@ function getRowProps({ item }: { item: any }) {
                 <VIcon size="12">
                   tabler-history
                 </VIcon>
-                <TableDate :value="item.updated_at" />
+                <TableDate :value="item?.updated_at" />
               </div>
               <div
-                v-if="item.deleted_at"
+                v-if="item?.deleted_at"
                 class="d-flex align-center ga-1 text-error"
               >
                 <VIcon size="12">
@@ -231,12 +272,7 @@ function getRowProps({ item }: { item: any }) {
                   v-bind="menuProps"
                 />
               </template>
-
               <VList density="compact">
-                <VListSubheader class="text-xxs font-weight-black uppercase">
-                  Inventory Actions
-                </VListSubheader>
-
                 <VListItem @click="editProduct(item)">
                   <template #prepend>
                     <VIcon size="18">
@@ -245,8 +281,7 @@ function getRowProps({ item }: { item: any }) {
                   </template>
                   <VListItemTitle>Edit Details</VListItemTitle>
                 </VListItem>
-
-                <VListItem @click="copyUuid(item.product_uuid)">
+                <VListItem @click="copyUuid(item?.product_uuid)">
                   <template #prepend>
                     <VIcon size="18">
                       tabler-fingerprint
@@ -254,25 +289,20 @@ function getRowProps({ item }: { item: any }) {
                   </template>
                   <VListItemTitle>Copy UUID</VListItemTitle>
                 </VListItem>
-
                 <VDivider class="my-1" />
-
                 <VListItem
-                  :color="item.active === 1 ? 'warning' : 'success'"
-                  @click="item.active === 1 ? deactivateProduct(item) : activateProduct(item)"
+                  :color="item?.active === 1 ? 'warning' : 'success'"
+                  @click="item?.active === 1 ? deactivateProduct(item) : activateProduct(item)"
                 >
                   <template #prepend>
                     <VIcon size="18">
-                      {{ item.active === 1 ? 'tabler-lock-pause' : 'tabler-lock-open' }}
+                      {{ item?.active === 1 ? 'tabler-lock-pause' : 'tabler-lock-open' }}
                     </VIcon>
                   </template>
-                  <VListItemTitle class="font-weight-medium">
-                    {{ item.active === 1 ? 'Suspend Account' : 'Unsuspend Account' }}
-                  </VListItemTitle>
+                  <VListItemTitle>{{ item?.active === 1 ? 'Suspend Account' : 'Unsuspend' }}</VListItemTitle>
                 </VListItem>
-
                 <VListItem
-                  v-if="item.deleted_at !== null"
+                  v-if="item?.deleted_at"
                   color="success"
                   @click="restoreProduct(item)"
                 >
@@ -281,11 +311,8 @@ function getRowProps({ item }: { item: any }) {
                       tabler-restore
                     </VIcon>
                   </template>
-                  <VListItemTitle class="font-weight-bold">
-                    Restore Product
-                  </VListItemTitle>
+                  <VListItemTitle>Restore Product</VListItemTitle>
                 </VListItem>
-
                 <VListItem
                   v-else
                   color="error"
@@ -296,33 +323,10 @@ function getRowProps({ item }: { item: any }) {
                       tabler-archive
                     </VIcon>
                   </template>
-                  <VListItemTitle class="font-weight-bold">
-                    Archive Product
-                  </VListItemTitle>
+                  <VListItemTitle>Archive Product</VListItemTitle>
                 </VListItem>
               </VList>
             </VMenu>
-          </template>
-
-          <template #no-data>
-            <div class="d-flex flex-column align-center justify-center pa-10 ga-2">
-              <VIcon
-                size="48"
-                color="secondary"
-                class="opacity-50"
-              >
-                tabler-package-off
-              </VIcon>
-              <span class="text-body-1 text-medium-emphasis font-weight-medium">Your catalog is empty</span>
-              <VBtn
-                size="small"
-                variant="tonal"
-                color="primary"
-                @click="addProduct"
-              >
-                Add your first product
-              </VBtn>
-            </div>
           </template>
 
           <template #bottom>
@@ -341,9 +345,7 @@ function getRowProps({ item }: { item: any }) {
                 />
               </div>
               <div class="d-flex align-center ga-4">
-                <span class="text-caption text-medium-emphasis">
-                  Page {{ pagination.currentPage }} of {{ pagination.lastPage }}
-                </span>
+                <span class="text-caption text-medium-emphasis">Page {{ pagination.currentPage }} of {{ pagination.lastPage }}</span>
                 <VPagination
                   v-model="pagination.currentPage"
                   :length="pagination.lastPage"
@@ -384,19 +386,9 @@ function getRowProps({ item }: { item: any }) {
   >
     <VCard>
       <VCardTitle class="pa-4 d-flex align-center">
-        <VIcon
-          start
-          color="secondary"
-        >
-          tabler-file-spreadsheet
-        </VIcon>
-        Bulk Import Products
+        Bulk Import
       </VCardTitle>
-
       <VCardText>
-        <div class="text-body-2 mb-4">
-          Please select a .csv file containing your product data. Ensure the headers match our template.
-        </div>
         <VFileInput
           v-model="csvFile"
           label="Select CSV File"
@@ -404,16 +396,11 @@ function getRowProps({ item }: { item: any }) {
           prepend-icon="tabler-upload"
           variant="outlined"
           density="compact"
-          :loading="loading"
-          show-size
         />
       </VCardText>
-
       <VCardActions class="pa-4">
-        <VSpacer />
-        <VBtn
+        <VSpacer /><VBtn
           variant="text"
-          :disabled="loading"
           @click="isImportModalOpen = false"
         >
           Cancel
@@ -422,10 +409,9 @@ function getRowProps({ item }: { item: any }) {
           color="primary"
           variant="elevated"
           :disabled="!csvFile"
-          :loading="loading"
           @click="handleCsvUpload"
         >
-          Upload Data
+          Upload
         </VBtn>
       </VCardActions>
     </VCard>
@@ -434,22 +420,17 @@ function getRowProps({ item }: { item: any }) {
 
 <style scoped>
 .product-table :deep(td:first-child) {
-  position: sticky;
-  left: 0;
-  background: v-bind(surfaceColor) !important;
-  z-index: 1;
-  border-right: 1px solid rgba(var(--v-border-color), var(--v-border-opacity));
+  position: sticky; left: 0; background: v-bind(surfaceColor) !important;
+  z-index: 1; border-right: 1px solid rgba(var(--v-border-color), var(--v-border-opacity));
 }
-
-:deep(.deleted-row-style) td {
-  background-color: v-bind(`${errorColor}1F`) !important; /* ~12% opacity error color */
+:deep(.deleted-row-style) td { background-color: v-bind(`${errorColor}1F`) !important; }
+:deep(.out-of-stock) td { background-color: rgba(var(--v-theme-error), 0.05) !important; }
+.animate-pulse { animation: pulse 1.5s infinite; }
+@keyframes pulse {
+  0% { transform: scale(1); opacity: 1; }
+  50% { transform: scale(1.1); opacity: 0.7; }
+  100% { transform: scale(1); opacity: 1; }
 }
-
-.text-xxs {
-  font-size: 0.65rem;
-}
-
-.italic {
-  font-style: italic;
-}
+.text-xxs { font-size: 0.65rem; }
+.italic { font-style: italic; }
 </style>

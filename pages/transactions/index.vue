@@ -141,12 +141,15 @@ onMounted(async () => {
           </div>
           <div class="d-flex align-center ga-2">
             <VBtn
+              color="primary"
+              prepend-icon="tabler-refresh"
               variant="tonal"
-              color="secondary"
               :loading="loading"
-              icon="tabler-refresh"
               @click="fetchAllTransactions"
-            />
+            >
+              Refresh
+            </VBtn>
+
             <VBtn
               color="primary"
               prepend-icon="tabler-plus"

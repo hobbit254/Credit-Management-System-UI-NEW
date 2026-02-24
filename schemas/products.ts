@@ -8,6 +8,7 @@ export interface Product {
   product_brand: string
   product_model_number: string
   default_price: number | 0
+  inventory_total: number | 0
   active: number
   deleted_at: string
   created_at: string

@@ -8,7 +8,7 @@ const {
   openAdd, addProduct, newProduct, createProduct,
   openEdit, productToEdit, editProduct, updateProduct,
   openDelete, productToDelete, deleteProductModal, deleteProduct,
-  restoreProduct, activateProduct, deactivateProduct,
+  restoreProduct, activateProduct, deactivateProduct, importProductsCsv,
 } = useProduct()
 
 const theme = useTheme()
@@ -24,6 +24,27 @@ onMounted(async () => {
     loading.value = false
   }
 })
+
+// --- New State ---
+const isImportModalOpen = ref(false)
+const csvFile = ref<File | null>(null)
+
+// --- New Methods ---
+const refreshData = async () => {
+  await fetchAllProducts({
+    page: pagination.value.currentPage,
+    perPage: pagination.value.perPage,
+  })
+}
+
+const handleCsvUpload = async () => {
+  if (!csvFile.value)
+    return
+
+  await importProductsCsv(csvFile.value)
+  isImportModalOpen.value = false
+  csvFile.value = null
+}
 
 const perPageOptions = [5, 10, 25, 50, 100]
 
@@ -50,7 +71,7 @@ const headers = [
   { title: 'Status', key: 'active', align: 'center' },
   { title: 'Last Activity', key: 'updated_at' },
   { title: 'Actions', key: 'actions', sortable: false, align: 'end' },
-]
+] as const
 
 function getRowProps({ item }: { item: any }) {
   return item.deleted_at !== null ? { class: 'deleted-row-style italic' } : {}
@@ -78,14 +99,34 @@ function getRowProps({ item }: { item: any }) {
               <span class="text-caption text-medium-emphasis">Manage stock items, pricing, and classifications</span>
             </div>
           </div>
-          <VBtn
-            color="primary"
-            prepend-icon="tabler-plus"
-            variant="elevated"
-            @click="addProduct"
-          >
-            Add Product
-          </VBtn>
+          <div class="d-flex align-center ga-2">
+            <VBtn
+              color="primary"
+              variant="tonal"
+              prepend-icon="tabler-refresh"
+              :loading="loading"
+              @click="refreshData"
+            >
+              Refresh Page
+            </VBtn>
+
+            <VBtn
+              color="secondary"
+              variant="tonal"
+              prepend-icon="tabler-file-upload"
+              @click="isImportModalOpen = true"
+            >
+              Import CSV
+            </VBtn>
+            <VBtn
+              color="primary"
+              prepend-icon="tabler-plus"
+              variant="elevated"
+              @click="addProduct"
+            >
+              Add Product
+            </VBtn>
+          </div>
         </VCardTitle>
 
         <VDivider />
@@ -336,6 +377,59 @@ function getRowProps({ item }: { item: any }) {
     :loading="loading"
     @confirm="deleteProduct"
   />
+
+  <VDialog
+    v-model="isImportModalOpen"
+    max-width="500"
+  >
+    <VCard>
+      <VCardTitle class="pa-4 d-flex align-center">
+        <VIcon
+          start
+          color="secondary"
+        >
+          tabler-file-spreadsheet
+        </VIcon>
+        Bulk Import Products
+      </VCardTitle>
+
+      <VCardText>
+        <div class="text-body-2 mb-4">
+          Please select a .csv file containing your product data. Ensure the headers match our template.
+        </div>
+        <VFileInput
+          v-model="csvFile"
+          label="Select CSV File"
+          accept=".csv"
+          prepend-icon="tabler-upload"
+          variant="outlined"
+          density="compact"
+          :loading="loading"
+          show-size
+        />
+      </VCardText>
+
+      <VCardActions class="pa-4">
+        <VSpacer />
+        <VBtn
+          variant="text"
+          :disabled="loading"
+          @click="isImportModalOpen = false"
+        >
+          Cancel
+        </VBtn>
+        <VBtn
+          color="primary"
+          variant="elevated"
+          :disabled="!csvFile"
+          :loading="loading"
+          @click="handleCsvUpload"
+        >
+          Upload Data
+        </VBtn>
+      </VCardActions>
+    </VCard>
+  </VDialog>
 </template>
 
 <style scoped>

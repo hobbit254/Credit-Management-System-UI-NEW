@@ -37,10 +37,11 @@ export function useProductInventory() {
 
   async function fetchAllProductInventory(options?: { page?: number; perPage?: number }) {
     await withLoading(async () => {
+      // FIX: Correctly update state based on options
       if (options?.page)
         pagination.value.currentPage = options.page
       if (options?.perPage)
-        pagination.value.currentPage = options.perPage
+        pagination.value.perPage = options.perPage
 
       const { data } = await $api.get('product-inventory', {
         params: {
@@ -51,30 +52,38 @@ export function useProductInventory() {
 
       const payload = data.value ?? data
 
-      const [rows, pageInfo] = Array.isArray(payload.data)
-        ? payload.data
-        : [payload.data.rows, payload.data.pagination]
+      // Defensive Parsing to prevent "Cannot read properties of undefined (reading 'total')"
+      let rows: ProductInventory[] = []
+      let pageInfo = { total: 0, currentPage: 1, lastPage: 1 }
 
-      productInventories.value = rows ?? []
+      if (payload?.data) {
+        if (Array.isArray(payload.data)) {
+          // Format: [ [rows], {pagination} ]
+          rows = payload.data[0] || []
+          pageInfo = payload.data[1] || pageInfo
+        }
+        else {
+          // Format: { rows: [], pagination: {} }
+          rows = payload.data.rows || []
+          pageInfo = payload.data.pagination || pageInfo
+        }
+      }
+
+      productInventories.value = rows
       pagination.value = {
-        total: pageInfo.total,
+        total: pageInfo?.total ?? 0,
         perPage: pagination.value.perPage,
-        currentPage: pageInfo.currentPage,
-        lastPage: pageInfo.lastPage,
+        currentPage: pageInfo?.currentPage ?? 1,
+        lastPage: pageInfo?.lastPage ?? 1,
       }
     })
   }
 
   async function fetchAllActiveProductInventory() {
     const { data } = await $api.get('product-inventory/active')
+    const result = Array.isArray(data) ? data : (data?.data || [])
 
-    let result: ProductInventory[] = []
-    if (Array.isArray(data))
-      result = data
-    else if (data && Array.isArray(data.data))
-      result = data.data
-
-    productInventories.value = result // <-- update reactive state here
+    productInventories.value = result
 
     return result
   }
@@ -82,20 +91,12 @@ export function useProductInventory() {
   const openAdd = ref(false)
 
   const newProductInventory = ref<NewProductInventory>({
-    product_uuid: '',
-    supplier_uuid: '',
-    serial_number: '',
-    source_type: '',
-    status: '',
+    product_uuid: '', supplier_uuid: '', serial_number: '', source_type: '', status: '',
   })
 
   function addProductInventory() {
     newProductInventory.value = {
-      product_uuid: '',
-      supplier_uuid: '',
-      serial_number: '',
-      source_type: '',
-      status: '',
+      product_uuid: '', supplier_uuid: '', serial_number: '', source_type: '', status: '',
     }
     openAdd.value = true
   }
@@ -104,12 +105,7 @@ export function useProductInventory() {
     await withLoading(async () => {
       const { data } = await $api.post('product-inventory/create', newProductInventory.value)
 
-      showToast({
-        title: 'Create New Product Inventory',
-        text: data.message,
-        color: 'success',
-        icon: '$success',
-      })
+      showToast({ title: 'Success', text: data.message, color: 'success', icon: '$success' })
       await fetchAllProductInventory()
       openAdd.value = false
     })
@@ -127,12 +123,7 @@ export function useProductInventory() {
     await withLoading(async () => {
       const { data } = await $api.put('product-inventory/updateStatus', productInventory)
 
-      showToast({
-        title: 'Update Product Inventory',
-        text: data.message,
-        color: 'success',
-        icon: '$success',
-      })
+      showToast({ title: 'Success', text: data.message, color: 'success', icon: '$success' })
       await fetchAllProductInventory()
       openEdit.value = false
     })
@@ -152,12 +143,7 @@ export function useProductInventory() {
         inventory_uuid: productInventory.inventory_uuid,
       })
 
-      showToast({
-        title: 'Delete Product Inventory',
-        text: data.message,
-        color: 'success',
-        icon: '$success',
-      })
+      showToast({ title: 'Deleted', text: data.message, color: 'success', icon: '$success' })
       await fetchAllProductInventory()
       openDelete.value = false
     })
@@ -169,46 +155,27 @@ export function useProductInventory() {
         inventory_uuid: productInventory.inventory_uuid,
       })
 
-      showToast({
-        title: 'Restore Product Inventory',
-        text: data.message,
-        color: 'success',
-        icon: '$success',
-      })
+      showToast({ title: 'Restored', text: data.message, color: 'success', icon: '$success' })
       await fetchAllProductInventory()
     })
   }
 
-  async function activateProductInventory(productInventory: ProductInventory) {
+  async function importProductInventoryCsv(file: File) {
     await withLoading(async () => {
-      const { data } = await $api.put('product-inventory/updateStatusActive', {
-        inventory_uuid: productInventory.inventory_uuid,
-        active: 1,
-      })
+      const formData = new FormData()
+
+      formData.append('file', file) // Ensure this key matches what PHP expects (e.g., 'file')
+
+      // REMOVE the manual Content-Type header
+      const { data } = await $api.post('product-inventory/importProductInventory', formData)
 
       showToast({
-        title: 'Activate Product Inventory',
-        text: data.message,
+        title: 'Import Successful',
+        text: data.message || 'Inventory items have been imported.',
         color: 'success',
         icon: '$success',
       })
-      await fetchAllProductInventory()
-    })
-  }
 
-  async function deactivateProductInventory(productInventory: ProductInventory) {
-    await withLoading(async () => {
-      const { data } = await $api.put('product-inventory/updateStatusActive', {
-        inventory_uuid: productInventory.inventory_uuid,
-        active: 0,
-      })
-
-      showToast({
-        title: 'Deactivate Product Inventory',
-        text: data.message,
-        color: 'success',
-        icon: '$success',
-      })
       await fetchAllProductInventory()
     })
   }
@@ -232,8 +199,7 @@ export function useProductInventory() {
     openDelete,
     productInventoryToDelete,
     restoreProductInventory,
-    activateProductInventory,
-    deactivateProductInventory,
+    importProductInventoryCsv,
     fetchAllActiveProductInventory,
   }
 }

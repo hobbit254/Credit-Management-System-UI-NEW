@@ -1,5 +1,6 @@
 <script lang="ts" setup>
 import { PerfectScrollbar } from 'vue3-perfect-scrollbar'
+import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { formatTimeAgo } from '@/utils/formatters'
 import { useNotifications } from '@/composables/notifications/useNotification'
 
@@ -11,14 +12,36 @@ const {
   markAsRead,
 } = useNotifications()
 
+// 👉 Polling logic state
+const POLLING_INTERVAL = 60000 // 60 seconds
+const timer = ref<ReturnType<typeof setInterval> | null>(null)
+
 // 👉 Computed property to limit records
 const limitedNotifications = computed(() => {
   return notifications.value.slice(0, 10)
 })
 
-// Fetch on mount
+// 👉 Start Polling
+const startPolling = () => {
+  timer.value = setInterval(async () => {
+    // We pass a flag if your fetchNotifications supports "silent" background loading
+    // to avoid showing a big spinner every 60 seconds
+    await fetchNotifications()
+  }, POLLING_INTERVAL)
+}
+
+// 👉 Lifecycle Hooks
 onMounted(() => {
-  fetchNotifications()
+  fetchNotifications() // Initial fetch
+  startPolling() // Start background checks
+})
+
+onUnmounted(() => {
+  // Always clear timers to prevent memory leaks when user navigates away
+  if (timer.value) {
+    clearInterval(timer.value)
+    timer.value = null
+  }
 })
 
 // UI State Logic
@@ -29,6 +52,9 @@ const router = useRouter()
 const handleNotificationClick = async (notification: any) => {
   if (!notification.read)
     await markAsRead(notification.notification_uuid)
+
+  // Optional: If notification has a specific link, you could navigate here
+  // if (notification.data?.url) router.push(notification.data.url)
 }
 </script>
 
@@ -41,7 +67,10 @@ const handleNotificationClick = async (notification: any) => {
       offset-x="2"
       offset-y="3"
     >
-      <VIcon icon="tabler-bell" />
+      <VIcon
+        icon="tabler-bell"
+        :class="{ 'animate-pulse': unreadCount > 0 }"
+      />
     </VBadge>
 
     <VMenu
@@ -73,6 +102,7 @@ const handleNotificationClick = async (notification: any) => {
             <IconBtn
               v-show="notifications.length"
               size="34"
+              @click="fetchNotifications"
             >
               <VIcon
                 size="20"
@@ -83,7 +113,7 @@ const handleNotificationClick = async (notification: any) => {
                 activator="parent"
                 location="start"
               >
-                {{ isAllMarkRead ? 'All caught up!' : '' }}
+                {{ isAllMarkRead ? 'All caught up!' : 'Mark all as read' }}
               </VTooltip>
             </IconBtn>
           </template>
@@ -177,3 +207,18 @@ const handleNotificationClick = async (notification: any) => {
     </VMenu>
   </IconBtn>
 </template>
+
+<style scoped>
+.animate-pulse {
+  animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: .5; }
+}
+
+.bg-lighter {
+  background-color: rgba(var(--v-theme-primary,255,255,255), 0.04);
+}
+</style>

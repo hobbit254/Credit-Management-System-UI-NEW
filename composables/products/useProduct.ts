@@ -212,6 +212,25 @@ export function useProduct() {
     })
   }
 
+  async function importProductsCsv(file: File) {
+    await withLoading(async () => {
+      const formData = new FormData()
+
+      formData.append('file', file)
+
+      const { data } = await $api.post('products/importProduct', formData)
+
+      showToast({
+        title: 'Import Successful',
+        text: data.message || 'Products have been imported successfully.',
+        color: 'success',
+        icon: '$success',
+      })
+
+      await fetchAllProducts()
+    })
+  }
+
   return {
     showToast,
     loading,
@@ -234,5 +253,6 @@ export function useProduct() {
     activateProduct,
     deactivateProduct,
     fetchActiveProducts,
+    importProductsCsv,
   }
 }

@@ -178,7 +178,7 @@ const formatCurrency = (amount: number) =>
                 <VListItemTitle class="d-flex justify-space-between align-center">
                   <span class="text-body-2 text-medium-emphasis">Created</span>
                   <span class="text-caption">
-                    <TableDate :value="detail.created_at" />
+                    <TableDate :value="notification?.created_at || null" />
                   </span>
                 </VListItemTitle>
               </VListItem>
@@ -198,7 +198,7 @@ const formatCurrency = (amount: number) =>
               <VListItemTitle class="d-flex justify-space-between align-center">
                 <span class="text-body-2 text-medium-emphasis">Received</span>
                 <span class="text-caption">
-                  <TableDate :value="notification.created_at" />
+                  <TableDate :value="notification?.created_at || null" />
                 </span>
               </VListItemTitle>
             </VListItem>

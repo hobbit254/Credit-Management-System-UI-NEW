@@ -1,44 +1,44 @@
 # Stage 1: Build
 FROM node:20-alpine AS build-stage
 
-# Install pnpm
 RUN corepack enable && corepack prepare pnpm@latest --activate
 
 WORKDIR /app
 
-# 1. Copy package files
+# 1. Install dependencies
 COPY package.json pnpm-lock.yaml* ./
-
-# 2. Install dependencies (ignoring scripts to avoid iconify crash)
 RUN pnpm install --frozen-lockfile --ignore-scripts
 
-# 3. Copy source code
+# 2. Copy source and prepare
 COPY . .
-
-# 4. Generate icons and prepare Nuxt
 RUN pnpm run build:icons
 RUN npx nuxt prepare
 
-# 5. Build the project
-# Note: Since ssr: false is in nuxt.config, 'build' will output static files
-RUN pnpm build
+# 3. FORCE STATIC GENERATION
+# This is the key to getting an index.html
+RUN npx nuxi generate
 
 # Stage 2: Production
 FROM nginx:stable-alpine AS production-stage
 
-# 1. Clean out Nginx default directory
+# 4. Clean Nginx
 RUN rm -rf /usr/share/nginx/html/*
 
-# 2. Copy the static files from the build output
-# In Nuxt 3 (SSR: false), files are always in .output/public
-COPY --from=build-stage /app/.output/public /usr/share/nginx/html
+# 5. Copy with a fallback check
+# We copy the whole .output folder then move the right parts
+COPY --from=build-stage /app/.output /tmp/build_output
 
-# 3. Overwrite the default Nginx config
+RUN if [ -d "/tmp/build_output/public" ]; then \
+        cp -r /tmp/build_output/public/* /usr/share/nginx/html/; \
+    else \
+        cp -r /tmp/build_output/* /usr/share/nginx/html/; \
+    fi
+
+# 6. Copy Nginx config
 COPY ./nginx.conf /etc/nginx/conf.d/default.conf
 
-# 4. Final Verification: If this fails, the build stops (prevents 403 errors later)
-RUN ls -la /usr/share/nginx/html/index.html
+# 7. Final Check - This will show you EXACTLY what was found if it fails
+RUN ls -R /usr/share/nginx/html/ && [ -f /usr/share/nginx/html/index.html ]
 
 EXPOSE 80
-
 CMD ["nginx", "-g", "daemon off;"]

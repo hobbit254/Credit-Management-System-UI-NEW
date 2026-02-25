@@ -26,19 +26,25 @@ RUN pnpm build
 # Stage 2: Production
 FROM nginx:stable-alpine AS production-stage
 
-# 1. COMPLETELY WIPE the directory before copying
-# This ensures the Feb 4th files are deleted
+# 1. Clean out Nginx
 RUN rm -rf /usr/share/nginx/html/*
 
-# 2. Copy the Nuxt files
-# Adding the /. at the end forces Docker to copy the CONTENTS of the folder
-COPY --from=build-stage /app/.output/public/. /usr/share/nginx/html/
+# 2. Copy EVERYTHING from the build output to a temp folder so we can find it
+COPY --from=build-stage /app/.output /tmp/nuxt_output
 
-# 3. Copy your custom config
+# 3. Use this "Search and Move" command to find index.html and put it in the right place
+# This finds where Nuxt hid the public files and moves them to Nginx
+RUN if [ -d "/tmp/nuxt_output/public" ]; then \
+        cp -r /tmp/nuxt_output/public/* /usr/share/nginx/html/; \
+    else \
+        cp -r /tmp/nuxt_output/* /usr/share/nginx/html/; \
+    fi
+
+# 4. Overwrite config
 COPY ./nginx.conf /etc/nginx/conf.d/default.conf
 
-# 4. Debug check: This will print the file size during build
-RUN ls -lh /usr/share/nginx/html/index.html
+# 5. The safety check (it shouldn't fail now)
+RUN ls -la /usr/share/nginx/html/
 
 EXPOSE 80
 CMD ["nginx", "-g", "daemon off;"]

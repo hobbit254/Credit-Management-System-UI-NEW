@@ -6,23 +6,26 @@ RUN corepack enable && corepack prepare pnpm@latest --activate
 
 WORKDIR /app
 
-# 1. Copy ALL files first (needed because postinstall scripts require source files)
-COPY . .
+# 1. Copy package files
+COPY package.json pnpm-lock.yaml* ./
 
-# 2. Install dependencies (this will now find the plugins/iconify folder)
+# 2. Install dependencies
 RUN pnpm install --frozen-lockfile
 
-# 3. Build the project
+# 3. Copy source code
+COPY . .
+
+# 4. Build the project
+# (This creates the .output directory)
 RUN pnpm build
 
 # Stage 2: Production
 FROM nginx:stable-alpine AS production-stage
 
-# Copy the build output (Nuxt/Vite usually outputs to .output/public or dist)
-# For Vuexy Nuxt, it is typically .output/public
+# For Nuxt, the static files are in .output/public
 COPY --from=build-stage /app/.output/public /usr/share/nginx/html
 
-# Copy the Nginx config we created earlier
+# Copy your Nginx config
 COPY ./nginx.conf /etc/nginx/conf.d/default.conf
 
 EXPOSE 80

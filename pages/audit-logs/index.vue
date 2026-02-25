@@ -62,7 +62,7 @@ const headers = [
 ] as const
 
 onMounted(async () => {
-  await refreshLogs()
+  refreshLogs()
 })
 </script>
 

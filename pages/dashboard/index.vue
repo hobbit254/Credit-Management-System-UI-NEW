@@ -12,7 +12,7 @@ const productHeaders = [
   { title: 'Source', key: 'source_type', align: 'center' },
   { title: 'Status', key: 'status', align: 'center' },
   { title: 'Qty', key: 'total', align: 'end', sortable: true },
-]
+] as const
 
 const stats = computed(() => {
   const data = dashboardStats.value
@@ -29,7 +29,7 @@ const stats = computed(() => {
     lowStockCount: p.filter(i => i.status === 'InStock' && i.total <= 2).length,
     totalTrans: totalT,
     collectionRate: totalT > 0 ? Math.ceil((paidT / totalT) * 100) : 0,
-    onCreditCount: p.filter(p => p.status === 'OnCredit').length,
+    onCreditCount: p.filter(f => f.status === 'OnCredit').length,
   }
 })
 

@@ -1,0 +1,17 @@
+services:
+  cms_ui:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        - NUXT_PUBLIC_API_BASE_URL=http://hobbit254.tail6284cc.ts.net:8003/api
+    container_name: cms_ui
+    restart: always
+    ports:
+      - "7001:80" # Maps your host port 7000 to Nginx port 80
+    networks:
+      - homelab_web
+
+networks:
+  homelab_web:
+    external: true

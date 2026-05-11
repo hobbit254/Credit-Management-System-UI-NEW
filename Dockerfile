@@ -1,14 +1,22 @@
 # Stage 1: Build
 FROM node:20-alpine AS build-stage
+
+# Receive the API URL from docker-compose build args
+ARG NUXT_PUBLIC_API_BASE_URL
+# Set it as an environment variable so Nuxt can see it during 'generate'
+ENV NUXT_PUBLIC_API_BASE_URL=$NUXT_PUBLIC_API_BASE_URL
+
 RUN corepack enable && corepack prepare pnpm@latest --activate
 WORKDIR /app
+
 COPY package.json pnpm-lock.yaml* ./
 RUN pnpm install --frozen-lockfile --ignore-scripts
+
 COPY . .
 RUN pnpm run build:icons
 RUN npx nuxt prepare
 
-# Ensure we generate a static SPA
+# Nuxt will now use the ENV variable set above during this step
 RUN npx nuxi generate
 
 # Stage 2: Production
@@ -18,7 +26,7 @@ RUN rm -rf /usr/share/nginx/html/*
 # Copy generated static files
 COPY --from=build-stage /app/.output/public /usr/share/nginx/html
 
-# Copy the proxy config we wrote above
+# Copy the proxy config
 COPY ./nginx.conf /etc/nginx/conf.d/default.conf
 
 # Fail-safe check

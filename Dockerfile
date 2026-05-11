@@ -1,9 +1,9 @@
 # Stage 1: Build
-FROM node:20-alpine AS build-stage
+# CHANGED: Upgraded from node:20 to node:22 to support pnpm 10/11
+FROM node:22-alpine AS build-stage
 
 # Receive the API URL from docker-compose build args
 ARG NUXT_PUBLIC_API_BASE_URL
-# Set it as an environment variable so Nuxt can see it during 'generate'
 ENV NUXT_PUBLIC_API_BASE_URL=$NUXT_PUBLIC_API_BASE_URL
 
 RUN corepack enable && corepack prepare pnpm@latest --activate

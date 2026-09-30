@@ -27,8 +27,6 @@ export interface LoginResponse {
   status: string
   message?: string
   data: {
-    token: string
     user: User
-    expires_in: number
   }
 }

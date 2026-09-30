@@ -13,7 +13,7 @@ import { themeConfig } from '@themeConfig'
 definePageMeta({
   layout: 'blank',
   public: true,
-
+  guestOnly: true,
 })
 
 const form = ref({

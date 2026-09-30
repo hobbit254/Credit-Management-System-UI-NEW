@@ -4,7 +4,12 @@ services:
       context: .
       dockerfile: Dockerfile
       args:
-        - NUXT_PUBLIC_API_BASE_URL=http://hobbit254.tail6284cc.ts.net:8003/api
+        # Relative, not the tailscale API host:port directly - this keeps the UI and
+        # API on the same origin in production (proxied by this container's own
+        # nginx, see nginx.conf), which is what makes the session-cookie auth work
+        # with plain SameSite=Lax and no cross-origin cookie complexity.
+        - NUXT_PUBLIC_API_BASE_URL=/api/v1/
+        - NUXT_PUBLIC_APP_URL=
     container_name: cms_ui
     restart: always
     ports:

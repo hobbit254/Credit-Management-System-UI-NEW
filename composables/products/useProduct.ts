@@ -49,24 +49,22 @@ export function useProduct() {
         },
       })
 
-      // 1. Get the top-level payload
       const payload = response.data?.value ?? response.data
 
-      // 2. Parse the specific structure shown in your log
-      // Structure: payload.data.data (rows) and payload.data.meta (meta)
-      if (payload && payload.status === 'success' && payload.data) {
-        const innerData = payload.data
+      // allProducts returns [rows, meta] on success, or [] when there are no
+      // results — matching the tuple shape every other paginated list
+      // endpoint (users, permissions, etc.) uses.
+      if (payload && payload.status === 'success' && Array.isArray(payload.data)) {
+        const [rows, meta] = payload.data
 
-        // Assign the products (rows)
-        products.value = innerData.data ?? []
+        products.value = rows ?? []
 
-        // Assign the pagination (meta)
-        if (innerData.meta) {
+        if (meta) {
           pagination.value = {
-            total: Number(innerData.meta.total ?? 0),
-            perPage: Number(innerData.meta.perPage ?? pagination.value.perPage),
-            currentPage: Number(innerData.meta.currentPage ?? 1),
-            lastPage: Number(innerData.meta.lastPage ?? 1),
+            total: Number(meta.total ?? 0),
+            perPage: Number(meta.perPage ?? pagination.value.perPage),
+            currentPage: Number(meta.currentPage ?? 1),
+            lastPage: Number(meta.lastPage ?? 1),
           }
         }
       }

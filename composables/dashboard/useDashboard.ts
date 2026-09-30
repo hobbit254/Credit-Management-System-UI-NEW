@@ -1,9 +1,9 @@
-import type { AxiosInstance } from 'axios'
 import { ref } from 'vue'
+import type { ApiClient } from '@/types/api'
 import type { DashboardStats } from '@/schemas/dashboard_stats'
 
 export function useDashboard() {
-  const { $api } = useNuxtApp() as unknown as { $api: AxiosInstance }
+  const { $api } = useNuxtApp() as unknown as { $api: ApiClient }
   const loading = ref(false)
 
   const dashboardStats = ref<DashboardStats>({

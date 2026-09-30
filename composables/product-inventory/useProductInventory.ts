@@ -1,11 +1,11 @@
-import type { AxiosInstance } from 'axios'
 import { ref } from 'vue'
+import type { ApiClient } from '@/types/api'
 import { useAlert } from '@/composables/alerts/useAlert'
 import type { Pagination } from '@/schemas/pagination'
 import type { NewProductInventory, ProductInventory } from '@/schemas/productInventory'
 
 export function useProductInventory() {
-  const { $api } = useNuxtApp() as unknown as { $api: AxiosInstance }
+  const { $api } = useNuxtApp() as unknown as { $api: ApiClient }
   const loading = ref(false)
   const { alert: showToast } = useAlert()
   const productInventories = ref<ProductInventory[]>([])

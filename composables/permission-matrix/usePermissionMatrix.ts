@@ -1,5 +1,5 @@
 import { ref } from 'vue'
-import type { AxiosInstance } from 'axios'
+import type { ApiClient } from '@/types/api'
 import { useNuxtApp } from '#imports'
 import { useAlert } from '~/composables/alerts/useAlert'
 import type { Role } from '~/schemas/role'
@@ -10,7 +10,7 @@ interface RoleWithPermissions extends Role {
 }
 
 export function usePermissionMatrix() {
-  const { $api } = useNuxtApp() as unknown as { $api: AxiosInstance }
+  const { $api } = useNuxtApp() as unknown as { $api: ApiClient }
   const { alert: showToast } = useAlert()
 
   const roles = ref<Role[]>([])

@@ -1,5 +1,5 @@
 import { computed, ref } from 'vue'
-import type { AxiosInstance } from 'axios'
+import type { ApiClient } from '@/types/api'
 import type { NotificationList, Pagination } from '@/schemas/notifications'
 import { useAlert } from '@/composables/alerts/useAlert'
 
@@ -19,7 +19,7 @@ const pagination = ref<Pagination>({
 })
 
 export const useNotifications = () => {
-  const { $api } = useNuxtApp() as unknown as { $api: AxiosInstance }
+  const { $api } = useNuxtApp() as unknown as { $api: ApiClient }
   const { alert: showToast } = useAlert()
 
   // ── Computed ───────────────────────────────────────────────────────────────

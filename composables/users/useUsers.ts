@@ -1,10 +1,10 @@
-import type { AxiosInstance } from 'axios'
+import type { ApiClient } from '@/types/api'
 import type { NewUser, User } from '@/schemas/users'
 import { useAlert } from '@/composables/alerts/useAlert'
 import type { Pagination } from '@/schemas/pagination'
 
 export function useUsers() {
-  const { $api } = useNuxtApp() as unknown as { $api: AxiosInstance }
+  const { $api } = useNuxtApp() as unknown as { $api: ApiClient }
   const users = ref<User[]>([])
   const loading = ref(false)
   const { alert: showToast } = useAlert()

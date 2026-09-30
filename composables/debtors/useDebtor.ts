@@ -1,10 +1,10 @@
-import type { AxiosInstance } from 'axios'
+import type { ApiClient } from '@/types/api'
 import type { Debtor, NewDebtor } from '@/schemas/debtors'
 import { useAlert } from '@/composables/alerts/useAlert'
 import type { Pagination } from '@/schemas/pagination'
 
 export function useDebtor() {
-  const { $api } = useNuxtApp() as unknown as { $api: AxiosInstance }
+  const { $api } = useNuxtApp() as unknown as { $api: ApiClient }
   const debtors = ref<Debtor[]>([])
   const loading = ref(false)
   const { alert: showToast } = useAlert()

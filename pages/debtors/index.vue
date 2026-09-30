@@ -287,7 +287,9 @@ const formatCurrency = (value: number) => {
               </div>
               <div class="d-flex align-center ga-4">
                 <span class="text-caption text-medium-emphasis">
-                  Page <span class="text-high-emphasis font-weight-bold">{{ pagination.currentPage }}</span> of {{ pagination.lastPage }}
+                  Page <span class="text-high-emphasis font-weight-bold">{{
+                    pagination.currentPage
+                  }}</span> of {{ pagination.lastPage }}
                 </span>
                 <VPagination
                   v-model="pagination.currentPage"
@@ -335,12 +337,26 @@ const formatCurrency = (value: number) => {
 }
 
 .deleted-row {
-  background-color: rgba(var(--v-theme-error,255,255,255), 0.04) !important;
+  background-color: rgba(var(--v-theme-error, 255, 255, 255), 0.04) !important;
 }
 
-.text-xxs { font-size: 0.65rem; }
-.font-mono { font-family: 'Fira Code', 'Roboto Mono', monospace; }
-.tracking-widest { letter-spacing: 0.12em; }
-.border { border: 1px solid rgba(var(--v-border-color), 0.12) !important; }
-.opacity-60 { opacity: 0.6; }
+.text-xxs {
+  font-size: 0.65rem;
+}
+
+.font-mono {
+  font-family: 'Fira Code', 'Roboto Mono', monospace;
+}
+
+.tracking-widest {
+  letter-spacing: 0.12em;
+}
+
+.border {
+  border: 1px solid rgba(var(--v-border-color), 0.12) !important;
+}
+
+.opacity-60 {
+  opacity: 0.6;
+}
 </style>

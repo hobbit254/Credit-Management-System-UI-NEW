@@ -36,7 +36,9 @@ function closeModal() {
   isOpen.value = false
 
   // Delay error clearing slightly to avoid visual flicker during close animation
-  setTimeout(() => { fieldErrors.value = {} }, 200)
+  setTimeout(() => {
+    fieldErrors.value = {}
+  }, 200)
 }
 
 function handleConfirm() {

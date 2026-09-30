@@ -3,6 +3,10 @@ import { computed, onMounted } from 'vue'
 import { useTheme } from 'vuetify'
 import { useDebtor } from '@/composables/debtors/useDebtor'
 
+definePageMeta({
+  subject: 'v1/debtors',
+})
+
 const {
   debtors, loading, pagination, showToast, fetchAllDebtors,
   openAdd, newDebtor, addDebtor, createDebtor,

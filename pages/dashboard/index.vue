@@ -2,6 +2,10 @@
 import { computed, onMounted, ref } from 'vue'
 import { useDashboard } from '@/composables/dashboard/useDashboard'
 
+definePageMeta({
+  subject: 'v1/dashboard_stats',
+})
+
 const { loading, dashboardStats, fetchDashboardStats } = useDashboard()
 
 const search = ref('')

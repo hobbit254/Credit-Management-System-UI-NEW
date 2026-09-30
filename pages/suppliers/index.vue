@@ -3,6 +3,10 @@ import { computed, onMounted } from 'vue'
 import { useTheme } from 'vuetify'
 import { useSuppliers } from '@/composables/suppliers/useSuppliers'
 
+definePageMeta({
+  subject: 'v1/suppliers',
+})
+
 const {
   showToast, suppliers, loading, pagination, fetchAllSuppliers,
   newSupplier, openAdd, addSupplier, createSupplier,

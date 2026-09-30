@@ -3,6 +3,10 @@ import { onMounted, ref } from 'vue'
 import type { Notification } from '@/schemas/notifications'
 import { useNotifications } from '@/composables/notifications/useNotification'
 
+definePageMeta({
+  subject: 'v1/notifications',
+})
+
 const {
   notifications,
   loading,

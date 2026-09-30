@@ -3,6 +3,10 @@ import { computed, onMounted, ref } from 'vue'
 import { useTheme } from 'vuetify'
 import { useProduct } from '@/composables/products/useProduct'
 
+definePageMeta({
+  subject: 'v1/products',
+})
+
 const {
   showToast, loading, products, pagination, fetchAllProducts,
   openAdd, addProduct, newProduct, createProduct,

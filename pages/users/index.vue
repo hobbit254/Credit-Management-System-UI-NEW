@@ -3,6 +3,10 @@ import { computed, onMounted } from 'vue'
 import { useTheme } from 'vuetify'
 import { useUsers } from '@/composables/users/useUsers'
 
+definePageMeta({
+  subject: 'v1/users',
+})
+
 const {
   users, pagination, fetchAllUsers, showToast, loading,
   openAdd, newUser, addUser, createUser,

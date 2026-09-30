@@ -35,15 +35,18 @@ export function useCollectors() {
   }
 
   async function fetchAllActiveCollectors() {
-    const { data } = await $api.get('collectors/active')
-
     let result: Collector[] = []
-    if (Array.isArray(data))
-      result = data
-    else if (data && Array.isArray(data.data))
-      result = data.data
 
-    collectors.value = result // <-- update reactive state here
+    await withLoading(async () => {
+      const { data } = await $api.get('collectors/active')
+
+      if (Array.isArray(data))
+        result = data
+      else if (data && Array.isArray(data.data))
+        result = data.data
+
+      collectors.value = result
+    })
 
     return result
   }

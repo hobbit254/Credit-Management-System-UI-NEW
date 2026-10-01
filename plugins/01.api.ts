@@ -41,6 +41,15 @@ export default defineNuxtPlugin(nuxtApp => {
     credentials: 'include',
 
     async onRequest({ options }) {
+      // Without this, Laravel's expectsJson() is false, so an expired/missing
+      // session falls through to Authenticate::redirectTo(), which calls
+      // route('login') — undefined in this API-only app — turning what should
+      // be a clean 401 into an unhandled 500.
+      const headers = new Headers(options.headers as HeadersInit)
+
+      headers.set('Accept', 'application/json')
+      options.headers = headers
+
       const method = (options.method ?? 'GET').toString().toUpperCase()
 
       if (method !== 'GET' && method !== 'HEAD') {
@@ -53,8 +62,6 @@ export default defineNuxtPlugin(nuxtApp => {
         const xsrfToken = readCookie('XSRF-TOKEN')
 
         if (xsrfToken) {
-          const headers = new Headers(options.headers as HeadersInit)
-
           headers.set('X-XSRF-TOKEN', xsrfToken)
           options.headers = headers
         }

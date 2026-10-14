@@ -96,7 +96,7 @@ export function useTransaction() {
       saved = true
 
       showToast({
-        title: 'Update New Transaction',
+        title: 'Item Returned',
         text: data.message,
         color: 'success',
         icon: '$success',

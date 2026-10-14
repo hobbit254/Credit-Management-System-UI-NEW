@@ -4,6 +4,7 @@ import { useTheme } from 'vuetify'
 import { useTransaction } from '@/composables/transactions/useTransaction'
 import type { TransactionItem } from '@/schemas/transactions'
 import { usePayments } from '@/composables/payments/usePayments'
+import { saleStatusColor } from '@/utils/formatters'
 
 definePageMeta({
   subject: 'v1/transactions',
@@ -71,8 +72,10 @@ const copyUuid = (uuid: string) => {
 const calculateProgress = (item: any) => {
   const expected = Number(item.total_expected) || 0
   const collected = Number(item.payments_sum_amount) || 0
+
+  // Nothing owed (e.g. every item returned) means the sale is settled.
   if (expected === 0)
-    return 0
+    return 100
 
   return Math.min(Math.round((collected / expected) * 100), 100)
 }
@@ -192,7 +195,7 @@ onMounted(async () => {
           <!-- Set by the server from accepted payments and returns -->
           <template #item.status="{ item }">
             <VChip
-              :color="item.status === 'Paid' ? 'success' : item.status === 'Partially_Paid' ? 'warning' : 'error'"
+              :color="saleStatusColor(item.status)"
               variant="tonal"
               size="small"
               class="font-weight-medium"

@@ -23,3 +23,12 @@ export const formatTimeAgo = (dateString: string) => {
 
   return dateString
 }
+
+// Sale status chip color: settled with returns is blue, not the red of unpaid.
+const saleStatusColors: Record<string, string> = {
+  Paid: 'success',
+  Closed_With_Returns: 'info',
+  Partially_Paid: 'warning',
+}
+
+export const saleStatusColor = (status?: string) => saleStatusColors[status ?? ''] ?? 'error'

@@ -2,6 +2,7 @@
 import { NewPaymentSchema } from '@/schemas/payments'
 import type { NewPayment } from '@/schemas/payments'
 import { useTransaction } from '@/composables/transactions/useTransaction'
+import { saleStatusColor } from '@/utils/formatters'
 
 const props = defineProps<{
   modelValue: boolean
@@ -135,7 +136,7 @@ const selectedTransaction = computed(() =>
                         {{ selectedTransaction?.transaction_type ?? '—' }}
                       </VChip>
                       <VChip
-                        :color="selectedTransaction?.status === 'Paid' ? 'success' : selectedTransaction?.status === 'Partially_Paid' ? 'warning' : 'error'"
+                        :color="saleStatusColor(selectedTransaction?.status)"
                         size="x-small"
                         variant="tonal"
                       >
@@ -197,7 +198,7 @@ const selectedTransaction = computed(() =>
                             {{ item.raw.transaction_type }}
                           </VChip>
                           <VChip
-                            :color="item.raw.status === 'Paid' ? 'success' : item.raw.status === 'Partially_Paid' ? 'warning' : 'error'"
+                            :color="saleStatusColor(item.raw.status)"
                             size="x-small"
                             variant="tonal"
                           >

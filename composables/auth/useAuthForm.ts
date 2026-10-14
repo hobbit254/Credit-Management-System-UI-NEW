@@ -10,12 +10,19 @@ interface MeResponseUser extends Omit<User, 'role_name'> {
 // The session lives in an httpOnly cookie, so this is the only way to know
 // if it's still valid — confirms (or clears) `user` against the server.
 // Called on every app boot, before any route middleware runs.
+// Plain $fetch, not $api: a 401 here just means "logged out", so it must not
+// trigger $api's error toast and redirect to /login (e.g. on /verify-email).
 export async function verifySession() {
-  const { $api } = useNuxtApp() as unknown as { $api: ApiClient }
+  const config = useRuntimeConfig()
   const user = useState<User | null>('user')
 
   try {
-    const { data } = await $api.get<{ data: MeResponseUser[] }>('users/me')
+    const data = await $fetch<{ data: MeResponseUser[] }>('users/me', {
+      baseURL: (config.public.apiBaseUrl as string) || '/api',
+      credentials: 'include',
+      headers: { Accept: 'application/json' },
+    })
+
     const me = data?.data?.[0]
 
     if (!me)
@@ -35,7 +42,7 @@ export async function verifySession() {
 }
 
 export function useAuthForm() {
-  const { $api, $ensureCsrfCookie } = useNuxtApp() as unknown as { $api: ApiClient; $ensureCsrfCookie: () => Promise<void> }
+  const { $api, $ensureCsrfToken } = useNuxtApp() as unknown as { $api: ApiClient; $ensureCsrfToken: () => Promise<string | null> }
   const { alert: showToast } = useAlert()
   const user = useState<User | null>('user', () => null)
   const loginForm = ref<LoginForm>(createLoginForm())
@@ -44,7 +51,7 @@ export function useAuthForm() {
   async function login() {
     loading.value = true
     try {
-      await $ensureCsrfCookie()
+      await $ensureCsrfToken()
 
       const { data } = await $api.post<LoginResponse>('login', loginForm.value)
 

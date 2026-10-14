@@ -13,15 +13,6 @@ interface User {
   role_name: string
 }
 
-function readCookie(name: string): string | null {
-  if (!import.meta.client)
-    return null
-
-  const match = document.cookie.match(new RegExp(`(?:^|; )${name}=([^;]*)`))
-
-  return match ? decodeURIComponent(match[1]) : null
-}
-
 export default defineNuxtPlugin(nuxtApp => {
   const config = useRuntimeConfig()
   const { alert: showToast } = useAlert()
@@ -29,16 +20,45 @@ export default defineNuxtPlugin(nuxtApp => {
 
   const apiBaseUrl = (config.public.apiBaseUrl as string) || '/api'
 
-  // Root app origin, used only for Sanctum's CSRF-cookie route (not under /api).
-  const appUrl = (config.public.appUrl as string) || ''
+  // The frontend and API live on different registrable domains, so frontend
+  // JS can never read the API's cookies via document.cookie — that's a
+  // browser same-origin restriction, not something config can work around.
+  // So instead of the usual "read the XSRF-TOKEN cookie, echo it back"
+  // dance, the backend hands the raw CSRF token back in a JSON body
+  // (GET csrf-token) and we keep it in memory here, sending it as
+  // X-CSRF-TOKEN — the header Laravel compares as a *raw* value. (The
+  // similarly-named X-XSRF-TOKEN header is for the *encrypted* cookie
+  // ciphertext instead and will always fail here.)
+  let csrfToken: string | null = null
 
-  async function ensureCsrfCookie() {
-    await $fetch(`${appUrl}/sanctum/csrf-cookie`, { credentials: 'include' })
+  // Uses the raw $fetch rather than the wrapped `fetcher` below: this is
+  // always a GET, which never needs the CSRF header anyway, and avoiding
+  // the circular reference keeps the two functions independently readable.
+  async function fetchCsrfToken(): Promise<string | null> {
+    try {
+      const data = await $fetch<{ csrfToken: string }>('csrf-token', {
+        baseURL: apiBaseUrl,
+        credentials: 'include',
+      })
+
+      csrfToken = data.csrfToken
+    }
+    catch {
+      csrfToken = null
+    }
+
+    return csrfToken
   }
 
   const fetcher = $fetch.create({
     baseURL: apiBaseUrl,
     credentials: 'include',
+
+    // A 419 almost always means our cached token went stale (e.g. the
+    // session was invalidated by a prior logout). Retry once, transparently,
+    // after onResponseError below clears it and onRequest fetches a fresh one.
+    retry: 1,
+    retryStatusCodes: [419],
 
     async onRequest({ options }) {
       // Without this, Laravel's expectsJson() is false, so an expired/missing
@@ -53,25 +73,32 @@ export default defineNuxtPlugin(nuxtApp => {
       const method = (options.method ?? 'GET').toString().toUpperCase()
 
       if (method !== 'GET' && method !== 'HEAD') {
-        // Every stateful mutating request needs a matching X-XSRF-TOKEN header.
-        // Fetch the cookie lazily if it isn't set yet (e.g. a public form
-        // submitted before anything else hit the API).
-        if (!readCookie('XSRF-TOKEN'))
-          await ensureCsrfCookie()
+        if (!csrfToken)
+          await fetchCsrfToken()
 
-        const xsrfToken = readCookie('XSRF-TOKEN')
-
-        if (xsrfToken) {
-          headers.set('X-XSRF-TOKEN', xsrfToken)
+        if (csrfToken) {
+          headers.set('X-CSRF-TOKEN', csrfToken)
           options.headers = headers
         }
       }
     },
 
-    onResponseError({ response }) {
+    onResponseError({ response, options }) {
       const status = response.status
-      let message = 'Unexpected error occurred'
       const responseData = response._data
+
+      if (status === 419) {
+        // Drop the stale token so the retry's onRequest fetches a fresh one.
+        csrfToken = null
+
+        // options.retry is the *remaining* retry count for this attempt —
+        // if it's still > 0, ofetch is about to retry automatically, so
+        // don't show an error for what the user will never actually see.
+        if (typeof options.retry === 'number' && options.retry > 0)
+          return
+      }
+
+      let message = 'Unexpected error occurred'
 
       if (status === 400) {
         message = responseData?.message || 'Bad request'
@@ -98,6 +125,15 @@ export default defineNuxtPlugin(nuxtApp => {
       }
       else if (status === 404) {
         message = 'Resource not found'
+      }
+      else if (status === 419) {
+        // Retries exhausted — the session really is gone.
+        message = 'Your session has expired. Please log in again.'
+        user.value = null
+        if (import.meta.client) {
+          localStorage.removeItem('user')
+          navigateTo('/login')
+        }
       }
       else if (status === 422) {
         message = responseData?.message || 'Validation failed'
@@ -145,5 +181,5 @@ export default defineNuxtPlugin(nuxtApp => {
   }
 
   nuxtApp.provide('api', api)
-  nuxtApp.provide('ensureCsrfCookie', ensureCsrfCookie)
+  nuxtApp.provide('ensureCsrfToken', fetchCsrfToken)
 })

@@ -1,7 +1,6 @@
 import { computed, ref } from 'vue'
 import type { ApiClient } from '@/types/api'
 import type { NotificationList, Pagination } from '@/schemas/notifications'
-import { useAlert } from '@/composables/alerts/useAlert'
 
 const notifications = ref<NotificationList>([])
 const loading = ref(false)
@@ -20,7 +19,6 @@ const pagination = ref<Pagination>({
 
 export const useNotifications = () => {
   const { $api } = useNuxtApp() as unknown as { $api: ApiClient }
-  const { alert: showToast } = useAlert()
 
   // ── Computed ───────────────────────────────────────────────────────────────
 
@@ -49,12 +47,6 @@ export const useNotifications = () => {
       notifications.value = Array.isArray(items) ? items : []
       if (meta)
         pagination.value = meta
-      showToast({
-        title: 'Notifications',
-        text: data.message,
-        color: 'success',
-        icon: '$success',
-      })
     }
     catch (err: any) {
       error.value = err?.message ?? 'Failed to load notifications'

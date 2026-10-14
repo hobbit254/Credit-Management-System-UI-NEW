@@ -22,6 +22,9 @@ export function useDebtor() {
       await fn()
     }
     catch (error: any) {
+      // plugins/01.api.ts already toasted HTTP errors with the server's message; don't overwrite it
+      if (error?.response)
+        return
       showToast({
         title: 'Error',
         text: error?.message ?? 'Something went wrong',

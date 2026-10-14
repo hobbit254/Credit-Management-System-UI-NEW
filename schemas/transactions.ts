@@ -97,7 +97,8 @@ export interface TransactionItem {
 
 export const NewTransactionItemSchema = z.object({
   product_inventory_uuid: z.string().uuid('Invalid product inventory UUID'),
-  unit_price: z.string().min(1, 'Unit price is required'),
+  unit_price: z.string().min(1, 'Unit price is required')
+    .refine(v => Number(v) > 0, 'Unit price must be greater than 0'),
   source_type: z.string().min(1, 'Source type is required'),
   status: z.string().min(1, 'Status is required'),
 })
@@ -117,7 +118,8 @@ export const NewTransactionSchema = z.object({
   transaction_type: z.string().min(1, 'Transaction type is required'),
   transaction_items: z.array(NewTransactionItemSchema).min(1, 'At least one transaction item is required'),
   payment_method: z.string().optional(),
-  amount: z.string().optional(),
+  amount: z.string().optional()
+    .refine(v => !v || Number(v) > 0, 'Amount must be greater than 0'),
   reference_code: z.string().optional(),
 }).superRefine((data, ctx) => {
   const hasExisting = !!data.runner_id

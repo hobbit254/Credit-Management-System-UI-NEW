@@ -26,11 +26,25 @@ const message = ref('Verifying email...')
 const status = ref(false)
 const email = ref('')
 
+// The link must point at our own API. Otherwise a crafted link could make this
+// page fetch another site and show that site's message as ours.
+function isOwnApiUrl(url: string) {
+  const apiOrigin = new URL(useRuntimeConfig().public.apiBaseUrl as string || '/api', window.location.origin).origin
+
+  try {
+    return new URL(url, apiOrigin).origin === apiOrigin
+  }
+  catch {
+    return false
+  }
+}
+
 onMounted(async () => {
-  const redirect = route.query.redirect as string
-  if (redirect) {
+  const redirect = decodeURIComponent(route.query.redirect as string || '')
+
+  if (redirect && isOwnApiUrl(redirect)) {
     try {
-      const res = await verifyEmail(decodeURIComponent(redirect))
+      const res = await verifyEmail(redirect)
 
       message.value = res?.message || 'Verification complete.'
       status.value = true

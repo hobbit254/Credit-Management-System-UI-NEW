@@ -56,7 +56,11 @@ const suppliers = ref<Supplier[]>([])
 const loadingProducts = ref<boolean>(false)
 const loadingSuppliers = ref<boolean>(false)
 
-onMounted(async () => {
+// Load each time the dialog opens: the page mounts it once, so loading on mount kept
+// lists from when the page opened (e.g. a unit sold a minute ago still offered).
+watch(() => props.modelValue, async open => {
+  if (!open)
+    return
   loadingProducts.value = true
   loadingSuppliers.value = true
   try {
@@ -72,7 +76,7 @@ onMounted(async () => {
     loadingProducts.value = false
     loadingSuppliers.value = false
   }
-})
+}, { immediate: true })
 
 const productItemTitle = (item: Product) => {
   if (!item)

@@ -51,7 +51,11 @@ const { fetchAllActiveCategories } = useCategory()
 const categories = ref<Category[]>([])
 const loadingCategories = ref(false)
 
-onMounted(async () => {
+// Load each time the dialog opens: the page mounts it once, so loading on mount kept
+// lists from when the page opened (e.g. a unit sold a minute ago still offered).
+watch(() => props.modelValue, async open => {
+  if (!open)
+    return
   loadingCategories.value = true
   try {
     const data = await fetchAllActiveCategories()
@@ -61,7 +65,7 @@ onMounted(async () => {
   finally {
     loadingCategories.value = false
   }
-})
+}, { immediate: true })
 </script>
 
 <template>

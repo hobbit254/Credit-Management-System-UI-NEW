@@ -70,7 +70,11 @@ const { fetchAllActiveProductInventory } = useProductInventory()
 const productInventories = ref<ProductInventory[]>([])
 const loadingInventory = ref(false)
 
-onMounted(async () => {
+// Load each time the dialog opens: the page mounts it once, so loading on mount kept
+// lists from when the page opened (e.g. a unit sold a minute ago still offered).
+watch(() => props.modelValue, async open => {
+  if (!open)
+    return
   loadingDebtors.value = true
   loadingCollectors.value = true
   loadingInventory.value = true
@@ -91,7 +95,7 @@ onMounted(async () => {
     loadingCollectors.value = false
     loadingInventory.value = false
   }
-})
+}, { immediate: true })
 
 // Runner new collector toggle
 interface NewCollectorFields { full_name: string; id_number: string; phone_number: string }

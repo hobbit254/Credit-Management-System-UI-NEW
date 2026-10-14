@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, ref, watch } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { type NewUser, NewUserSchema } from '@/schemas/users'
 import type { Role } from '@/schemas/role'
 import { useRoles } from '@/composables/roles/useRoles'
@@ -38,7 +38,11 @@ watch(localUser, newVal => {
 
 const { fetchAllActiveRoles } = useRoles()
 
-onMounted(async () => {
+// Load each time the dialog opens: the page mounts it once, so loading on mount kept
+// lists from when the page opened (e.g. a unit sold a minute ago still offered).
+watch(() => props.modelValue, async open => {
+  if (!open)
+    return
   loadingRoles.value = true
   try {
     const data = await fetchAllActiveRoles()
@@ -48,7 +52,7 @@ onMounted(async () => {
   finally {
     loadingRoles.value = false
   }
-})
+}, { immediate: true })
 
 function closeModal() {
   isOpen.value = false

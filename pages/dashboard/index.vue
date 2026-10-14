@@ -235,6 +235,7 @@ onMounted(() => {
               rounded="lg"
               class="mt-2"
               size="small"
+              to="/transactions"
             >
               View Credit Ledger
             </VBtn>

@@ -25,7 +25,11 @@ const paymentMethodOptions = ['Cash', 'M-Pesa', 'Bank', 'Cheque']
 const { transactions, fetchAllTransactions } = useTransaction()
 const loadingTransactions = ref(false)
 
-onMounted(async () => {
+// Load each time the dialog opens: the page mounts it once, so loading on mount kept
+// lists from when the page opened (e.g. a unit sold a minute ago still offered).
+watch(() => props.modelValue, async open => {
+  if (!open)
+    return
   loadingTransactions.value = true
   try {
     // Only sales that still owe money. shortcut: the newest 100 open sales; add a server-side search if a shop ever has more.
@@ -34,7 +38,7 @@ onMounted(async () => {
   finally {
     loadingTransactions.value = false
   }
-})
+}, { immediate: true })
 
 const localPayment = ref<NewPayment>({
   transaction_uuid: '',

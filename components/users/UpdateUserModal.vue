@@ -1,5 +1,5 @@
 <script lang="ts" setup>
-import { computed, onMounted, ref, watch } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { useTheme } from 'vuetify'
 import type { User } from '@/schemas/users'
 import { useRoles } from '@/composables/roles/useRoles'
@@ -63,7 +63,11 @@ const { fetchAllActiveRoles } = useRoles()
 const roles = ref<Role[]>([])
 const loadingRoles = ref(false)
 
-onMounted(async () => {
+// Load each time the dialog opens: the page mounts it once, so loading on mount kept
+// lists from when the page opened (e.g. a unit sold a minute ago still offered).
+watch(() => props.modelValue, async open => {
+  if (!open)
+    return
   loadingRoles.value = true
   try {
     const data = await fetchAllActiveRoles()
@@ -73,7 +77,7 @@ onMounted(async () => {
   finally {
     loadingRoles.value = false
   }
-})
+}, { immediate: true })
 </script>
 
 <template>

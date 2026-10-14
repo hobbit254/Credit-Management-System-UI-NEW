@@ -53,7 +53,7 @@ const headers = [
   { title: 'Last Activity', key: 'updated_at', width: '200px' },
   { title: 'Lifecycle', key: 'deleted_at', width: '150px' },
   { title: 'Actions', key: 'actions', sortable: false, align: 'end' },
-]
+] as const
 
 function getRowProps({ item }: { item: any }) {
   return item.deleted_at !== null ? { class: 'deleted-row-style text-error italic' } : {}
@@ -254,7 +254,7 @@ function getRowProps({ item }: { item: any }) {
                   :length="pagination.lastPage"
                   :total-visible="5"
                   density="compact"
-                  @update:model-value="(page: number) => fetchAllCategories(page)"
+                  @update:model-value="(page: number) => fetchAllCategories({ page })"
                 />
               </div>
             </div>

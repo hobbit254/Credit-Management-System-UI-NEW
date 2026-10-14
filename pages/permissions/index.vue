@@ -292,7 +292,7 @@ function getRowProps({ item }: { item: any }) {
                   :total-visible="5"
                   density="compact"
                   active-color="primary"
-                  @update:model-value="(page) => fetchAllPermissions(page)"
+                  @update:model-value="(page) => fetchAllPermissions({ page })"
                 />
               </div>
             </div>

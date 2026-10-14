@@ -2,7 +2,7 @@
 import avatar1 from '@images/avatars/avatar-1.png'
 import { useAuthForm } from '@/composables/auth/useAuthForm'
 
-const { user } = useAuthForm()
+const { user, logout } = useAuthForm()
 </script>
 
 <template>
@@ -51,9 +51,9 @@ const { user } = useAuthForm()
             </template>
 
             <VListItemTitle class="font-weight-semibold">
-              {{ user.full_name }}
+              {{ user?.full_name }}
             </VListItemTitle>
-            <VListItemSubtitle>{{ user.role_name }}</VListItemSubtitle>
+            <VListItemSubtitle>{{ user?.role_name }}</VListItemSubtitle>
           </VListItem>
 
           <VDivider class="my-2" />
@@ -75,7 +75,7 @@ const { user } = useAuthForm()
           <VDivider class="my-2" />
 
           <!-- 👉 Logout -->
-          <VListItem to="/">
+          <VListItem @click="logout">
             <template #prepend>
               <VIcon
                 class="me-2"

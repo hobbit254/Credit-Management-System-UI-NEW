@@ -1,6 +1,4 @@
 <script lang="ts" setup>
-import { NuxtLink } from '#components'
-
 import { layoutConfig } from '@layouts'
 import { can } from '@layouts/plugins/casl'
 import { useLayoutConfigStore } from '@layouts/stores/config'
@@ -14,6 +12,9 @@ import {
 defineProps<{
   item: NavLink
 }>()
+
+// Not `import { NuxtLink } from '#components'`: Vite's dependency scan can't resolve that virtual module.
+const NuxtLink = resolveComponent('NuxtLink')
 
 const configStore = useLayoutConfigStore()
 const hideTitleAndBadge = configStore.isVerticalNavMini()

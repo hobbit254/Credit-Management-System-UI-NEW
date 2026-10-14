@@ -36,18 +36,6 @@ function handleConfirm() {
   emit('confirm')
 }
 
-// Generate a slug preview based on name and action
-const slugPreview = computed(() => {
-  const name = localPermission.value.permission_name
-    ?.toLowerCase()
-    .replace(/\s+/g, '-')
-    .replace(/[^\w-]+/g, '') || 'permission'
-
-  const action = localPermission.value.permission_action?.toLowerCase() || 'action'
-
-  return `${name}:${action}`
-})
-
 const permissionActionItems = [
   { title: 'READ (GET)', value: 'GET', icon: 'tabler-eye' },
   { title: 'UPDATE (PUT)', value: 'PUT', icon: 'tabler-edit' },
@@ -122,17 +110,21 @@ const permissionActionItems = [
               cols="12"
               class="mb-2"
             >
-              <div class="d-flex align-center ga-2 px-3 py-2 rounded bg-var-theme-background border-dashed">
-                <VIcon
-                  size="14"
-                  color="secondary"
-                >
-                  tabler-key
-                </VIcon>
-                <span class="text-caption text-medium-emphasis">
-                  Resulting Slug: <code class="text-primary font-weight-bold">{{ slugPreview }}</code>
-                </span>
-              </div>
+              <!-- The permission only works if this is a real API route for the action above -->
+              <AppTextField
+                v-model="localPermission.permission_slug"
+                label="Route*"
+                placeholder="e.g. v1/product-inventory/delete"
+                hint="The API route this permission opens, exactly as the server has it."
+                persistent-hint
+                class="font-mono"
+              >
+                <template #prepend-inner>
+                  <VIcon size="18">
+                    tabler-route
+                  </VIcon>
+                </template>
+              </AppTextField>
             </VCol>
 
             <VCol cols="12">

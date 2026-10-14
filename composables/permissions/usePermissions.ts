@@ -2,7 +2,7 @@ import type { ApiClient } from '@/types/api'
 import type { NewPermission, Permission } from '@/schemas/permissions'
 import { useAlert } from '@/composables/alerts/useAlert'
 import type { Pagination } from '@/schemas/pagination'
-import { parsePage } from '@/utils/requests'
+import { parsePage, withLoading } from '@/utils/requests'
 
 export function usePermissions() {
   const { $api } = useNuxtApp() as unknown as { $api: ApiClient }
@@ -49,16 +49,17 @@ export function usePermissions() {
     permission_name: '',
     description: '',
     permission_action: '',
+    permission_slug: '',
   })
 
   function addPermission() {
-    newPermission.value = { permission_name: '', description: '', permission_action: '' }
+    newPermission.value = { permission_name: '', description: '', permission_action: '', permission_slug: '' }
     openAdd.value = true
   }
 
+  // Closes only on success, so a refused route (e.g. a typo) keeps what was typed; the toast shows why.
   async function createPermission() {
-    loading.value = true
-    try {
+    await withLoading(loading, async () => {
       const { data } = await $api.post('permissions/create', newPermission.value)
 
       showToast({
@@ -68,11 +69,8 @@ export function usePermissions() {
         icon: '$success',
       })
       await fetchAllPermissions()
-    }
-    finally {
-      loading.value = false
       openAdd.value = false
-    }
+    })
   }
 
   const openEdit = ref(false)

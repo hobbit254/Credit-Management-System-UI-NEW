@@ -22,5 +22,10 @@ export const NewPermissionSchema = z.object({
   permission_action: z
     .string()
     .min(3),
+
+  // The API route this permission opens, exactly as the server matches it, e.g. v1/product-inventory/delete.
+  permission_slug: z
+    .string()
+    .min(3),
 })
 export type NewPermission = z.infer<typeof NewPermissionSchema>

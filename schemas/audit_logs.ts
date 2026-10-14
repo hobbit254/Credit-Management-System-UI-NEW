@@ -16,7 +16,6 @@ export type AuditLogInternalPayload = z.infer<typeof AuditLogInternalPayloadSche
 export const AuditLogDetailsSchema = z.object({
   ip: z.string(),
   email: z.email(),
-  token: z.string(),
   payload: AuditLogInternalPayloadSchema,
   user_id: z.number(),
   userAgent: z.string(),

@@ -77,7 +77,13 @@ export default defineNuxtPlugin(nuxtApp => {
         message = responseData?.message || 'Bad request'
       }
       else if (status === 401) {
-        message = 'Unauthorized — please log in again'
+        // Show the server's reason (wrong password, account deactivated) unless
+        // it's the generic "Unauthenticated", which just means the session ended.
+        const serverMessage: string | undefined = responseData?.message
+
+        message = serverMessage && !/^unauthenticated\.?$/i.test(serverMessage)
+          ? serverMessage
+          : 'Unauthorized — please log in again'
         user.value = null
         if (import.meta.client) {
           localStorage.removeItem('user')
@@ -87,7 +93,8 @@ export default defineNuxtPlugin(nuxtApp => {
         }
       }
       else if (status === 403) {
-        message = 'Forbidden — you do not have permission to access this resource'
+        // e.g. "This account has been deactivated. Contact an administrator." on login
+        message = responseData?.message || 'Forbidden — you do not have permission to access this resource'
       }
       else if (status === 404) {
         message = 'Resource not found'

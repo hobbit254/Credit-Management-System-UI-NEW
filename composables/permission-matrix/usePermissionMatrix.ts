@@ -51,7 +51,7 @@ export function usePermissionMatrix() {
 
     // 🔹 Always load paginated permissions
     const permsRes = await $api.get(
-      `permissions/active/paginate?page=${page}&perPage=${perPage}`,
+      `permissions/active/paginate?page=${page}&per_page=${perPage}`,
     )
 
     permissions.value = permsRes.data.data[0]
@@ -76,10 +76,13 @@ export function usePermissionMatrix() {
       matrix.value[roleId].add(permId)
 
     try {
-      await $api.post('permission-matrix/create', {
-        roles_uuid: roleId,
-        permission_uuid: permId,
-      })
+      // create only grants (it no longer toggles), so revoking needs remove.
+      const body = { roles_uuid: roleId, permission_uuid: permId }
+
+      if (exists)
+        await $api.put('permission-matrix/remove', body)
+      else
+        await $api.post('permission-matrix/create', body)
 
       showToast({
         title: exists ? 'Permission Removed' : 'Permission Added',

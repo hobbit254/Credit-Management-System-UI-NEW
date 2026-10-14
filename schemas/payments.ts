@@ -43,7 +43,8 @@ export type PaymentList = z.infer<typeof PaymentListSchema>
 // ── Write schemas ──────────────────────────────────────────────────────────────
 
 export const NewPaymentSchema = z.object({
-  amount: z.string().min(1, 'Amount is required'),
+  amount: z.string().min(1, 'Amount is required')
+    .refine(v => Number(v) > 0, 'Amount must be greater than 0'),
   payment_method: z.string().min(1, 'Payment method is required'),
   reference_code: z.string(),
   transaction_uuid: z.uuid('Please select a transaction'),

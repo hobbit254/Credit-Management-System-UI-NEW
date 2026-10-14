@@ -19,7 +19,12 @@ export const NotificationSchema = z.object({
   user_id: z.number(),
   title: z.string(),
   message: z.string(),
-  details: z.array(NotificationDetailSchema),
+
+  // Overdue warnings carry the transaction items; import notifications carry counts.
+  details: z.union([
+    z.array(NotificationDetailSchema),
+    z.object({ imported: z.number(), skipped: z.number() }),
+  ]),
   read: z.boolean(),
   read_at: z.string().nullable(),
   created_at: z.string(),

@@ -7,7 +7,7 @@ const props = defineProps<{
   transactionUuid: string
 }>()
 
-const emit = defineEmits(['update:modelValue'])
+const emit = defineEmits(['update:modelValue', 'updated'])
 
 const isOpen = computed({
   get: () => props.modelValue,
@@ -16,7 +16,8 @@ const isOpen = computed({
 
 const { loading, updatePaymentStatus } = usePayments()
 
-const paymentStatusOptions = ['PENDING', 'ACCEPTED', 'REJECTED']
+// Only a PENDING payment can be decided, and the decision is final.
+const paymentStatusOptions = ['ACCEPTED', 'REJECTED']
 
 const headers = [
   { title: 'Payment Method', key: 'payment_method' },
@@ -28,7 +29,7 @@ const headers = [
 
 async function handleStatusChange(item: any, newStatus: string) {
   await updatePaymentStatus(item.payment_uuid, newStatus)
-  item.status = newStatus
+  emit('updated') // the sale's status follows its payments
   isOpen.value = false
 }
 
@@ -156,7 +157,7 @@ const totalAmount = computed(() =>
                 <VListItem
                   v-for="status in paymentStatusOptions"
                   :key="status"
-                  :disabled="item.status === status || loading"
+                  :disabled="item.status !== 'PENDING' || loading"
                   @click="handleStatusChange(item, status)"
                 >
                   <div class="d-flex align-center ga-2">

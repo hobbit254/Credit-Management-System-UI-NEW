@@ -98,23 +98,6 @@ export function useTransaction() {
     })
   }
 
-  async function updateTransactionStatus(transactionUuid: string, status: string) {
-    await withLoading(loading, async () => {
-      const { data } = await $api.put('transactions/updateStatus', {
-        transaction_uuid: transactionUuid,
-        status,
-      })
-
-      showToast({
-        title: 'Update Transaction Status',
-        text: data.message,
-        color: 'success',
-        icon: '$success',
-      })
-      await fetchAllTransactions()
-    })
-  }
-
   return {
     transactions,
     loading,
@@ -126,6 +109,5 @@ export function useTransaction() {
     addTransaction,
     createTransaction,
     updateTransactionItemStatus,
-    updateTransactionStatus,
   }
 }

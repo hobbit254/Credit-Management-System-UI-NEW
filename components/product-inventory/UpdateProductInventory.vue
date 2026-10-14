@@ -95,7 +95,8 @@ const statusOptions = [
   { label: 'Sold', icon: 'tabler-shopping-cart', color: 'secondary' },
 ]
 
-const statusLabels = statusOptions.map(s => s.label)
+// Only these can be set by hand (sales set the rest); the current status stays listed so other fields can be edited.
+const statusLabels = computed(() => [...new Set(['InStock', 'ReturnedToSupplier', props.productInventory?.status].filter(Boolean))])
 
 const selectedStatusOption = computed(() =>
   statusOptions.find(s => s.label === localStatus.value),

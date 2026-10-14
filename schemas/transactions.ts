@@ -95,10 +95,14 @@ export interface TransactionItem {
   product_inventory: ProductInventory
 }
 
+// Money is stored with 2 decimals; the server refuses more rather than rounding.
+export const hasCents = (v?: string) => !v || /^\d+(?:\.\d{1,2})?$/.test(v.trim())
+
 export const NewTransactionItemSchema = z.object({
   product_inventory_uuid: z.string().uuid('Invalid product inventory UUID'),
   unit_price: z.string().min(1, 'Unit price is required')
-    .refine(v => Number(v) > 0, 'Unit price must be greater than 0'),
+    .refine(v => Number(v) > 0, 'Unit price must be greater than 0')
+    .refine(hasCents, 'Use at most 2 decimals'),
   source_type: z.string().min(1, 'Source type is required'),
   status: z.string().min(1, 'Status is required'),
 })
@@ -119,7 +123,8 @@ export const NewTransactionSchema = z.object({
   transaction_items: z.array(NewTransactionItemSchema).min(1, 'At least one transaction item is required'),
   payment_method: z.string().optional(),
   amount: z.string().optional()
-    .refine(v => !v || Number(v) > 0, 'Amount must be greater than 0'),
+    .refine(v => !v || Number(v) > 0, 'Amount must be greater than 0')
+    .refine(hasCents, 'Use at most 2 decimals'),
   reference_code: z.string().optional(),
 }).superRefine((data, ctx) => {
   const hasExisting = !!data.runner_id
@@ -156,6 +161,17 @@ export const NewTransactionSchema = z.object({
         message: 'Amount is required',
         path: ['amount'],
       })
+    }
+    else if (data.transaction_type === 'Sale') {
+      // A sale is paid in full; compare whole cents, like the server.
+      const total = data.transaction_items.reduce((sum, item) => sum + Math.round(Number(item.unit_price) * 100), 0)
+      if (Math.round(Number(data.amount) * 100) !== total) {
+        ctx.addIssue({
+          code: 'custom',
+          message: `A sale is paid in full: the amount must be ${(total / 100).toFixed(2)}. Use a credit sale to pay later.`,
+          path: ['amount'],
+        })
+      }
     }
 
     if (

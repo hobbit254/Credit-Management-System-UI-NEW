@@ -20,10 +20,9 @@ const {
   addTransaction,
   createTransaction,
   updateTransactionItemStatus,
-  updateTransactionStatus,
 } = useTransaction()
 
-const { updatePaymentStatus, createPayment } = usePayments()
+const { createPayment } = usePayments()
 const theme = useTheme()
 const surfaceColor = computed(() => theme.current.value.colors.surface)
 
@@ -37,7 +36,6 @@ const selectedPaymentTransactionUuid = ref('')
 const openCreatePaymentModal = ref(false)
 const selectedTransactionForPayment = ref('')
 
-const transactionStatusOptions = ['UnPaid', 'Partially_Paid', 'Paid', 'Closed_With_Returns']
 const perPageOptions = [5, 10, 25, 50, 100]
 
 // Logic Functions
@@ -79,13 +77,11 @@ const calculateProgress = (item: any) => {
   return Math.min(Math.round((collected / expected) * 100), 100)
 }
 
-function handleUpdatePaymentStatus(paymentUuid: string, status: string) {
-  updatePaymentStatus(paymentUuid, status)
-}
-
 async function handleCreatePayment(payment: any) {
-  await createPayment(payment)
+  if (!await createPayment(payment))
+    return
   openCreatePaymentModal.value = false
+  await fetchAllTransactions() // so the sale's payment history includes it
 }
 
 async function handleUpdateItemStatus(item: TransactionItem, newStatus: string) {
@@ -190,37 +186,16 @@ onMounted(async () => {
             </div>
           </template>
 
+          <!-- Set by the server from accepted payments and returns -->
           <template #item.status="{ item }">
-            <VMenu location="bottom center">
-              <template #activator="{ props: menuProps }">
-                <VChip
-                  :color="item.status === 'Paid' ? 'success' : item.status === 'Partially_Paid' ? 'warning' : 'error'"
-                  variant="tonal"
-                  size="small"
-                  class="cursor-pointer font-weight-medium"
-                  v-bind="menuProps"
-                >
-                  {{ item.status.replace(/_/g, ' ') }}
-                  <VIcon
-                    end
-                    size="12"
-                  >
-                    tabler-chevron-down
-                  </VIcon>
-                </VChip>
-              </template>
-              <VList density="compact">
-                <VListItem
-                  v-for="status in transactionStatusOptions"
-                  :key="status"
-                  @click="updateTransactionStatus(item.transaction_uuid, status)"
-                >
-                  <VListItemTitle class="text-caption">
-                    {{ status.replace(/_/g, ' ') }}
-                  </VListItemTitle>
-                </VListItem>
-              </VList>
-            </VMenu>
+            <VChip
+              :color="item.status === 'Paid' ? 'success' : item.status === 'Partially_Paid' ? 'warning' : 'error'"
+              variant="tonal"
+              size="small"
+              class="font-weight-medium"
+            >
+              {{ item.status.replace(/_/g, ' ') }}
+            </VChip>
           </template>
 
           <template #item.debtor.debtor_name="{ item }">
@@ -445,7 +420,7 @@ onMounted(async () => {
     v-model="openPaymentsModal"
     :payments="selectedPayments"
     :transaction-uuid="selectedPaymentTransactionUuid"
-    @update:status="handleUpdatePaymentStatus"
+    @updated="fetchAllTransactions"
   />
   <CreateTransactionModal
     v-model:model-value="openAdd"

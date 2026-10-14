@@ -20,7 +20,8 @@ const {
 const theme = useTheme()
 const surfaceColor = computed(() => theme.current.value.colors.surface)
 
-const paymentStatusOptions = ['PENDING', 'ACCEPTED', 'REJECTED']
+// Only a PENDING payment can be decided, and the decision is final.
+const paymentStatusOptions = ['ACCEPTED', 'REJECTED']
 const perPageOptions = [5, 10, 25, 50, 100]
 
 // Modal States
@@ -45,8 +46,8 @@ function viewTransactionItems(item: Payment) {
 }
 
 async function handleCreatePayment(payment: NewPayment) {
-  await createPayment(payment)
-  openCreateModal.value = false
+  if (await createPayment(payment))
+    openCreateModal.value = false
 }
 
 // Strictly Typed Headers
@@ -180,7 +181,7 @@ onMounted(async () => {
                 <VListItem
                   v-for="status in paymentStatusOptions"
                   :key="status"
-                  :disabled="item.status === status || loading"
+                  :disabled="item.status !== 'PENDING' || loading"
                   @click="handleUpdatePaymentStatus(item, status)"
                 >
                   <template #prepend>

@@ -114,8 +114,15 @@ export default defineNuxtPlugin(nuxtApp => {
         nuxtApp.runWithContext(clearSession)
         navigateTo('/login')
       }
+      else if (status === 409) {
+        // e.g. "This payment is already ACCEPTED and can't be changed."
+        message = responseData?.message || 'This record was already changed'
+      }
       else if (status === 422) {
-        message = responseData?.message || 'Validation failed'
+        // The server lists the reasons in `details`; its `message` is only "Validation Failed".
+        message = Array.isArray(responseData?.details) && responseData.details.length
+          ? responseData.details.join(' ')
+          : responseData?.message || 'Validation failed'
       }
       else if (status === 500) {
         message = 'Server error — please try later'

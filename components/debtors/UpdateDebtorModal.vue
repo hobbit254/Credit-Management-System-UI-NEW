@@ -234,6 +234,8 @@ const debtorTypes = [
                 label="Credit Limit"
                 type="number"
                 placeholder="0"
+                hint="Most this debtor can owe on unpaid credit sales. 0 means no limit."
+                persistent-hint
                 prefix="KES"
                 prepend-inner-icon="tabler-coin"
                 persistent-placeholder

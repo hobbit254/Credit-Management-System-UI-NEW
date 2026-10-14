@@ -55,9 +55,14 @@ export function usePayments() {
     })
   }
 
-  async function createPayment(payment: NewPayment) {
+  // Returns whether it was saved, so a refused payment keeps its form open for correction.
+  async function createPayment(payment: NewPayment): Promise<boolean> {
+    let saved = false
+
     await withLoading(loading, async () => {
       const { data } = await $api.post('payments/create', payment)
+
+      saved = true
 
       showToast({
         title: 'Payment Created',
@@ -67,6 +72,8 @@ export function usePayments() {
       })
       await fetchAllPayments()
     })
+
+    return saved
   }
 
   return {

@@ -1,4 +1,5 @@
 import { z } from 'zod'
+import { hasCents } from '@/schemas/transactions'
 
 export const PaymentTransactionItemSchema = z.object({
   transaction_item_uuid: z.uuid(),
@@ -30,7 +31,6 @@ export const PaymentSchema = z.object({
   status: z.string(),
   created_at: z.string(),
   updated_at: z.string(),
-  transaction_items: z.array(z.uuid()),
   transaction: PaymentNestedTransactionSchema,
 })
 export type Payment = z.infer<typeof PaymentSchema>
@@ -44,7 +44,8 @@ export type PaymentList = z.infer<typeof PaymentListSchema>
 
 export const NewPaymentSchema = z.object({
   amount: z.string().min(1, 'Amount is required')
-    .refine(v => Number(v) > 0, 'Amount must be greater than 0'),
+    .refine(v => Number(v) > 0, 'Amount must be greater than 0')
+    .refine(hasCents, 'Use at most 2 decimals'),
   payment_method: z.string().min(1, 'Payment method is required'),
   reference_code: z.string(),
   transaction_uuid: z.uuid('Please select a transaction'),

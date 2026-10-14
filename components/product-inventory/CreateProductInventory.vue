@@ -102,7 +102,9 @@ const statusOptions = [
 ]
 
 const sourceTypeLabels = sourceTypeOptions.map(s => s.label)
-const statusLabels = statusOptions.map(s => s.label)
+
+// Sold, OnCredit and Paid are set by sales, so new stock starts as one of these.
+const statusLabels = ['InStock', 'ReturnedToSupplier']
 
 const selectedStatusOption = computed(() =>
   statusOptions.find(s => s.label === localProductInventory.value.status),

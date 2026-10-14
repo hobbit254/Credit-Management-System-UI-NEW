@@ -201,6 +201,8 @@ const debtorTypes = [
                 type="number"
                 placeholder="0"
                 :error-messages="fieldErrors.credit_limit"
+                hint="Most this debtor can owe on unpaid credit sales. 0 means no limit."
+                persistent-hint
                 prefix="KES"
                 persistent-placeholder
                 class="font-mono"

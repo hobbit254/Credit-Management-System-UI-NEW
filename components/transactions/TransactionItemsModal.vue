@@ -13,7 +13,8 @@ const emit = defineEmits<{
   'updateStatus': [item: TransactionItem, status: string]
 }>()
 
-const itemStatusOptions = ['OnSale', 'Paid', 'Returned']
+// Paid follows the sale's payments; a return is the only manual change, and it is final.
+const itemStatusOptions = ['Returned']
 
 const itemStatusColorMap: Record<string, string> = {
   OnSale: 'primary',
@@ -110,7 +111,7 @@ async function handleUpdateItemStatus(item: TransactionItem, newStatus: string) 
                   <VListItem
                     v-for="statusOption in itemStatusOptions"
                     :key="statusOption"
-                    :disabled="statusOption === item.status"
+                    :disabled="item.status === 'Returned'"
                     @click="handleUpdateItemStatus(item, statusOption)"
                   >
                     <VChip

@@ -174,7 +174,8 @@ function confirmReturn() {
         </VCardTitle>
         <VCardText>
           <p class="text-body-2 mb-4">
-            The item goes back in stock and comes off what this sale owes.
+            The item comes off what this sale owes and is set aside as Returned. Once someone checks it, put it back
+            in stock (or return it to the supplier) from Stock Management.
           </p>
           <AppTextarea
             v-model="returnReason"

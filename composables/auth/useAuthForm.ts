@@ -42,7 +42,7 @@ export async function verifySession() {
 }
 
 export function useAuthForm() {
-  const { $api, $ensureCsrfCookie } = useNuxtApp() as unknown as { $api: ApiClient; $ensureCsrfCookie: () => Promise<void> }
+  const { $api, $ensureCsrfToken } = useNuxtApp() as unknown as { $api: ApiClient; $ensureCsrfToken: () => Promise<string | null> }
   const { alert: showToast } = useAlert()
   const user = useState<User | null>('user', () => null)
   const loginForm = ref<LoginForm>(createLoginForm())
@@ -51,7 +51,7 @@ export function useAuthForm() {
   async function login() {
     loading.value = true
     try {
-      await $ensureCsrfCookie()
+      await $ensureCsrfToken()
 
       const { data } = await $api.post<LoginResponse>('login', loginForm.value)
 

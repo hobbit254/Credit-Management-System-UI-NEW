@@ -3,6 +3,7 @@ import type { ApiClient } from '@/types/api'
 import { useAlert } from '@/composables/alerts/useAlert'
 import type { NewProduct, Product } from '@/schemas/products'
 import type { Pagination } from '@/schemas/pagination'
+import { withLoading } from '@/utils/requests'
 
 export function useProduct() {
   const { $api } = useNuxtApp() as unknown as { $api: ApiClient }
@@ -17,29 +18,8 @@ export function useProduct() {
     lastPage: 1,
   })
 
-  async function withLoading(fn: () => Promise<void>) {
-    loading.value = true
-    try {
-      await fn()
-    }
-    catch (error: any) {
-      // plugins/01.api.ts already toasted HTTP errors with the server's message; don't overwrite it
-      if (error?.response)
-        return
-      showToast({
-        title: 'Error',
-        text: error?.message ?? 'Something went wrong',
-        color: 'error',
-        icon: '$error',
-      })
-    }
-    finally {
-      loading.value = false
-    }
-  }
-
   async function fetchAllProducts(options?: { page?: number; perPage?: number }) {
-    await withLoading(async () => {
+    await withLoading(loading, async () => {
       if (options?.page)
         pagination.value.currentPage = options.page
       if (options?.perPage)
@@ -113,7 +93,7 @@ export function useProduct() {
   }
 
   async function createProduct() {
-    await withLoading(async () => {
+    await withLoading(loading, async () => {
       const { data } = await $api.post('products/create', newProduct.value)
 
       showToast({
@@ -136,7 +116,7 @@ export function useProduct() {
   }
 
   async function updateProduct(updatedProduct: Product) {
-    await withLoading(async () => {
+    await withLoading(loading, async () => {
       const { data } = await $api.put('products/update', updatedProduct)
 
       showToast({
@@ -159,7 +139,7 @@ export function useProduct() {
   }
 
   async function deleteProduct(product: Product) {
-    await withLoading(async () => {
+    await withLoading(loading, async () => {
       const { data } = await $api.put('products/delete', {
         product_uuid: product.product_uuid,
       })
@@ -176,7 +156,7 @@ export function useProduct() {
   }
 
   async function restoreProduct(product: Product) {
-    await withLoading(async () => {
+    await withLoading(loading, async () => {
       const { data } = await $api.put('products/restore', {
         product_uuid: product.product_uuid,
       })
@@ -192,7 +172,7 @@ export function useProduct() {
   }
 
   async function activateProduct(product: Product) {
-    await withLoading(async () => {
+    await withLoading(loading, async () => {
       const { data } = await $api.put('products/updateStatus', {
         product_uuid: product.product_uuid,
         active: 1,
@@ -209,7 +189,7 @@ export function useProduct() {
   }
 
   async function deactivateProduct(product: Product) {
-    await withLoading(async () => {
+    await withLoading(loading, async () => {
       const { data } = await $api.put('products/updateStatus', {
         product_uuid: product.product_uuid,
         active: 0,
@@ -226,7 +206,7 @@ export function useProduct() {
   }
 
   async function importProductsCsv(file: File) {
-    await withLoading(async () => {
+    await withLoading(loading, async () => {
       const formData = new FormData()
 
       formData.append('file', file)

@@ -1,12 +1,11 @@
 import type { ApiClient } from '@/types/api'
-import { useAlert } from '@/composables/alerts/useAlert'
 import type { Pagination } from '@/schemas/pagination'
 import type { AuditLog } from '@/schemas/audit_logs'
+import { parsePage, withLoading } from '@/utils/requests'
 
 export function useAuditLogs() {
   const { $api } = useNuxtApp() as unknown as { $api: ApiClient }
   const loading = ref(false)
-  const { alert: showToast } = useAlert()
   const auditLogs = ref<AuditLog[]>([])
 
   const pagination = ref<Pagination>({
@@ -16,34 +15,13 @@ export function useAuditLogs() {
     lastPage: 1,
   })
 
-  async function withLoading(fn: () => Promise<void>) {
-    loading.value = true
-    try {
-      await fn()
-    }
-    catch (error: any) {
-      // plugins/01.api.ts already toasted HTTP errors with the server's message; don't overwrite it
-      if (error?.response)
-        return
-      showToast({
-        title: 'Error',
-        text: error?.message ?? 'Something went wrong',
-        color: 'error',
-        icon: '$error',
-      })
-    }
-    finally {
-      loading.value = false
-    }
-  }
-
   async function fetchAllAuditLogs(options?: {
     page?: number
     perPage?: number
     start_date?: string
     end_date?: string
   }): Promise<void> {
-    await withLoading(async () => {
+    await withLoading(loading, async () => {
       if (options?.page)
         pagination.value.currentPage = options.page
       if (options?.perPage)
@@ -58,19 +36,10 @@ export function useAuditLogs() {
         },
       })
 
-      const payload = data.value ?? data
+      const page = parsePage(data, pagination.value.perPage)
 
-      const [rows, pageInfo] = Array.isArray(payload.data)
-        ? payload.data
-        : [payload.data.rows, payload.data.pagination]
-
-      auditLogs.value = rows ?? []
-      pagination.value = {
-        total: pageInfo.total,
-        perPage: pagination.value.perPage,
-        currentPage: pageInfo.currentPage,
-        lastPage: pageInfo.lastPage,
-      }
+      auditLogs.value = page.rows
+      pagination.value = page.pagination
     })
   }
 

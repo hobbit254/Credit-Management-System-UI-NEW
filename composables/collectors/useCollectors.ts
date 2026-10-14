@@ -1,12 +1,11 @@
 import type { ApiClient } from '@/types/api'
-import { useAlert } from '@/composables/alerts/useAlert'
 import type { Pagination } from '@/schemas/pagination'
 import type { Collector } from '@/schemas/collectors'
+import { withLoading } from '@/utils/requests'
 
 export function useCollectors() {
   const { $api } = useNuxtApp() as unknown as { $api: ApiClient }
   const loading = ref(false)
-  const { alert: showToast } = useAlert()
   const collectors = ref<Collector[]>([])
 
   const pagination = ref<Pagination>({
@@ -16,31 +15,10 @@ export function useCollectors() {
     lastPage: 1,
   })
 
-  async function withLoading(fn: () => Promise<void>) {
-    loading.value = true
-    try {
-      await fn()
-    }
-    catch (error: any) {
-      // plugins/01.api.ts already toasted HTTP errors with the server's message; don't overwrite it
-      if (error?.response)
-        return
-      showToast({
-        title: 'Error',
-        text: error?.message ?? 'Something went wrong',
-        color: 'error',
-        icon: '$error',
-      })
-    }
-    finally {
-      loading.value = false
-    }
-  }
-
   async function fetchAllActiveCollectors() {
     let result: Collector[] = []
 
-    await withLoading(async () => {
+    await withLoading(loading, async () => {
       const { data } = await $api.get('collectors/active')
 
       if (Array.isArray(data))

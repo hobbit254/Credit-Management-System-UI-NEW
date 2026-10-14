@@ -2,6 +2,7 @@ import type { ApiClient } from '@/types/api'
 import { useAlert } from '@/composables/alerts/useAlert'
 import type { Pagination } from '@/schemas/pagination'
 import type { NewPayment, Payment } from '@/schemas/payments'
+import { parsePage, withLoading } from '@/utils/requests'
 
 export function usePayments() {
   const { $api } = useNuxtApp() as unknown as { $api: ApiClient }
@@ -16,29 +17,8 @@ export function usePayments() {
     lastPage: 1,
   })
 
-  async function withLoading(fn: () => Promise<void>) {
-    loading.value = true
-    try {
-      await fn()
-    }
-    catch (error: any) {
-      // plugins/01.api.ts already toasted HTTP errors with the server's message; don't overwrite it
-      if (error?.response)
-        return
-      showToast({
-        title: 'Error',
-        text: error?.message ?? 'Something went wrong',
-        color: 'error',
-        icon: '$error',
-      })
-    }
-    finally {
-      loading.value = false
-    }
-  }
-
   async function fetchAllPayments(options?: { page?: number; perPage?: number }) {
-    await withLoading(async () => {
+    await withLoading(loading, async () => {
       if (options?.page)
         pagination.value.currentPage = options.page
       if (options?.perPage)
@@ -51,24 +31,15 @@ export function usePayments() {
         },
       })
 
-      const payload = data.value ?? data
+      const page = parsePage(data, pagination.value.perPage)
 
-      const [rows, pageInfo] = Array.isArray(payload.data)
-        ? payload.data
-        : [payload.data.rows, payload.data.pagination]
-
-      payments.value = rows ?? []
-      pagination.value = {
-        total: pageInfo.total,
-        perPage: pagination.value.perPage,
-        currentPage: pageInfo.currentPage,
-        lastPage: pageInfo.lastPage,
-      }
+      payments.value = page.rows
+      pagination.value = page.pagination
     })
   }
 
   async function updatePaymentStatus(paymentUuid: string, status: string) {
-    await withLoading(async () => {
+    await withLoading(loading, async () => {
       const { data } = await $api.put('payments/updateStatus', {
         payment_uuid: paymentUuid,
         status,
@@ -85,7 +56,7 @@ export function usePayments() {
   }
 
   async function createPayment(payment: NewPayment) {
-    await withLoading(async () => {
+    await withLoading(loading, async () => {
       const { data } = await $api.post('payments/create', payment)
 
       showToast({

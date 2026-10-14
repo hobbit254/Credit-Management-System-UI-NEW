@@ -2,6 +2,7 @@ import type { ApiClient } from '@/types/api'
 import type { NewPermission, Permission } from '@/schemas/permissions'
 import { useAlert } from '@/composables/alerts/useAlert'
 import type { Pagination } from '@/schemas/pagination'
+import { parsePage } from '@/utils/requests'
 
 export function usePermissions() {
   const { $api } = useNuxtApp() as unknown as { $api: ApiClient }
@@ -32,20 +33,10 @@ export function usePermissions() {
         },
       })
 
-      const payload = data.value ?? data
+      const page = parsePage(data, pagination.value.perPage)
 
-      const [rows, pageInfo] = Array.isArray(payload.data)
-        ? payload.data
-        : [payload.data.rows, payload.data.pagination]
-
-      permissions.value = rows ?? []
-
-      pagination.value = {
-        total: pageInfo.total,
-        perPage: pagination.value.perPage,
-        currentPage: pageInfo.currentPage,
-        lastPage: pageInfo.lastPage,
-      }
+      permissions.value = page.rows
+      pagination.value = page.pagination
     }
     finally {
       loading.value = false

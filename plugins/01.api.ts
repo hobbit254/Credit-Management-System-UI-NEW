@@ -124,6 +124,10 @@ export default defineNuxtPlugin(nuxtApp => {
           ? responseData.details.join(' ')
           : responseData?.message || 'Validation failed'
       }
+      else if (status === 429) {
+        // Rate limited, e.g. 5 login attempts a minute; the server sends no message of its own.
+        message = 'Too many attempts. Wait a minute and try again.'
+      }
       else if (status === 500) {
         message = 'Server error — please try later'
       }

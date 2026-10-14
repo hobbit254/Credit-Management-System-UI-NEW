@@ -8,6 +8,7 @@ export type AppAbility = MongoAbility<['access', string]>
 // whole permission matrix (only Super Admin may).
 export interface RoleWithPermissions {
   role_name: string
+  role_slug?: string
   permissions?: { permission_slug: string }[]
 }
 
@@ -18,7 +19,11 @@ export function createAppAbility(): AppAbility {
 export function buildRulesFromRole(role: RoleWithPermissions | undefined) {
   const { can, rules } = new AbilityBuilder<AppAbility>(createMongoAbility)
 
-  role?.permissions?.forEach(permission => can('access', permission.permission_slug))
+  // Super Admins pass every check on the server too, so no change to their grants can hide administration from them.
+  if (role?.role_slug === 'super_admin')
+    can('access', 'all')
+  else
+    role?.permissions?.forEach(permission => can('access', permission.permission_slug))
 
   return rules
 }

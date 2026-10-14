@@ -19,6 +19,15 @@ describe('buildRulesFromRole', () => {
     expect(ability.can('access', 'roles')).toBe(false)
   })
 
+  it('grants a Super Admin every page, whatever their grants', () => {
+    const ability = createAppAbility()
+
+    ability.update(buildRulesFromRole({ role_name: 'Super Admin', role_slug: 'super_admin', permissions: [] }))
+
+    expect(ability.can('access', 'v1/permission-matrix')).toBe(true)
+    expect(ability.can('access', 'v1/refunds/create')).toBe(true)
+  })
+
   it('grants nothing when the role or its permissions are missing', () => {
     const ability = createAppAbility()
 

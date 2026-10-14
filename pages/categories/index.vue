@@ -166,6 +166,7 @@ function getRowProps({ item }: { item: any }) {
             <VMenu location="bottom end">
               <template #activator="{ props: menuProps }">
                 <VBtn
+                  aria-label="Category actions"
                   icon="tabler-dots-vertical"
                   variant="text"
                   size="small"

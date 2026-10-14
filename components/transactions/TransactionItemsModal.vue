@@ -71,6 +71,7 @@ function confirmReturn() {
       <VCardTitle class="d-flex justify-space-between align-center pa-4">
         <span class="text-h6">Transaction Items</span>
         <VBtn
+          aria-label="Close"
           icon="tabler-x"
           variant="text"
           @click="close"
@@ -109,6 +110,7 @@ function confirmReturn() {
               <VMenu>
                 <template #activator="{ props: menuProps }">
                   <VBtn
+                    aria-label="Change status"
                     v-bind="menuProps"
                     size="x-small"
                     variant="tonal"

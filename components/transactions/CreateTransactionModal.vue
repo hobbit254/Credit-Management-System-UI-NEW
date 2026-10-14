@@ -513,6 +513,7 @@ const isCredit = computed(() => localTransaction.value.transaction_type === 'Cre
                         <span class="text-caption text-medium-emphasis font-weight-medium">Item {{ index + 1 }}</span>
                       </div>
                       <VBtn
+                        aria-label="Remove item"
                         size="x-small"
                         color="error"
                         variant="text"

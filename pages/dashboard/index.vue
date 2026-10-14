@@ -86,6 +86,7 @@ onMounted(() => {
             class="max-width-300"
           />
           <VBtn
+            aria-label="Refresh"
             :loading="loading"
             color="primary"
             rounded="lg"

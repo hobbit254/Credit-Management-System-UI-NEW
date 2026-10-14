@@ -48,6 +48,7 @@ const formatCurrency = (amount: number) =>
         </div>
 
         <VBtn
+          aria-label="Close"
           icon
           variant="text"
           size="small"

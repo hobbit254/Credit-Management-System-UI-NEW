@@ -140,6 +140,7 @@ function getRowProps({ item }: { item: any }) {
             <div class="d-flex align-center ga-2">
               <VBtn
                 v-if="item.supplier_phone"
+                aria-label="Call supplier"
                 variant="tonal"
                 size="x-small"
                 color="primary"
@@ -180,6 +181,7 @@ function getRowProps({ item }: { item: any }) {
             <VMenu location="bottom end">
               <template #activator="{ props: menuProps }">
                 <VBtn
+                  aria-label="Supplier actions"
                   icon="tabler-dots-vertical"
                   variant="text"
                   size="small"

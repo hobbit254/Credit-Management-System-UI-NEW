@@ -117,6 +117,7 @@ onMounted(async () => {
                 Apply
               </VBtn>
               <VBtn
+                aria-label="Clear filters"
                 variant="tonal"
                 color="secondary"
                 icon="tabler-filter-off"
@@ -219,6 +220,7 @@ onMounted(async () => {
 
           <template #item.actions="{ item }">
             <VBtn
+              aria-label="View details"
               icon="tabler-eye"
               variant="text"
               size="small"
@@ -270,6 +272,7 @@ onMounted(async () => {
       <VCardTitle class="pa-4 d-flex justify-space-between align-center">
         <span>Request Metadata</span>
         <VBtn
+          aria-label="Close"
           icon="tabler-x"
           variant="text"
           @click="openDetailsModal = false"

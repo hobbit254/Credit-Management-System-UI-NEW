@@ -192,6 +192,7 @@ const formatCurrency = (value: number) => {
             <VMenu location="bottom end">
               <template #activator="{ props: menuProps }">
                 <VBtn
+                  aria-label="Debtor actions"
                   icon="tabler-dots-vertical"
                   variant="text"
                   size="small"

@@ -178,6 +178,7 @@ function getRowProps({ item }: { item: any }) {
             <VMenu>
               <template #activator="{ props: activatorProps }">
                 <VBtn
+                  aria-label="User actions"
                   icon="tabler-dots"
                   variant="text"
                   size="small"

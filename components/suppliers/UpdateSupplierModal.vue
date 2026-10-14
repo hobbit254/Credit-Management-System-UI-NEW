@@ -82,6 +82,7 @@ function handleConfirm() {
         </div>
         <VSpacer />
         <VBtn
+          aria-label="Close"
           icon="tabler-x"
           variant="text"
           size="small"

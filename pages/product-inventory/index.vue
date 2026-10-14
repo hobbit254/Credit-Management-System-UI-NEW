@@ -275,6 +275,7 @@ onMounted(async () => {
             <VMenu location="bottom end">
               <template #activator="{ props: menuProps }">
                 <VBtn
+                  aria-label="Stock unit actions"
                   icon="tabler-dots-vertical"
                   variant="text"
                   size="small"

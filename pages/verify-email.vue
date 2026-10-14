@@ -26,6 +26,9 @@ const message = ref('Verifying email...')
 const status = ref(false)
 const email = ref('')
 
+// Only these answers mean the address is verified; "Invalid verification link." also comes back as 200.
+const VERIFIED_MESSAGES = ['Your email has been verified.', 'Email already verified.']
+
 // The link must point at our own API. Otherwise a crafted link could make this
 // page fetch another site and show that site's message as ours.
 function isOwnApiUrl(url: string) {
@@ -47,8 +50,8 @@ onMounted(async () => {
       const res = await verifyEmail(redirect)
 
       message.value = res?.message || 'Verification complete.'
-      status.value = true
-      email.value = res?.email
+      status.value = VERIFIED_MESSAGES.includes(res?.message)
+      email.value = res?.email ?? ''
     }
     catch {
       message.value = 'Verification failed.'
@@ -114,20 +117,24 @@ onMounted(async () => {
           <h4 class="text-h4 mb-1">
             Verify your email ✉️
           </h4>
-          <p class="text-body-1 mb-0">
-            Account activation for <span class="font-weight-medium text-high-emphasis">{{ email }} </span> was unsuccessful. Please follow the link inside to resend the verification email.
+          <p class="text-body-1 mb-4">
+            This link is invalid or has expired (links last an hour). Enter your email to get a new one.
           </p>
+          <!-- An expired link never reaches the server's verify step, so the page can't know the email: ask for it. -->
+          <AppTextField
+            v-model="email"
+            type="email"
+            label="Your email"
+            placeholder="you@example.com"
+          />
           <VBtn
             block
             class="my-5"
+            :disabled="!email.includes('@')"
             @click="resendEmail(email)"
           >
             Resend Verification Link
           </VBtn>
-
-          <div class="d-flex align-center justify-center">
-            <span class="me-1">Issue with the link?</span><a href="#">Resend</a>
-          </div>
         </VCardText>
         <VCardText v-else>
           <h4 class="text-h4 mb-1">

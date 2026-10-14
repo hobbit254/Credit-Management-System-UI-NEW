@@ -121,11 +121,13 @@ export function useAuthForm() {
   async function verifyEmail(redirectUrl: string) {
     const { data } = await $api.get(redirectUrl)
 
+    const failed = data.message === 'Invalid verification link.'
+
     showToast({
       title: 'Verify email',
       text: data.message || 'Verify email',
-      color: data.message === 'Invalid verification link.' ? 'error' : 'success',
-      icon: '$error',
+      color: failed ? 'error' : 'success',
+      icon: failed ? '$error' : '$success',
     })
 
     return data

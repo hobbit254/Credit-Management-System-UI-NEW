@@ -17,7 +17,8 @@ export function useTransaction() {
     lastPage: 1,
   })
 
-  async function fetchAllTransactions(options?: { page?: number; perPage?: number }) {
+  // open: only sales that still owe money (UnPaid or Partially Paid).
+  async function fetchAllTransactions(options?: { page?: number; perPage?: number; open?: boolean }) {
     await withLoading(loading, async () => {
       if (options?.page)
         pagination.value.currentPage = options.page
@@ -28,6 +29,7 @@ export function useTransaction() {
         params: {
           page: pagination.value.currentPage,
           per_page: pagination.value.perPage,
+          ...(options?.open ? { open: 1 } : {}),
         },
       })
 

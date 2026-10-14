@@ -28,7 +28,8 @@ const loadingTransactions = ref(false)
 onMounted(async () => {
   loadingTransactions.value = true
   try {
-    await fetchAllTransactions()
+    // Only sales that still owe money. shortcut: the newest 100 open sales; add a server-side search if a shop ever has more.
+    await fetchAllTransactions({ perPage: 100, open: true })
   }
   finally {
     loadingTransactions.value = false
@@ -159,7 +160,7 @@ const selectedTransaction = computed(() =>
                 <AppAutocomplete
                   v-model="localPayment.transaction_uuid"
                   :items="transactions"
-                  item-title="transaction_uuid"
+                  :item-title="(sale: any) => `${sale.debtor?.debtor_name ?? ''} ${sale.transaction_uuid}`"
                   item-value="transaction_uuid"
                   :loading="loadingTransactions"
                   label="Transaction*"

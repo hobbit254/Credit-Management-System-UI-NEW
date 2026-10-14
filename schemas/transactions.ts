@@ -7,6 +7,7 @@ export interface Transaction {
   payments_sum_amount: number
   total_refunded: number
   overpaid: number
+  refunds: Refund[]
   status: string
   created_at: string
   updated_at: string
@@ -96,6 +97,16 @@ export interface TransactionItem {
   created_at: string
   updated_at: string
   product_inventory: ProductInventory
+}
+
+export interface Refund {
+  refund_uuid: string
+  amount: number
+  refund_method: string
+  reference_code: string | null
+  note: string | null
+  created_at: string
+  recorder: { full_name: string } | null
 }
 
 export interface NewRefund {

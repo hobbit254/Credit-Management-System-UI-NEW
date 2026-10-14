@@ -272,6 +272,25 @@ onMounted(() => {
                   <span class="text-body-2 font-weight-black">KES {{ p.total.toLocaleString() }}</span>
                 </template>
               </VListItem>
+              <!-- Paid back to customers; revenue above is net of this -->
+              <VListItem
+                v-if="(dashboardStats?.refunds ?? 0) > 0"
+                class="px-0 mb-2"
+              >
+                <template #prepend>
+                  <VIcon
+                    icon="tabler-receipt-refund"
+                    color="warning"
+                    class="me-2"
+                  />
+                </template>
+                <VListItemTitle class="text-body-2 font-weight-bold">
+                  Refunds
+                </VListItemTitle>
+                <template #append>
+                  <span class="text-body-2 font-weight-black">− KES {{ dashboardStats.refunds.toLocaleString() }}</span>
+                </template>
+              </VListItem>
               <div
                 v-if="!dashboardStats?.payments?.length && !loading"
                 class="text-caption text-center py-4 text-disabled"

@@ -1,13 +1,17 @@
 <script setup lang="ts">
 import { usePayments } from '@/composables/payments/usePayments'
+import type { Refund } from '@/schemas/transactions'
 
-const props = defineProps<{
+const props = withDefaults(defineProps<{
   modelValue: boolean
   payments: any[]
+  refunds?: Refund[]
   transactionUuid: string
-}>()
+}>(), { refunds: () => [] })
 
 const emit = defineEmits(['update:modelValue', 'updated'])
+
+const totalRefunded = computed(() => props.refunds.reduce((sum, r) => sum + Number(r.amount), 0))
 
 const isOpen = computed({
   get: () => props.modelValue,
@@ -206,6 +210,34 @@ const totalAmount = computed(() =>
 
           <template #bottom />
         </VDataTable>
+
+        <!-- Money paid back on this sale: how, the reference, who recorded it and when -->
+        <template v-if="refunds.length">
+          <VDivider />
+          <div class="d-flex align-center justify-space-between px-4 pt-4 pb-2">
+            <span class="text-subtitle-2 font-weight-bold">Refunds</span>
+            <span class="text-body-2 font-weight-bold text-error">− KES {{ totalRefunded.toLocaleString() }}</span>
+          </div>
+          <VList
+            density="compact"
+            class="pt-0"
+          >
+            <VListItem
+              v-for="refund in refunds"
+              :key="refund.refund_uuid"
+            >
+              <VListItemTitle class="text-body-2">
+                <span class="font-weight-bold">KES {{ Number(refund.amount).toLocaleString() }}</span>
+                · {{ refund.refund_method }}
+                <span v-if="refund.reference_code"> · #{{ refund.reference_code }}</span>
+              </VListItemTitle>
+              <VListItemSubtitle class="text-caption">
+                {{ refund.recorder?.full_name ?? 'Unknown' }} · <TableDate :value="refund.created_at" />
+                <span v-if="refund.note"> · {{ refund.note }}</span>
+              </VListItemSubtitle>
+            </VListItem>
+          </VList>
+        </template>
       </VCardText>
 
       <VDivider />

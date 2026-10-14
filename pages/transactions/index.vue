@@ -2,7 +2,7 @@
 import { computed, onMounted, ref } from 'vue'
 import { useTheme } from 'vuetify'
 import { useTransaction } from '@/composables/transactions/useTransaction'
-import type { NewRefund, Transaction, TransactionItem } from '@/schemas/transactions'
+import type { NewRefund, Refund, Transaction, TransactionItem } from '@/schemas/transactions'
 import type { AppAbility } from '@/composables/auth/useAbility'
 import { usePayments } from '@/composables/payments/usePayments'
 import { saleStatusColor } from '@/utils/formatters'
@@ -35,6 +35,7 @@ const selectedItems = ref<TransactionItem[]>([])
 const selectedTransactionUuid = ref('')
 const openPaymentsModal = ref(false)
 const selectedPayments = ref<any[]>([])
+const selectedRefunds = ref<Refund[]>([])
 const selectedPaymentTransactionUuid = ref('')
 const openCreatePaymentModal = ref(false)
 const selectedTransactionForPayment = ref('')
@@ -50,6 +51,7 @@ const viewItems = (item: any) => {
 
 const viewPayments = (item: any) => {
   selectedPayments.value = item.payments ?? []
+  selectedRefunds.value = item.refunds ?? []
   selectedPaymentTransactionUuid.value = item.transaction_uuid
   openPaymentsModal.value = true
 }
@@ -475,6 +477,7 @@ onMounted(async () => {
   <TransactionPaymentsModal
     v-model="openPaymentsModal"
     :payments="selectedPayments"
+    :refunds="selectedRefunds"
     :transaction-uuid="selectedPaymentTransactionUuid"
     @updated="fetchAllTransactions"
   />

@@ -2,7 +2,7 @@ import type { ApiClient } from '@/types/api'
 import type { NewSupplier, Supplier } from '@/schemas/suppliers'
 import { useAlert } from '@/composables/alerts/useAlert'
 import type { Pagination } from '@/schemas/pagination'
-import { parsePage } from '@/utils/requests'
+import { parsePage, withLoading } from '@/utils/requests'
 
 export function useSuppliers() {
   const { $api } = useNuxtApp() as unknown as { $api: ApiClient }
@@ -57,8 +57,7 @@ export function useSuppliers() {
   }
 
   async function createSupplier() {
-    loading.value = true
-    try {
+    await withLoading(loading, async () => {
       const { data } = await $api.post('suppliers/create', newSupplier.value)
 
       showToast({
@@ -68,11 +67,8 @@ export function useSuppliers() {
         icon: '$success',
       })
       await fetchAllSuppliers()
-    }
-    finally {
-      loading.value = false
       openAdd.value = false
-    }
+    })
   }
 
   const openEdit = ref(false)
@@ -84,8 +80,7 @@ export function useSuppliers() {
   }
 
   async function updateSupplier(updated: Supplier) {
-    loading.value = true
-    try {
+    await withLoading(loading, async () => {
       const { data } = await $api.put('suppliers/update', updated)
 
       showToast({
@@ -95,11 +90,8 @@ export function useSuppliers() {
         icon: '$success',
       })
       await fetchAllSuppliers()
-    }
-    finally {
-      loading.value = false
       openEdit.value = false
-    }
+    })
   }
 
   const openDelete = ref(false)
@@ -111,8 +103,7 @@ export function useSuppliers() {
   }
 
   async function deleteSupplier(supplier: Supplier) {
-    loading.value = true
-    try {
+    await withLoading(loading, async () => {
       const { data } = await $api.put('suppliers/delete', {
         supplier_uuid: supplier.supplier_uuid,
       })
@@ -125,11 +116,8 @@ export function useSuppliers() {
       })
 
       await fetchAllSuppliers()
-    }
-    finally {
-      loading.value = false
       openDelete.value = false
-    }
+    })
   }
 
   async function restoreSupplier(supplier: Supplier) {

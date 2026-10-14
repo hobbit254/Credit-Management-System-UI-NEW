@@ -3,7 +3,7 @@ import { onMounted, ref } from 'vue'
 import { useUsers } from '@/composables/users/useUsers'
 import UpdateUserProfileModal from '@/components/users/UpdateUserProfileModal.vue'
 
-const { showToast, updateUser, fetchActiveUser, activeUser } = useUsers()
+const { updateProfile, fetchActiveUser, activeUser } = useUsers()
 
 // Dialog Controls
 const isUserInfoEditDialogVisible = ref(false)
@@ -26,21 +26,13 @@ const resolveUserStatusVariant = (status: number) => {
   return { color: 'secondary', text: 'Inactive' }
 }
 
-// Logic for User Update
-const handleUserUpdate = async (updatedData: any) => {
-  try {
-    await updateUser(updatedData)
-    isUserInfoEditDialogVisible.value = false // close modal
-    await fetchActiveUser() // refresh data
-    showToast({
-      title: 'Success',
-      text: 'Profile updated successfully',
-      color: 'success',
-    })
-  }
-  catch (error) {
-
-  }
+// Saves through users/me, so every role can edit their own profile. The dialog closes only on success;
+// the toast shows the server's answer either way (e.g. a wrong current password).
+const handleUserUpdate = async (updatedData: Record<string, string>) => {
+  if (!await updateProfile(updatedData))
+    return
+  isUserInfoEditDialogVisible.value = false
+  await fetchActiveUser()
 }
 </script>
 

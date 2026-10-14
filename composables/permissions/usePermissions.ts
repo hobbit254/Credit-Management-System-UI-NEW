@@ -82,8 +82,7 @@ export function usePermissions() {
   }
 
   async function updatePermission(updated: Permission) {
-    loading.value = true
-    try {
+    await withLoading(loading, async () => {
       const { data } = await $api.put('permissions/update', updated)
 
       showToast({
@@ -93,11 +92,8 @@ export function usePermissions() {
         icon: '$success',
       })
       await fetchAllPermissions()
-    }
-    finally {
-      loading.value = false
       openEdit.value = false
-    }
+    })
   }
 
   const openDelete = ref(false)
@@ -109,8 +105,7 @@ export function usePermissions() {
   }
 
   async function deletePermission(permission: Permission) {
-    loading.value = true
-    try {
+    await withLoading(loading, async () => {
       const { data } = await $api.put('permissions/delete', {
         permission_uuid: permission.permission_uuid,
       })
@@ -122,11 +117,8 @@ export function usePermissions() {
         icon: '$success',
       })
       await fetchAllPermissions()
-    }
-    finally {
-      loading.value = false
       openDelete.value = false
-    }
+    })
   }
 
   async function restorePermission(restored: Permission) {

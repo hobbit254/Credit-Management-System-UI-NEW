@@ -2,6 +2,7 @@ import { ref } from 'vue'
 import type { ApiClient } from '@/types/api'
 import type { NewRole, Role } from '@/schemas/role'
 import { useAlert } from '@/composables/alerts/useAlert'
+import { withLoading } from '@/utils/requests'
 
 export function useRoles() {
   const { $api } = useNuxtApp() as unknown as { $api: ApiClient }
@@ -50,8 +51,7 @@ export function useRoles() {
   }
 
   async function createRole() {
-    loading.value = true
-    try {
+    await withLoading(loading, async () => {
       const { data } = await $api.post('roles/create', newRole.value)
 
       if (data.status === 'success') {
@@ -63,11 +63,8 @@ export function useRoles() {
         })
       }
       await fetchAllRoles()
-    }
-    finally {
       openAdd.value = false
-      loading.value = false
-    }
+    })
   }
 
   const openEdit = ref(false)
@@ -79,8 +76,7 @@ export function useRoles() {
   }
 
   async function updateRole(updated: Role) {
-    loading.value = true
-    try {
+    await withLoading(loading, async () => {
       const { data } = await $api.put('roles/update', updated)
 
       showToast({
@@ -90,11 +86,8 @@ export function useRoles() {
         icon: '$success',
       })
       await fetchAllRoles()
-    }
-    finally {
       openEdit.value = false
-      loading.value = false
-    }
+    })
   }
 
   const openDelete = ref(false)
@@ -106,8 +99,7 @@ export function useRoles() {
   }
 
   async function deleteRole(deleted: Role) {
-    loading.value = true
-    try {
+    await withLoading(loading, async () => {
       const { data } = await $api.put('roles/delete', {
         roles_uuid: deleted.roles_uuid,
       })
@@ -119,11 +111,8 @@ export function useRoles() {
         icon: '$success',
       })
       await fetchAllRoles()
-    }
-    finally {
       openDelete.value = false
-      loading.value = false
-    }
+    })
   }
 
   async function restoreRole(restored: Role) {

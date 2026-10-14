@@ -1,9 +1,7 @@
 <script lang="ts" setup>
-import { computed, onMounted, ref, watch } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { useTheme } from 'vuetify'
 import type { User } from '@/schemas/users'
-import { useRoles } from '@/composables/roles/useRoles'
-import type { Role } from '@/schemas/role'
 
 const props = defineProps<{
   modelValue: boolean
@@ -30,8 +28,12 @@ function closeModal() {
 const localFullName = ref('')
 const localEmail = ref('')
 const localPassword = ref('')
-const localRoleUuid = ref('')
+const localPasswordConfirmation = ref('')
+const localCurrentPassword = ref('')
 const isPasswordVisible = ref(false)
+
+// Shown only: people can't change their own role.
+const roleName = computed(() => props.user?.roles?.[0]?.role_name ?? '')
 
 watch(
   () => props.user,
@@ -39,8 +41,9 @@ watch(
     if (newUser) {
       localFullName.value = newUser.full_name
       localEmail.value = newUser.email
-      localRoleUuid.value = newUser.roles?.[0]?.roles_uuid || ''
-      localPassword.value = '' // Reset password field on user change
+      localPassword.value = '' // Reset password fields on user change
+      localPasswordConfirmation.value = ''
+      localCurrentPassword.value = ''
     }
   },
   { immediate: true, deep: true },
@@ -50,30 +53,17 @@ function handleConfirm() {
   if (!props.user)
     return
 
-  emit('confirm', {
-    user_uuid: props.user.user_uuid,
-    full_name: localFullName.value,
-    email: localEmail.value,
-    role_uuid: localRoleUuid.value,
-    ...(localPassword.value ? { password: localPassword.value } : {}),
-  })
+  // Saved through users/me: only name, email and password, and a new password needs the current one.
+  const profile: Record<string, string> = { full_name: localFullName.value, email: localEmail.value }
+
+  if (localPassword.value) {
+    profile.password = localPassword.value
+    profile.password_confirmation = localPasswordConfirmation.value
+    profile.current_password = localCurrentPassword.value
+  }
+
+  emit('confirm', profile)
 }
-
-const { fetchAllActiveRoles } = useRoles()
-const roles = ref<Role[]>([])
-const loadingRoles = ref(false)
-
-onMounted(async () => {
-  loadingRoles.value = true
-  try {
-    const data = await fetchAllActiveRoles()
-
-    roles.value = data as unknown as Role[]
-  }
-  finally {
-    loadingRoles.value = false
-  }
-})
 </script>
 
 <template>
@@ -174,13 +164,11 @@ onMounted(async () => {
               <p class="text-caption text-medium-emphasis font-weight-medium mb-1 text-uppercase">
                 Access Control
               </p>
-              <AppSelect
-                v-model="localRoleUuid"
-                :items="roles"
-                item-title="role_name"
-                item-value="roles_uuid"
-                :loading="loadingRoles"
-                label="Assigned Role*"
+              <AppTextField
+                :model-value="roleName"
+                label="Assigned Role"
+                hint="Ask an administrator to change your role."
+                persistent-hint
                 readonly
               >
                 <template #prepend-inner>
@@ -188,7 +176,7 @@ onMounted(async () => {
                     tabler-shield-check
                   </VIcon>
                 </template>
-              </AppSelect>
+              </AppTextField>
             </VCol>
 
             <VCol
@@ -216,6 +204,25 @@ onMounted(async () => {
                 </template>
               </AppTextField>
             </VCol>
+
+            <template v-if="localPassword">
+              <VCol cols="12">
+                <AppTextField
+                  v-model="localPasswordConfirmation"
+                  label="Confirm New Password*"
+                  :type="isPasswordVisible ? 'text' : 'password'"
+                />
+              </VCol>
+              <VCol cols="12">
+                <AppTextField
+                  v-model="localCurrentPassword"
+                  label="Current Password*"
+                  hint="Needed to set a new password."
+                  persistent-hint
+                  type="password"
+                />
+              </VCol>
+            </template>
           </VRow>
         </VForm>
       </VCardText>

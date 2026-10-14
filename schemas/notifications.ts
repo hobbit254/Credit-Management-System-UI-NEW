@@ -50,5 +50,8 @@ export const PaginationSchema = z.object({
   to: z.number(),
   nextPageUrl: z.string().nullable(),
   hasMorePages: z.boolean(),
+
+  // All of the user's unread notifications, not just this page's.
+  unreadCount: z.number().optional(),
 })
 export type Pagination = z.infer<typeof PaginationSchema>

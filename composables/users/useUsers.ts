@@ -2,7 +2,7 @@ import type { ApiClient } from '@/types/api'
 import type { NewUser, User } from '@/schemas/users'
 import { useAlert } from '@/composables/alerts/useAlert'
 import type { Pagination } from '@/schemas/pagination'
-import { parsePage } from '@/utils/requests'
+import { parsePage, withLoading } from '@/utils/requests'
 
 export function useUsers() {
   const { $api } = useNuxtApp() as unknown as { $api: ApiClient }
@@ -77,8 +77,7 @@ export function useUsers() {
   }
 
   async function createUser() {
-    loading.value = true
-    try {
+    await withLoading(loading, async () => {
       const { data } = await $api.post('users/create', newUser.value)
 
       showToast({
@@ -88,11 +87,8 @@ export function useUsers() {
         icon: '$success',
       })
       await fetchAllUsers()
-    }
-    finally {
-      loading.value = false
       openAdd.value = false
-    }
+    })
   }
 
   const openEdit = ref(false)
@@ -104,8 +100,7 @@ export function useUsers() {
   }
 
   async function updateUser(updated: User) {
-    loading.value = true
-    try {
+    await withLoading(loading, async () => {
       const { data } = await $api.put('users/update', updated)
 
       showToast({
@@ -115,11 +110,8 @@ export function useUsers() {
         icon: '$success',
       })
       await fetchAllUsers()
-    }
-    finally {
-      loading.value = false
       openEdit.value = false
-    }
+    })
   }
 
   const openDelete = ref(false)
@@ -130,9 +122,22 @@ export function useUsers() {
     openDelete.value = true
   }
 
+  // Saves the signed-in user's own name, email and password (users/me, open to every role).
+  async function updateProfile(profile: Record<string, string>): Promise<boolean> {
+    let saved = false
+
+    await withLoading(loading, async () => {
+      const { data } = await $api.put('users/me', profile)
+
+      saved = true
+      showToast({ title: 'Profile', text: data.message, color: 'success', icon: '$success' })
+    })
+
+    return saved
+  }
+
   async function deleteUser(user: User) {
-    loading.value = true
-    try {
+    await withLoading(loading, async () => {
       const { data } = await $api.put('users/delete', {
         user_uuid: user.user_uuid,
       })
@@ -144,11 +149,8 @@ export function useUsers() {
         icon: '$success',
       })
       await fetchAllUsers()
-    }
-    finally {
-      loading.value = false
       openDelete.value = false
-    }
+    })
   }
 
   async function restoreUser(user: User) {
@@ -226,6 +228,7 @@ export function useUsers() {
     openEdit,
     editUser,
     updateUser,
+    updateProfile,
     userToEdit,
     openDelete,
     deleteUserModal,

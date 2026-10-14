@@ -2,6 +2,10 @@
 import { computed, onMounted, ref } from 'vue'
 import { useDashboard } from '@/composables/dashboard/useDashboard'
 
+definePageMeta({
+  subject: 'v1/dashboard_stats',
+})
+
 const { loading, dashboardStats, fetchDashboardStats } = useDashboard()
 
 const search = ref('')
@@ -54,7 +58,7 @@ onMounted(() => {
               icon="tabler-layout-dashboard"
               size="32"
               color="primary"
-              class="mr-3"
+              class="me-3"
             />
             <h1 class="text-h4 font-weight-black text-grey-darken-3">
               Inventory Insights
@@ -111,7 +115,7 @@ onMounted(() => {
                 variant="tonal"
                 rounded="lg"
                 size="48"
-                class="mr-4"
+                class="me-4"
               >
                 <VIcon
                   :icon="card.icon"
@@ -164,7 +168,7 @@ onMounted(() => {
                         icon="tabler-alert-circle"
                         color="error"
                         size="18"
-                        class="ml-2 animate-pulse"
+                        class="ms-2 animate-pulse"
                       />
                     </template>
                   </VTooltip>
@@ -207,7 +211,7 @@ onMounted(() => {
               <VIcon
                 icon="tabler-shield-check"
                 color="success"
-                class="mr-2"
+                class="me-2"
               />
               Financial Risk
             </h3>
@@ -253,7 +257,7 @@ onMounted(() => {
                   <VIcon
                     :icon="p.status === 'ACCEPTED' ? 'tabler-circle-check-filled' : 'tabler-circle-x-filled'"
                     :color="p.status === 'ACCEPTED' ? 'success' : 'error'"
-                    class="mr-2"
+                    class="me-2"
                   />
                 </template>
                 <VListItemTitle class="text-body-2 font-weight-bold">

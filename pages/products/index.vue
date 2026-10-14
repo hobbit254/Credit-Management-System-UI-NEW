@@ -3,6 +3,10 @@ import { computed, onMounted, ref } from 'vue'
 import { useTheme } from 'vuetify'
 import { useProduct } from '@/composables/products/useProduct'
 
+definePageMeta({
+  subject: 'v1/products',
+})
+
 const {
   showToast, loading, products, pagination, fetchAllProducts,
   openAdd, addProduct, newProduct, createProduct,
@@ -215,7 +219,7 @@ function getRowProps({ item }: { item: any }) {
                 <VTooltip
                   v-if="Number(item?.inventory_total ?? 0) < 10"
                   location="top"
-                  :text="(item?.inventory_total ?? 0) == 0 ? 'Out of Stock' : 'Low Stock Warning'"
+                  :text="(item?.inventory_total ?? 0) === 0 ? 'Out of Stock' : 'Low Stock Warning'"
                 >
                   <template #activator="{ props }">
                     <VIcon

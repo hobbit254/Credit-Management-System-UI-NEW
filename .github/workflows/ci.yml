@@ -1,0 +1,38 @@
+name: CI
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+    branches: [master]
+
+jobs:
+  lint-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 12
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --no-frozen-lockfile
+
+      - name: Lint
+        run: pnpm exec eslint . -c .eslintrc.cjs --ext .ts,.js,.cjs,.vue,.tsx,.jsx
+
+      - name: Unit tests
+        run: pnpm test
+
+      # Not blocking yet: enabling typecheck exposed a pre-existing backlog of
+      # ~140 errors (mostly $api calls without response generics, so `data` is
+      # typed `unknown`). Surfaced for visibility; flip to blocking once cleared.
+      - name: Type check
+        run: pnpm typecheck
+        continue-on-error: true

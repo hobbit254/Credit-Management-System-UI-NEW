@@ -3,6 +3,10 @@ import { computed, onMounted, ref } from 'vue'
 import { useTheme } from 'vuetify'
 import { useProductInventory } from '@/composables/product-inventory/useProductInventory'
 
+definePageMeta({
+  subject: 'v1/product-inventory',
+})
+
 const {
   loading, showToast, productInventories, fetchAllProductInventory, pagination,
   openAdd, newProductInventory, addProductInventory, createProductInventory,

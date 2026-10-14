@@ -3,6 +3,10 @@ import { computed, onMounted } from 'vue'
 import { useTheme } from 'vuetify'
 import { usePermissions } from '@/composables/permissions/usePermissions'
 
+definePageMeta({
+  subject: 'v1/permissions',
+})
+
 const {
   permissions, pagination, fetchAllPermissions, showToast, loading,
   openAdd, newPermission, addPermission, createPermission,

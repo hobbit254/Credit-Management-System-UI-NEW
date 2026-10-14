@@ -1,7 +1,7 @@
 <script lang="ts" setup>
 import { onMounted, ref } from 'vue'
 import { useUsers } from '@/composables/users/useUsers'
-import UpdateUserProfileModal from "@/components/users/UpdateUserProfileModal.vue";
+import UpdateUserProfileModal from '@/components/users/UpdateUserProfileModal.vue'
 
 const { showToast, updateUser, fetchActiveUser, activeUser } = useUsers()
 

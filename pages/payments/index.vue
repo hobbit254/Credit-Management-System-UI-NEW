@@ -4,6 +4,10 @@ import { useTheme } from 'vuetify'
 import { usePayments } from '@/composables/payments/usePayments'
 import type { NewPayment, Payment, PaymentTransactionItem } from '@/schemas/payments'
 
+definePageMeta({
+  subject: 'v1/payments',
+})
+
 const {
   payments,
   loading,

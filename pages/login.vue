@@ -9,18 +9,19 @@ import authV2MaskDark from '@images/pages/misc-mask-dark.png'
 import authV2MaskLight from '@images/pages/misc-mask-light.png'
 import { VNodeRenderer } from '@layouts/components/VNodeRenderer'
 import { themeConfig } from '@themeConfig'
+import { useAuthForm } from '@/composables/auth/useAuthForm'
 
 definePageMeta({
   layout: 'blank',
   public: true,
-
+  guestOnly: true,
 })
 
-const form = ref({
-  email: '',
-  password: '',
-  remember: false,
-})
+const { loginForm, login, loading } = useAuthForm()
+
+async function onSubmit() {
+  await login()
+}
 
 const isPasswordVisible = ref(false)
 
@@ -93,12 +94,12 @@ const authThemeMask = useGenerateImageVariant(authV2MaskLight, authV2MaskDark)
           </p>
         </VCardText>
         <VCardText>
-          <VForm @submit.prevent="() => {}">
+          <VForm @submit.prevent="onSubmit">
             <VRow>
               <!-- email -->
               <VCol cols="12">
                 <AppTextField
-                  v-model="form.email"
+                  v-model="loginForm.email"
                   autofocus
                   label="Email or Username"
                   type="email"
@@ -109,7 +110,7 @@ const authThemeMask = useGenerateImageVariant(authV2MaskLight, authV2MaskDark)
               <!-- password -->
               <VCol cols="12">
                 <AppTextField
-                  v-model="form.password"
+                  v-model="loginForm.password"
                   label="Password"
                   placeholder="············"
                   :type="isPasswordVisible ? 'text' : 'password'"
@@ -120,7 +121,7 @@ const authThemeMask = useGenerateImageVariant(authV2MaskLight, authV2MaskDark)
 
                 <div class="d-flex align-center flex-wrap justify-space-between my-6">
                   <VCheckbox
-                    v-model="form.remember"
+                    v-model="loginForm.remember"
                     label="Remember me"
                   />
                   <a
@@ -134,6 +135,8 @@ const authThemeMask = useGenerateImageVariant(authV2MaskLight, authV2MaskDark)
                 <VBtn
                   block
                   type="submit"
+                  :loading="loading"
+                  :disabled="loading"
                 >
                   Login
                 </VBtn>

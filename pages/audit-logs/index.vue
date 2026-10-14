@@ -4,6 +4,10 @@ import { useTheme } from 'vuetify'
 import type { AuditLog } from '@/schemas/audit_logs'
 import { useAuditLogs } from '@/composables/audit-logs/useAuditLogs'
 
+definePageMeta({
+  subject: 'v1/audit_logs',
+})
+
 const {
   auditLogs,
   loading,

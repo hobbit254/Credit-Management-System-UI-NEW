@@ -1,3 +1,4 @@
+import type { AppAbility } from '@/composables/auth/useAbility'
 import { useAlert } from '@/composables/alerts/useAlert'
 
 interface User {
@@ -12,39 +13,58 @@ interface User {
   role_name: string
 }
 
+function readCookie(name: string): string | null {
+  if (!import.meta.client)
+    return null
+
+  const match = document.cookie.match(new RegExp(`(?:^|; )${name}=([^;]*)`))
+
+  return match ? decodeURIComponent(match[1]) : null
+}
+
 export default defineNuxtPlugin(nuxtApp => {
   const config = useRuntimeConfig()
   const { alert: showToast } = useAlert()
-  const accessToken = useState<string | null>('accessToken')
-  const expiry = useState<number | null>('expiry')
   const user = useState<User | null>('user')
 
-  // const { alert: showToast } = useAlert()
+  const apiBaseUrl = (config.public.apiBaseUrl as string) || '/api'
+
+  // Root app origin, used only for Sanctum's CSRF-cookie route (not under /api).
+  const appUrl = (config.public.appUrl as string) || ''
+
+  async function ensureCsrfCookie() {
+    await $fetch(`${appUrl}/sanctum/csrf-cookie`, { credentials: 'include' })
+  }
 
   const fetcher = $fetch.create({
-    baseURL: (config.public.apiBaseUrl as string) || '/api',
+    baseURL: apiBaseUrl,
+    credentials: 'include',
 
-    onRequest({ options }) {
-      if (accessToken.value) {
-        const now = Math.floor(Date.now() / 1000)
-        if (expiry.value && expiry.value < now) {
-          accessToken.value = null
-          user.value = null
-          expiry.value = null
-          if (import.meta.client)
-            navigateTo('/')
+    async onRequest({ options }) {
+      // Without this, Laravel's expectsJson() is false, so an expired/missing
+      // session falls through to Authenticate::redirectTo(), which calls
+      // route('login') — undefined in this API-only app — turning what should
+      // be a clean 401 into an unhandled 500.
+      const headers = new Headers(options.headers as HeadersInit)
 
-          throw new Error('Token expired')
+      headers.set('Accept', 'application/json')
+      options.headers = headers
+
+      const method = (options.method ?? 'GET').toString().toUpperCase()
+
+      if (method !== 'GET' && method !== 'HEAD') {
+        // Every stateful mutating request needs a matching X-XSRF-TOKEN header.
+        // Fetch the cookie lazily if it isn't set yet (e.g. a public form
+        // submitted before anything else hit the API).
+        if (!readCookie('XSRF-TOKEN'))
+          await ensureCsrfCookie()
+
+        const xsrfToken = readCookie('XSRF-TOKEN')
+
+        if (xsrfToken) {
+          headers.set('X-XSRF-TOKEN', xsrfToken)
+          options.headers = headers
         }
-
-        options.headers = options.headers || {}
-
-        const headers = options.headers as any
-
-        if (headers instanceof Headers)
-          headers.set('Authorization', `Bearer ${accessToken.value}`)
-        else
-          headers.Authorization = `Bearer ${accessToken.value}`
       }
     },
 
@@ -57,15 +77,24 @@ export default defineNuxtPlugin(nuxtApp => {
         message = responseData?.message || 'Bad request'
       }
       else if (status === 401) {
-        message = 'Unauthorized — please log in again'
-        accessToken.value = null
+        // Show the server's reason (wrong password, account deactivated) unless
+        // it's the generic "Unauthenticated", which just means the session ended.
+        const serverMessage: string | undefined = responseData?.message
+
+        message = serverMessage && !/^unauthenticated\.?$/i.test(serverMessage)
+          ? serverMessage
+          : 'Unauthorized — please log in again'
         user.value = null
-        expiry.value = null
-        if (import.meta.client)
-          navigateTo('/')
+        if (import.meta.client) {
+          localStorage.removeItem('user')
+          if (nuxtApp.$ability)
+            (nuxtApp.$ability as AppAbility).update([])
+          navigateTo('/login')
+        }
       }
       else if (status === 403) {
-        message = 'Forbidden — you do not have permission to access this resource'
+        // e.g. "This account has been deactivated. Contact an administrator." on login
+        message = responseData?.message || 'Forbidden — you do not have permission to access this resource'
       }
       else if (status === 404) {
         message = 'Resource not found'
@@ -94,13 +123,13 @@ export default defineNuxtPlugin(nuxtApp => {
       return { data }
     },
 
-    post: async <T = unknown>(url: string, body?: any, options?: Record<string, unknown>) => {
+    post: async <T = unknown>(url: string, body?: unknown, options?: Record<string, unknown>) => {
       const data = await fetcher<T>(url, { ...options, method: 'POST', body })
 
       return { data }
     },
 
-    put: async <T = unknown>(url: string, body?: any, options?: Record<string, unknown>) => {
+    put: async <T = unknown>(url: string, body?: unknown, options?: Record<string, unknown>) => {
       const data = await fetcher<T>(url, { ...options, method: 'PUT', body })
 
       return { data }
@@ -116,4 +145,5 @@ export default defineNuxtPlugin(nuxtApp => {
   }
 
   nuxtApp.provide('api', api)
+  nuxtApp.provide('ensureCsrfCookie', ensureCsrfCookie)
 })

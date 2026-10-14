@@ -7,16 +7,22 @@ export default [
         title: 'Categories',
         to: 'categories',
         icon: { icon: 'tabler-hierarchy-2', size: 20 },
+        action: 'access',
+        subject: 'v1/categories',
       },
       {
         title: 'Products',
         to: 'products',
         icon: { icon: 'tabler-package', size: 20 },
+        action: 'access',
+        subject: 'v1/products',
       },
       {
         title: 'Stock Management', // More action-oriented than "Product Inventory"
         to: 'product-inventory',
         icon: { icon: 'tabler-building-warehouse', size: 20 },
+        action: 'access',
+        subject: 'v1/product-inventory',
       },
     ],
   },

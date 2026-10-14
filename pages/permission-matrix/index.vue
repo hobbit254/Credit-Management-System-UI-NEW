@@ -3,6 +3,10 @@ import { computed, onMounted, reactive, ref, watch } from 'vue'
 import type { DataTableHeader } from 'vuetify'
 import { usePermissionMatrix } from '@/composables/permission-matrix/usePermissionMatrix'
 
+definePageMeta({
+  subject: 'v1/permission-matrix',
+})
+
 const {
   roles,
   permissions,

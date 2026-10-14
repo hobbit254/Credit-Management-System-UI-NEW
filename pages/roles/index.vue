@@ -3,6 +3,10 @@ import { computed, onMounted, ref } from 'vue'
 import { useTheme } from 'vuetify'
 import { useRoles } from '@/composables/roles/useRoles'
 
+definePageMeta({
+  subject: 'v1/roles',
+})
+
 const {
   showToast, roles, fetchAllRoles, openAdd, newRole, addRole, createRole, openEdit,
   roleToEdit, editRole, updateRole, openDelete, roleToDelete, deleteRoleModal,

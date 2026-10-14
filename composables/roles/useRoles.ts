@@ -1,10 +1,10 @@
-import type { AxiosInstance } from 'axios'
 import { ref } from 'vue'
+import type { ApiClient } from '@/types/api'
 import type { NewRole, Role } from '@/schemas/role'
 import { useAlert } from '@/composables/alerts/useAlert'
 
 export function useRoles() {
-  const { $api } = useNuxtApp() as unknown as { $api: AxiosInstance }
+  const { $api } = useNuxtApp() as unknown as { $api: ApiClient }
   const roles = ref<Role[]>([])
   const loading = ref(false)
   const { alert: showToast } = useAlert()

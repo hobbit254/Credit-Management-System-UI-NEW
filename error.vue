@@ -27,6 +27,13 @@ const errToShow = computed(() => {
     }
   }
 
+  if (props.error?.statusCode === 403) {
+    return {
+      title: 'Access Denied',
+      description: props.error.statusMessage || 'You do not have permission to view this page.',
+    }
+  }
+
   else if (isDev) {
     return {
       title: props.error?.statusMessage,

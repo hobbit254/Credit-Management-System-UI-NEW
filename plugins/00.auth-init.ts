@@ -1,15 +1,17 @@
-// plugins/00.auth-init.ts
+// Optimistic UI hint only — the actual session lives in an httpOnly cookie
+// the client can't read, so this is not a trust boundary. plugins/02.ability.ts
+// confirms (or clears) this against the server on every app boot.
 export default defineNuxtPlugin(() => {
   if (import.meta.client) {
-    const accessToken = localStorage.getItem('accessToken')
-    const expiry = localStorage.getItem('expiry')
     const user = localStorage.getItem('user')
 
-    if (accessToken)
-      useState<string | null>('accessToken').value = accessToken
-    if (expiry)
-      useState<number | null>('expiry').value = Number(expiry)
-    if (user)
-      useState('user').value = JSON.parse(user)
+    if (user) {
+      try {
+        useState('user').value = JSON.parse(user)
+      }
+      catch {
+        localStorage.removeItem('user')
+      }
+    }
   }
 })

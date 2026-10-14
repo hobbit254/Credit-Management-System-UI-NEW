@@ -1,10 +1,10 @@
-import type { AxiosInstance } from 'axios'
+import type { ApiClient } from '@/types/api'
 import type { Category, NewCategory } from '@/schemas/category'
 import { useAlert } from '@/composables/alerts/useAlert'
 import type { Pagination } from '@/schemas/pagination'
 
 export function useCategory() {
-  const { $api } = useNuxtApp() as unknown as { $api: AxiosInstance }
+  const { $api } = useNuxtApp() as unknown as { $api: ApiClient }
   const categories = ref<Category[]>([])
   const loading = ref(false)
   const { alert: showToast } = useAlert()

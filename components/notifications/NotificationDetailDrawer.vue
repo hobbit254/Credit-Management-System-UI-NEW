@@ -120,7 +120,7 @@ const formatCurrency = (amount: number) =>
 
         <!-- Details Array -->
         <div
-          v-if="notification.details?.length"
+          v-if="Array.isArray(notification.details) && notification.details.length"
           class="mb-5"
         >
           <p class="text-overline text-medium-emphasis mb-3">

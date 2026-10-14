@@ -1,10 +1,10 @@
-import type { AxiosInstance } from 'axios'
+import type { ApiClient } from '@/types/api'
 import { useAlert } from '@/composables/alerts/useAlert'
 import type { Pagination } from '@/schemas/pagination'
 import type { Collector } from '@/schemas/collectors'
 
 export function useCollectors() {
-  const { $api } = useNuxtApp() as unknown as { $api: AxiosInstance }
+  const { $api } = useNuxtApp() as unknown as { $api: ApiClient }
   const loading = ref(false)
   const { alert: showToast } = useAlert()
   const collectors = ref<Collector[]>([])
@@ -35,15 +35,18 @@ export function useCollectors() {
   }
 
   async function fetchAllActiveCollectors() {
-    const { data } = await $api.get('collectors/active')
-
     let result: Collector[] = []
-    if (Array.isArray(data))
-      result = data
-    else if (data && Array.isArray(data.data))
-      result = data.data
 
-    collectors.value = result // <-- update reactive state here
+    await withLoading(async () => {
+      const { data } = await $api.get('collectors/active')
+
+      if (Array.isArray(data))
+        result = data
+      else if (data && Array.isArray(data.data))
+        result = data.data
+
+      collectors.value = result
+    })
 
     return result
   }

@@ -35,7 +35,6 @@ onMounted(async () => {
       message.value = res?.message || 'Verification complete.'
       status.value = true
       email.value = res?.email
-
     }
     catch {
       message.value = 'Verification failed.'

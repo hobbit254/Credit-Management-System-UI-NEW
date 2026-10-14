@@ -5,6 +5,10 @@ import { useTransaction } from '@/composables/transactions/useTransaction'
 import type { TransactionItem } from '@/schemas/transactions'
 import { usePayments } from '@/composables/payments/usePayments'
 
+definePageMeta({
+  subject: 'v1/transactions',
+})
+
 const {
   transactions,
   loading,

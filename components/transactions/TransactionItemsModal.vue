@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import type { TransactionItem } from '@/schemas/transactions'
 
-const props = defineProps<{
+defineProps<{
   modelValue: boolean
   items: TransactionItem[]
   transactionUuid: string

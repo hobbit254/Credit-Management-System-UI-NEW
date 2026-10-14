@@ -3,6 +3,10 @@ import { computed, onMounted } from 'vue'
 import { useTheme } from 'vuetify'
 import { useCategory } from '@/composables/categories/useCategory'
 
+definePageMeta({
+  subject: 'v1/categories',
+})
+
 const {
   pagination, categories, loading, showToast, fetchAllCategories,
   openAdd, addCategory, newCategory, createCategory,

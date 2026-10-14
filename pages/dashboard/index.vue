@@ -25,7 +25,9 @@ const stats = computed(() => {
   const pay = data?.payments ?? []
 
   const totalT = t.reduce((a, b) => a + b.total, 0)
-  const paidT = t.filter(i => i.status === 'Paid').reduce((a, b) => a + b.total, 0)
+
+  // Closed with returns is settled too: what was kept is paid for.
+  const paidT = t.filter(i => ['Paid', 'Closed_With_Returns'].includes(i.status)).reduce((a, b) => a + b.total, 0)
 
   return {
     revenue: pay.filter(i => i.status === 'ACCEPTED').reduce((a, b) => a + b.total, 0),
@@ -33,7 +35,9 @@ const stats = computed(() => {
     lowStockCount: p.filter(i => i.status === 'InStock' && i.total <= 2).length,
     totalTrans: totalT,
     collectionRate: totalT > 0 ? Math.ceil((paidT / totalT) * 100) : 0,
-    onCreditCount: p.filter(f => f.status === 'OnCredit').length,
+
+    // Rows are grouped per product, so add up their counts to get units.
+    onCreditCount: p.filter(f => f.status === 'OnCredit').reduce((a, b) => a + b.total, 0),
   }
 })
 

@@ -334,6 +334,7 @@ onMounted(async () => {
               <div class="d-flex align-center ga-2">
                 <span class="text-caption text-medium-emphasis">Rows per page</span>
                 <VSelect
+                  aria-label="Items per page"
                   :model-value="pagination.perPage"
                   :items="perPageOptions"
                   density="compact"

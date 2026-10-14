@@ -128,11 +128,13 @@ const perPageOptions = [5, 10, 25, 50, 100]
             #[`item.role_${role.roles_uuid}`]="{ item }"
           >
             <div class="d-flex justify-center">
+              <!-- Named for its row and column: a screen reader would otherwise just say "switch, on" -->
               <VSwitch
                 color="primary"
                 density="compact"
                 hide-details
                 inset
+                :aria-label="`${item.permission_name} for ${role.role_name}`"
                 :model-value="hasPermission(role.roles_uuid, item.permission_uuid)"
                 @update:model-value="() => toggle(role.roles_uuid, item.permission_uuid)"
               />
@@ -158,6 +160,7 @@ const perPageOptions = [5, 10, 25, 50, 100]
               <div class="d-flex align-center ga-2">
                 <span class="text-caption text-medium-emphasis">Rows per page</span>
                 <VSelect
+                  aria-label="Items per page"
                   :model-value="pagination.perPage"
                   :items="perPageOptions"
                   density="compact"

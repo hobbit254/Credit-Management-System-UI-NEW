@@ -77,6 +77,7 @@ onMounted(() => {
         >
           <VTextField
             v-model="search"
+            aria-label="Search products"
             prepend-inner-icon="tabler-search"
             placeholder="Search models, brands..."
             variant="solo"

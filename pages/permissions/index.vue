@@ -274,6 +274,7 @@ function getRowProps({ item }: { item: any }) {
               <div class="d-flex align-center ga-3">
                 <span class="text-caption text-medium-emphasis font-weight-medium">Rows per page:</span>
                 <VSelect
+                  aria-label="Items per page"
                   :model-value="pagination.perPage"
                   :items="perPageOptions"
                   density="compact"

@@ -221,9 +221,14 @@ const formatCurrency = (value: number) => {
                   <VListItemTitle>Copy UUID</VListItemTitle>
                 </VListItem>
 
-                <VDivider class="my-1" />
+                <!-- Archived rows are restored, not unsuspended -->
+                <VDivider
+                  v-if="item.deleted_at === null"
+                  class="my-1"
+                />
 
                 <VListItem
+                  v-if="item.deleted_at === null"
                   :color="item.active === 1 ? 'warning' : 'success'"
                   @click="item.active === 1 ? deactivateDebtor(item) : activateDebtor(item)"
                 >

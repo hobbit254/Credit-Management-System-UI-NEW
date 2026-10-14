@@ -80,13 +80,18 @@ export function useTransaction() {
     })
   }
 
+  // Returns whether it was saved; a return is refused while the sale has a pending payment.
   async function updateTransactionItemStatus(transactionUuid: string, transactionItemUuid: string, status: string,
-  ) {
+  ): Promise<boolean> {
+    let saved = false
+
     await withLoading(loading, async () => {
       const { data } = await $api.post('transaction-items/updateStatus', {
         transaction_item_uuid: transactionItemUuid,
         status,
       })
+
+      saved = true
 
       showToast({
         title: 'Update New Transaction',
@@ -96,6 +101,8 @@ export function useTransaction() {
       })
       await fetchAllTransactions()
     })
+
+    return saved
   }
 
   return {

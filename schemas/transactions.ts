@@ -5,6 +5,7 @@ export interface Transaction {
   transaction_type: string
   total_expected: number
   payments_sum_amount: number
+  overpaid: number
   status: string
   created_at: string
   updated_at: string

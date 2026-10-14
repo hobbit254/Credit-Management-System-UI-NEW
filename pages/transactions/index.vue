@@ -85,12 +85,13 @@ async function handleCreatePayment(payment: any) {
 }
 
 async function handleUpdateItemStatus(item: TransactionItem, newStatus: string) {
-  await updateTransactionItemStatus(selectedTransactionUuid.value, item.transaction_item_uuid, newStatus)
+  // The request already toasts its own success or the server's reason for refusing.
+  if (!await updateTransactionItemStatus(selectedTransactionUuid.value, item.transaction_item_uuid, newStatus))
+    return
 
   const found = selectedItems.value.find(i => i.transaction_item_uuid === item.transaction_item_uuid)
   if (found)
     found.status = newStatus
-  showToast({ title: 'Updated', text: 'Item status updated successfully', color: 'success', icon: 'tabler-check' })
 }
 
 const headers = [
@@ -283,6 +284,16 @@ onMounted(async () => {
                 <span class="text-xxs text-disabled font-weight-bold">TOTAL PAID:</span>
                 <span class="text-body-2 font-weight-bold text-success font-mono">
                   {{ Number(item.payments_sum_amount || 0).toLocaleString() }}
+                </span>
+              </div>
+              <!-- Accepted money beyond what is owed, e.g. after a paid item came back -->
+              <div
+                v-if="Number(item.overpaid) > 0"
+                class="d-flex align-center ga-2"
+              >
+                <span class="text-xxs text-error font-weight-bold">REFUND DUE:</span>
+                <span class="text-body-2 font-weight-bold text-error font-mono">
+                  {{ Number(item.overpaid).toLocaleString() }}
                 </span>
               </div>
 

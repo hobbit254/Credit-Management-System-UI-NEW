@@ -1,5 +1,5 @@
 import { abilitiesPlugin } from '@casl/vue'
-import { createAppAbility, refreshAbility } from '@/composables/auth/useAbility'
+import { createAppAbility } from '@/composables/auth/useAbility'
 import { verifySession } from '@/composables/auth/useAuthForm'
 
 export default defineNuxtPlugin(async nuxtApp => {
@@ -12,8 +12,6 @@ export default defineNuxtPlugin(async nuxtApp => {
   // valid is to ask the server. This runs before the first route middleware
   // (Nuxt awaits async plugins before mounting), so `user` reflects the real
   // session state everywhere downstream.
-  if (import.meta.client) {
+  if (import.meta.client)
     await verifySession()
-    await refreshAbility()
-  }
 })

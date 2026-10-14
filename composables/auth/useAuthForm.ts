@@ -1,19 +1,21 @@
 import type { ApiClient } from '@/types/api'
 import { type LoginForm, type LoginResponse, type User, createLoginForm } from '@/schemas/auth'
 import { useAlert } from '@/composables/alerts/useAlert'
-import { type AppAbility, refreshAbility } from '@/composables/auth/useAbility'
+import { type AppAbility, type RoleWithPermissions, buildRulesFromRole } from '@/composables/auth/useAbility'
 
 interface MeResponseUser extends Omit<User, 'role_name'> {
-  roles?: { role_name: string }[]
+  roles?: RoleWithPermissions[]
 }
 
 // The session lives in an httpOnly cookie, so this is the only way to know
 // if it's still valid — confirms (or clears) `user` against the server.
-// Called on every app boot, before any route middleware runs.
+// Called on every app boot, before any route middleware runs, and after login.
+// Also sets the ability from the user's own role permissions.
 // Plain $fetch, not $api: a 401 here just means "logged out", so it must not
 // trigger $api's error toast and redirect to /login (e.g. on /verify-email).
 export async function verifySession() {
   const config = useRuntimeConfig()
+  const { $ability } = useNuxtApp() as unknown as { $ability: AppAbility }
   const user = useState<User | null>('user')
 
   try {
@@ -28,14 +30,17 @@ export async function verifySession() {
     if (!me)
       throw new Error('No user in response')
 
-    const resolved: User = { ...me, role_name: me.roles?.[0]?.role_name ?? '' }
+    const { roles, ...rest } = me
+    const resolved: User = { ...rest, role_name: roles?.[0]?.role_name ?? '' }
 
     user.value = resolved
+    $ability.update(buildRulesFromRole(roles?.[0]))
     if (import.meta.client)
       localStorage.setItem('user', JSON.stringify(resolved))
   }
   catch {
     user.value = null
+    $ability.update([])
     if (import.meta.client)
       localStorage.removeItem('user')
   }
@@ -61,7 +66,7 @@ export function useAuthForm() {
         if (import.meta.client)
           localStorage.setItem('user', JSON.stringify(data.data.user))
 
-        await refreshAbility()
+        await verifySession()
         showToast({
           title: 'Login Successful',
           text: data.message,

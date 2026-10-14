@@ -1,6 +1,6 @@
 import type { ApiClient } from '@/types/api'
 import { useAlert } from '@/composables/alerts/useAlert'
-import type { NewTransaction, Transaction } from '@/schemas/transactions'
+import type { NewRefund, NewTransaction, Transaction } from '@/schemas/transactions'
 import type { Pagination } from '@/schemas/pagination'
 import { parsePage, withLoading } from '@/utils/requests'
 
@@ -107,6 +107,21 @@ export function useTransaction() {
     return saved
   }
 
+  // Returns whether it was saved, so a refused refund keeps its form open.
+  async function recordRefund(refund: NewRefund): Promise<boolean> {
+    let saved = false
+
+    await withLoading(loading, async () => {
+      const { data } = await $api.post('refunds/create', refund)
+
+      saved = true
+      showToast({ title: 'Refund Recorded', text: data.message, color: 'success', icon: '$success' })
+      await fetchAllTransactions()
+    })
+
+    return saved
+  }
+
   return {
     transactions,
     loading,
@@ -118,5 +133,6 @@ export function useTransaction() {
     addTransaction,
     createTransaction,
     updateTransactionItemStatus,
+    recordRefund,
   }
 }

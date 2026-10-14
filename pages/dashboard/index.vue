@@ -30,7 +30,8 @@ const stats = computed(() => {
   const paidT = t.filter(i => ['Paid', 'Closed_With_Returns'].includes(i.status)).reduce((a, b) => a + b.total, 0)
 
   return {
-    revenue: pay.filter(i => i.status === 'ACCEPTED').reduce((a, b) => a + b.total, 0),
+    // Money kept: accepted payments less what was paid back.
+    revenue: pay.filter(i => i.status === 'ACCEPTED').reduce((a, b) => a + b.total, 0) - (data?.refunds ?? 0),
     inStock: p.filter(i => i.status === 'InStock').reduce((a, b) => a + b.total, 0),
     lowStockCount: p.filter(i => i.status === 'InStock' && i.total <= 2).length,
     totalTrans: totalT,

@@ -2,7 +2,8 @@
 import { computed, onMounted, ref } from 'vue'
 import { useTheme } from 'vuetify'
 import { useTransaction } from '@/composables/transactions/useTransaction'
-import type { TransactionItem } from '@/schemas/transactions'
+import type { NewRefund, Transaction, TransactionItem } from '@/schemas/transactions'
+import type { AppAbility } from '@/composables/auth/useAbility'
 import { usePayments } from '@/composables/payments/usePayments'
 import { saleStatusColor } from '@/utils/formatters'
 
@@ -21,6 +22,7 @@ const {
   addTransaction,
   createTransaction,
   updateTransactionItemStatus,
+  recordRefund,
 } = useTransaction()
 
 const { createPayment } = usePayments()
@@ -50,6 +52,22 @@ const viewPayments = (item: any) => {
   selectedPayments.value = item.payments ?? []
   selectedPaymentTransactionUuid.value = item.transaction_uuid
   openPaymentsModal.value = true
+}
+
+// Admins and accountants hold refunds/create (granted by the backend migration).
+const { $ability } = useNuxtApp() as unknown as { $ability: AppAbility }
+const canRecordRefund = computed(() => $ability.can('access', 'v1/refunds/create'))
+const openRefundModal = ref(false)
+const refundSale = ref<Transaction | null>(null)
+
+const recordRefundForTransaction = (item: Transaction) => {
+  refundSale.value = item
+  openRefundModal.value = true
+}
+
+async function handleRecordRefund(refund: NewRefund) {
+  if (await recordRefund(refund))
+    openRefundModal.value = false
 }
 
 const addPaymentForTransaction = (item: any) => {
@@ -291,7 +309,16 @@ onMounted(async () => {
                   {{ Number(item.payments_sum_amount || 0).toLocaleString() }}
                 </span>
               </div>
-              <!-- Accepted money beyond what is owed, e.g. after a paid item came back -->
+              <div
+                v-if="Number(item.total_refunded) > 0"
+                class="d-flex align-center ga-2"
+              >
+                <span class="text-xxs text-disabled font-weight-bold">REFUNDED:</span>
+                <span class="text-body-2 font-weight-bold font-mono">
+                  {{ Number(item.total_refunded).toLocaleString() }}
+                </span>
+              </div>
+              <!-- Accepted money beyond what is owed and not yet paid back, e.g. after a paid item came back -->
               <div
                 v-if="Number(item.overpaid) > 0"
                 class="d-flex align-center ga-2"
@@ -369,6 +396,19 @@ onMounted(async () => {
                     </VIcon>
                   </template>
                   <VListItemTitle>Record Payment</VListItemTitle>
+                </VListItem>
+                <!-- Admins and accountants (refunds/create), only while money is due back -->
+                <VListItem
+                  v-if="Number(item.overpaid) > 0 && canRecordRefund"
+                  color="error"
+                  @click="recordRefundForTransaction(item)"
+                >
+                  <template #prepend>
+                    <VIcon size="18">
+                      tabler-receipt-refund
+                    </VIcon>
+                  </template>
+                  <VListItemTitle>Record Refund</VListItemTitle>
                 </VListItem>
                 <VListItem @click="viewPayments(item)">
                   <template #prepend>
@@ -449,6 +489,12 @@ onMounted(async () => {
     :loading="loading"
     :preset-transaction-uuid="selectedTransactionForPayment"
     @confirm="handleCreatePayment"
+  />
+  <RecordRefundModal
+    v-model="openRefundModal"
+    :sale="refundSale"
+    :loading="loading"
+    @confirm="handleRecordRefund"
   />
 </template>
 

@@ -10,6 +10,7 @@ export function useDashboard() {
     products: [],
     transactions: [],
     payments: [],
+    refunds: 0,
   })
 
   async function fetchDashboardStats() {

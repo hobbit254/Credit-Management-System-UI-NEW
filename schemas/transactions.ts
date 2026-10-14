@@ -5,6 +5,7 @@ export interface Transaction {
   transaction_type: string
   total_expected: number
   payments_sum_amount: number
+  total_refunded: number
   overpaid: number
   status: string
   created_at: string
@@ -95,6 +96,14 @@ export interface TransactionItem {
   created_at: string
   updated_at: string
   product_inventory: ProductInventory
+}
+
+export interface NewRefund {
+  transaction_uuid: string
+  amount: string
+  refund_method: string
+  reference_code: string
+  note: string
 }
 
 // Money is stored with 2 decimals; the server refuses more rather than rounding.

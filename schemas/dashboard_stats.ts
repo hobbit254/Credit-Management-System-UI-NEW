@@ -25,6 +25,7 @@ export const DashboardStatsSchema = z.object({
   products: z.array(ProductStatSchema),
   transactions: z.array(TransactionStatSchema),
   payments: z.array(PaymentStatSchema),
+  refunds: z.number(),
 })
 
 export type DashboardStats = z.infer<typeof DashboardStatsSchema>

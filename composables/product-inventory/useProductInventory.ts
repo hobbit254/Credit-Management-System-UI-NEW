@@ -3,7 +3,7 @@ import type { ApiClient } from '@/types/api'
 import { useAlert } from '@/composables/alerts/useAlert'
 import type { Pagination } from '@/schemas/pagination'
 import type { NewProductInventory, ProductInventory } from '@/schemas/productInventory'
-import { withLoading } from '@/utils/requests'
+import { parsePage, withLoading } from '@/utils/requests'
 
 export function useProductInventory() {
   const { $api } = useNuxtApp() as unknown as { $api: ApiClient }
@@ -33,32 +33,10 @@ export function useProductInventory() {
         },
       })
 
-      const payload = data.value ?? data
+      const page = parsePage(data, pagination.value.perPage)
 
-      // Defensive Parsing to prevent "Cannot read properties of undefined (reading 'total')"
-      let rows: ProductInventory[] = []
-      let pageInfo = { total: 0, currentPage: 1, lastPage: 1 }
-
-      if (payload?.data) {
-        if (Array.isArray(payload.data)) {
-          // Format: [ [rows], {pagination} ]
-          rows = payload.data[0] || []
-          pageInfo = payload.data[1] || pageInfo
-        }
-        else {
-          // Format: { rows: [], pagination: {} }
-          rows = payload.data.rows || []
-          pageInfo = payload.data.pagination || pageInfo
-        }
-      }
-
-      productInventories.value = rows
-      pagination.value = {
-        total: pageInfo?.total ?? 0,
-        perPage: pagination.value.perPage,
-        currentPage: pageInfo?.currentPage ?? 1,
-        lastPage: pageInfo?.lastPage ?? 1,
-      }
+      productInventories.value = page.rows
+      pagination.value = page.pagination
     })
   }
 

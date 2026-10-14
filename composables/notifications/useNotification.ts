@@ -17,6 +17,12 @@ const pagination = ref<Pagination>({
   hasMorePages: false,
 })
 
+// Called on logout so the next user never sees the previous user's notifications.
+export function clearNotifications() {
+  notifications.value = []
+  error.value = null
+}
+
 export const useNotifications = () => {
   const { $api } = useNuxtApp() as unknown as { $api: ApiClient }
 

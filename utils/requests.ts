@@ -18,12 +18,13 @@ export async function withLoading(loading: Ref<boolean>, fn: () => Promise<void>
   }
 }
 
-// List endpoints return `data` as a [rows, meta] tuple; older ones as { rows, pagination }.
+// List endpoints return `data` as a [rows, meta] tuple (or [] when empty); older ones as { rows, pagination }.
 export function parsePage(body: any, perPage: number): { rows: any[]; pagination: Pagination } {
-  const [rows, meta] = Array.isArray(body.data) ? body.data : [body.data.rows, body.data.pagination]
+  const data = body?.data
+  const [rows, meta] = Array.isArray(data) ? data : [data?.rows, data?.pagination]
 
   return {
     rows: rows ?? [],
-    pagination: { total: meta.total, perPage, currentPage: meta.currentPage, lastPage: meta.lastPage },
+    pagination: { total: meta?.total ?? 0, perPage, currentPage: meta?.currentPage ?? 1, lastPage: meta?.lastPage ?? 1 },
   }
 }

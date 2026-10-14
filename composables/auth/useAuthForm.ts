@@ -2,9 +2,21 @@ import type { ApiClient } from '@/types/api'
 import { type LoginForm, type LoginResponse, type User, createLoginForm } from '@/schemas/auth'
 import { useAlert } from '@/composables/alerts/useAlert'
 import { type AppAbility, type RoleWithPermissions, buildRulesFromRole } from '@/composables/auth/useAbility'
+import { clearNotifications } from '@/composables/notifications/useNotification'
 
 interface MeResponseUser extends Omit<User, 'role_name'> {
   roles?: RoleWithPermissions[]
+}
+
+// Forgets the signed-in user everywhere: state, localStorage, permissions, notifications.
+export function clearSession() {
+  const { $ability } = useNuxtApp() as unknown as { $ability?: AppAbility }
+
+  useState<User | null>('user').value = null
+  $ability?.update([])
+  clearNotifications()
+  if (import.meta.client)
+    localStorage.removeItem('user')
 }
 
 // The session lives in an httpOnly cookie, so this is the only way to know
@@ -39,10 +51,7 @@ export async function verifySession() {
       localStorage.setItem('user', JSON.stringify(resolved))
   }
   catch {
-    user.value = null
-    $ability.update([])
-    if (import.meta.client)
-      localStorage.removeItem('user')
+    clearSession()
   }
 }
 
@@ -104,15 +113,7 @@ export function useAuthForm() {
       // Best-effort — clear local state regardless of whether the server call succeeded.
     }
 
-    user.value = null
-
-    if (import.meta.client) {
-      localStorage.removeItem('user')
-
-      const { $ability } = useNuxtApp() as unknown as { $ability: AppAbility }
-
-      $ability.update([])
-    }
+    clearSession()
 
     navigateTo('/login')
   }

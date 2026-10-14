@@ -297,7 +297,7 @@ const formatCurrency = (value: number) => {
                   :total-visible="5"
                   density="compact"
                   active-color="primary"
-                  @update:model-value="(page) => fetchAllDebtors(page)"
+                  @update:model-value="(page) => fetchAllDebtors({ page })"
                 />
               </div>
             </div>

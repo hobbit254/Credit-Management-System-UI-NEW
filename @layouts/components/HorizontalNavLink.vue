@@ -1,6 +1,4 @@
 <script lang="ts" setup>
-import { NuxtLink } from '#components'
-
 import { layoutConfig } from '@layouts'
 import { can } from '@layouts/plugins/casl'
 import type { NavLink } from '@layouts/types'
@@ -20,6 +18,9 @@ interface Props {
 const props = withDefaults(defineProps<Props>(), {
   isSubItem: false,
 })
+
+// Not `import { NuxtLink } from '#components'`: Vite's dependency scan can't resolve that virtual module.
+const NuxtLink = resolveComponent('NuxtLink')
 </script>
 
 <template>

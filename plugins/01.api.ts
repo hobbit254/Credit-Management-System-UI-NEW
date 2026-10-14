@@ -1,22 +1,9 @@
-import type { AppAbility } from '@/composables/auth/useAbility'
 import { useAlert } from '@/composables/alerts/useAlert'
-
-interface User {
-  user_uuid: string
-  full_name: string
-  email: string
-  email_verified_at: string | null
-  active: number
-  deleted_at: string | null
-  created_at: string
-  updated_at: string
-  role_name: string
-}
+import { clearSession } from '@/composables/auth/useAuthForm'
 
 export default defineNuxtPlugin(nuxtApp => {
   const config = useRuntimeConfig()
   const { alert: showToast } = useAlert()
-  const user = useState<User | null>('user')
 
   const apiBaseUrl = (config.public.apiBaseUrl as string) || '/api'
 
@@ -111,13 +98,8 @@ export default defineNuxtPlugin(nuxtApp => {
         message = serverMessage && !/^unauthenticated\.?$/i.test(serverMessage)
           ? serverMessage
           : 'Unauthorized — please log in again'
-        user.value = null
-        if (import.meta.client) {
-          localStorage.removeItem('user')
-          if (nuxtApp.$ability)
-            (nuxtApp.$ability as AppAbility).update([])
-          navigateTo('/login')
-        }
+        nuxtApp.runWithContext(clearSession)
+        navigateTo('/login')
       }
       else if (status === 403) {
         // e.g. "This account has been deactivated. Contact an administrator." on login
@@ -129,11 +111,8 @@ export default defineNuxtPlugin(nuxtApp => {
       else if (status === 419) {
         // Retries exhausted — the session really is gone.
         message = 'Your session has expired. Please log in again.'
-        user.value = null
-        if (import.meta.client) {
-          localStorage.removeItem('user')
-          navigateTo('/login')
-        }
+        nuxtApp.runWithContext(clearSession)
+        navigateTo('/login')
       }
       else if (status === 422) {
         message = responseData?.message || 'Validation failed'
@@ -153,24 +132,24 @@ export default defineNuxtPlugin(nuxtApp => {
 
   // Wrapper to mimic Axios API
   const api = {
-    get: async <T = unknown>(url: string, options?: Record<string, unknown>) => {
+    get: async <T = any>(url: string, options?: Record<string, unknown>) => {
       const data = await fetcher<T>(url, { ...options, method: 'GET' })
 
       return { data }
     },
 
-    post: async <T = unknown>(url: string, body?: unknown, options?: Record<string, unknown>) => {
+    post: async <T = any>(url: string, body?: BodyInit | Record<string, any>, options?: Record<string, unknown>) => {
       const data = await fetcher<T>(url, { ...options, method: 'POST', body })
 
       return { data }
     },
 
-    put: async <T = unknown>(url: string, body?: unknown, options?: Record<string, unknown>) => {
+    put: async <T = any>(url: string, body?: BodyInit | Record<string, any>, options?: Record<string, unknown>) => {
       const data = await fetcher<T>(url, { ...options, method: 'PUT', body })
 
       return { data }
     },
-    delete: async <T = unknown>(url: string, options?: Record<string, unknown>) => {
+    delete: async <T = any>(url: string, options?: Record<string, unknown>) => {
       const data = await fetcher<T>(url, { ...options, method: 'DELETE' })
 
       return { data }

@@ -3,7 +3,7 @@ import type { ApiClient } from '@/types/api'
 import { useAlert } from '@/composables/alerts/useAlert'
 import type { NewProduct, Product } from '@/schemas/products'
 import type { Pagination } from '@/schemas/pagination'
-import { withLoading } from '@/utils/requests'
+import { parsePage, withLoading } from '@/utils/requests'
 
 export function useProduct() {
   const { $api } = useNuxtApp() as unknown as { $api: ApiClient }
@@ -25,36 +25,17 @@ export function useProduct() {
       if (options?.perPage)
         pagination.value.perPage = options.perPage
 
-      const response = await $api.get('products', {
+      const { data } = await $api.get('products', {
         params: {
           page: pagination.value.currentPage,
           per_page: pagination.value.perPage,
         },
       })
 
-      const payload = response.data?.value ?? response.data
+      const page = parsePage(data, pagination.value.perPage)
 
-      // allProducts returns [rows, meta] on success, or [] when there are no
-      // results — matching the tuple shape every other paginated list
-      // endpoint (users, permissions, etc.) uses.
-      if (payload && payload.status === 'success' && Array.isArray(payload.data)) {
-        const [rows, meta] = payload.data
-
-        products.value = rows ?? []
-
-        if (meta) {
-          pagination.value = {
-            total: Number(meta.total ?? 0),
-            perPage: Number(meta.perPage ?? pagination.value.perPage),
-            currentPage: Number(meta.currentPage ?? 1),
-            lastPage: Number(meta.lastPage ?? 1),
-          }
-        }
-      }
-      else {
-        console.warn('Data structure mismatch or status not success', payload)
-        products.value = []
-      }
+      products.value = page.rows
+      pagination.value = page.pagination
     })
   }
 

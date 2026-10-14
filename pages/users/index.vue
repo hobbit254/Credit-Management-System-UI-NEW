@@ -53,7 +53,7 @@ const headers = [
   { title: 'Verified', key: 'email_verified_at', align: 'center' },
   { title: 'Timeline', key: 'created_at' },
   { title: 'Actions', key: 'actions', sortable: false, align: 'end' },
-]
+] as const
 
 function getRowProps({ item }: { item: any }) {
   return item.deleted_at !== null ? { class: 'deleted-row' } : {}
@@ -281,7 +281,7 @@ function getRowProps({ item }: { item: any }) {
                   :length="pagination.lastPage"
                   :total-visible="5"
                   density="compact"
-                  @update:model-value="(page: number) => fetchAllUsers(page)"
+                  @update:model-value="(page: number) => fetchAllUsers({ page })"
                 />
               </div>
             </div>

@@ -300,7 +300,7 @@ onMounted(async () => {
                   :total-visible="5"
                   density="compact"
                   active-color="primary"
-                  @update:model-value="(page: number) => fetchAllPayments(page)"
+                  @update:model-value="(page: number) => fetchAllPayments({ page })"
                 />
               </div>
             </div>

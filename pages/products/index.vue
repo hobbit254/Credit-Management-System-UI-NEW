@@ -355,7 +355,7 @@ function getRowProps({ item }: { item: any }) {
                   :length="pagination.lastPage"
                   :total-visible="5"
                   density="compact"
-                  @update:model-value="(page: number) => fetchAllProducts(page)"
+                  @update:model-value="(page: number) => fetchAllProducts({ page })"
                 />
               </div>
             </div>

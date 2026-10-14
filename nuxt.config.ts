@@ -7,8 +7,7 @@ export default defineNuxtConfig({
   ssr: false,
   app: {
     head: {
-      titleTemplate: '%s - NuxtJS Admin Template',
-      title: 'Vuexy',
+      title: 'Plugpoint CMS',
 
       link: [{
         rel: 'icon',

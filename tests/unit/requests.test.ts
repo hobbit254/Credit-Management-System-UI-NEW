@@ -20,6 +20,13 @@ describe('parsePage', () => {
   it('returns an empty list when rows are missing', () => {
     expect(parsePage({ data: [null, meta] }, 10).rows).toEqual([])
   })
+
+  it('handles an empty [] response (no rows, no meta) without crashing', () => {
+    expect(parsePage({ data: [] }, 10)).toEqual({
+      rows: [],
+      pagination: { total: 0, perPage: 10, currentPage: 1, lastPage: 1 },
+    })
+  })
 })
 
 describe('withLoading', () => {

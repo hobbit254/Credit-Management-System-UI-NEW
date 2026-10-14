@@ -282,7 +282,7 @@ function getRowProps({ item }: { item: any }) {
                   :total-visible="5"
                   density="compact"
                   active-color="primary"
-                  @update:model-value="(page: number) => fetchAllSuppliers(page)"
+                  @update:model-value="(page: number) => fetchAllSuppliers({ page })"
                 />
               </div>
             </div>

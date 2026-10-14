@@ -91,6 +91,7 @@ export interface TransactionItem {
   unit_price: number
   source_type: string
   status: string
+  return_reason: string | null
   created_at: string
   updated_at: string
   product_inventory: ProductInventory

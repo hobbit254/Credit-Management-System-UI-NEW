@@ -84,14 +84,16 @@ async function handleCreatePayment(payment: any) {
   await fetchAllTransactions() // so the sale's payment history includes it
 }
 
-async function handleUpdateItemStatus(item: TransactionItem, newStatus: string) {
+async function handleUpdateItemStatus(item: TransactionItem, newStatus: string, reason: string) {
   // The request already toasts its own success or the server's reason for refusing.
-  if (!await updateTransactionItemStatus(selectedTransactionUuid.value, item.transaction_item_uuid, newStatus))
+  if (!await updateTransactionItemStatus(selectedTransactionUuid.value, item.transaction_item_uuid, newStatus, reason))
     return
 
   const found = selectedItems.value.find(i => i.transaction_item_uuid === item.transaction_item_uuid)
-  if (found)
+  if (found) {
     found.status = newStatus
+    found.return_reason = reason
+  }
 }
 
 const headers = [

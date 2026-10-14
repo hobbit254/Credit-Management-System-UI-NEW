@@ -10,11 +10,16 @@ defineProps<{
 
 const emit = defineEmits<{
   'update:modelValue': [value: boolean]
-  'updateStatus': [item: TransactionItem, status: string]
+  'updateStatus': [item: TransactionItem, status: string, reason: string]
 }>()
 
 // Paid follows the sale's payments; a return is the only manual change, and it is final.
 const itemStatusOptions = ['Returned']
+
+// A return takes the item off what is owed, so the server asks why it came back.
+const returningItem = ref<TransactionItem | null>(null)
+const returnReason = ref('')
+const reasonError = computed(() => returnReason.value.trim().length < 3 ? 'Say why the item is being returned (at least 3 characters).' : '')
 
 const itemStatusColorMap: Record<string, string> = {
   OnSale: 'primary',
@@ -30,6 +35,7 @@ const itemHeaders = [
   { title: 'Source Type', key: 'source_type' },
   { title: 'Unit Price', key: 'unit_price' },
   { title: 'Status', key: 'status' },
+  { title: 'Return Reason', key: 'return_reason' },
   { title: 'Created', key: 'created_at' },
   { title: 'Updated', key: 'updated_at' },
 ]
@@ -38,15 +44,19 @@ function close() {
   emit('update:modelValue', false)
 }
 
-async function handleUpdateItemStatus(item: TransactionItem, newStatus: string) {
-  updatingItemUuid.value = item.transaction_item_uuid
-  try {
-    emit('updateStatus', item, newStatus)
-    emit('update:modelValue', false)
-  }
-  finally {
-    updatingItemUuid.value = null
-  }
+function askReturnReason(item: TransactionItem) {
+  returningItem.value = item
+  returnReason.value = ''
+}
+
+function confirmReturn() {
+  if (!returningItem.value || reasonError.value)
+    return
+  updatingItemUuid.value = returningItem.value.transaction_item_uuid
+  emit('updateStatus', returningItem.value, 'Returned', returnReason.value.trim())
+  returningItem.value = null
+  updatingItemUuid.value = null
+  emit('update:modelValue', false)
 }
 </script>
 
@@ -112,7 +122,7 @@ async function handleUpdateItemStatus(item: TransactionItem, newStatus: string) 
                     v-for="statusOption in itemStatusOptions"
                     :key="statusOption"
                     :disabled="item.status === 'Returned'"
-                    @click="handleUpdateItemStatus(item, statusOption)"
+                    @click="askReturnReason(item)"
                   >
                     <VChip
                       :color="itemStatusColorMap[statusOption] ?? 'default'"
@@ -124,6 +134,10 @@ async function handleUpdateItemStatus(item: TransactionItem, newStatus: string) 
                 </VList>
               </VMenu>
             </div>
+          </template>
+
+          <template #item.return_reason="{ item }">
+            {{ item.return_reason ?? '—' }}
           </template>
 
           <!-- Dates -->
@@ -148,5 +162,49 @@ async function handleUpdateItemStatus(item: TransactionItem, newStatus: string) 
         </VBtn>
       </VCardActions>
     </VCard>
+
+    <VDialog
+      :model-value="!!returningItem"
+      max-width="460"
+      @update:model-value="returningItem = null"
+    >
+      <VCard>
+        <VCardTitle class="pa-4">
+          Return {{ returningItem?.product_inventory?.serial_number ?? 'item' }}
+        </VCardTitle>
+        <VCardText>
+          <p class="text-body-2 mb-4">
+            The item goes back in stock and comes off what this sale owes.
+          </p>
+          <AppTextarea
+            v-model="returnReason"
+            label="Reason for the return*"
+            placeholder="e.g. Faulty screen, customer changed their mind"
+            rows="3"
+            counter="255"
+            maxlength="255"
+            autofocus
+            :error-messages="returnReason ? reasonError : ''"
+          />
+        </VCardText>
+        <VCardActions class="pa-4">
+          <VSpacer />
+          <VBtn
+            variant="tonal"
+            @click="returningItem = null"
+          >
+            Cancel
+          </VBtn>
+          <VBtn
+            color="warning"
+            variant="flat"
+            :disabled="!!reasonError"
+            @click="confirmReturn"
+          >
+            Return item
+          </VBtn>
+        </VCardActions>
+      </VCard>
+    </VDialog>
   </VDialog>
 </template>

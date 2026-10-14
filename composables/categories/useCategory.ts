@@ -2,6 +2,7 @@ import type { ApiClient } from '@/types/api'
 import type { Category, NewCategory } from '@/schemas/category'
 import { useAlert } from '@/composables/alerts/useAlert'
 import type { Pagination } from '@/schemas/pagination'
+import { parsePage, withLoading } from '@/utils/requests'
 
 export function useCategory() {
   const { $api } = useNuxtApp() as unknown as { $api: ApiClient }
@@ -16,29 +17,8 @@ export function useCategory() {
     lastPage: 1,
   })
 
-  async function withLoading(fn: () => Promise<void>) {
-    loading.value = true
-    try {
-      await fn()
-    }
-    catch (error: any) {
-      // plugins/01.api.ts already toasted HTTP errors with the server's message; don't overwrite it
-      if (error?.response)
-        return
-      showToast({
-        title: 'Error',
-        text: error?.message ?? 'Something went wrong',
-        color: 'error',
-        icon: '$error',
-      })
-    }
-    finally {
-      loading.value = false
-    }
-  }
-
   async function fetchAllCategories(options?: { page?: number; perPage?: number }) {
-    await withLoading(async () => {
+    await withLoading(loading, async () => {
       if (options?.page)
         pagination.value.currentPage = options.page
       if (options?.perPage)
@@ -51,19 +31,10 @@ export function useCategory() {
         },
       })
 
-      const payload = data.value ?? data
+      const page = parsePage(data, pagination.value.perPage)
 
-      const [rows, pageInfo] = Array.isArray(payload.data)
-        ? payload.data
-        : [payload.data.rows, payload.data.pagination]
-
-      categories.value = rows ?? []
-      pagination.value = {
-        total: pageInfo.total,
-        perPage: pagination.value.perPage,
-        currentPage: pageInfo.currentPage,
-        lastPage: pageInfo.lastPage,
-      }
+      categories.value = page.rows
+      pagination.value = page.pagination
     })
   }
 
@@ -94,7 +65,7 @@ export function useCategory() {
   }
 
   async function createCategory() {
-    await withLoading(async () => {
+    await withLoading(loading, async () => {
       const { data } = await $api.post('categories/create', newCategory.value)
 
       showToast({
@@ -117,7 +88,7 @@ export function useCategory() {
   }
 
   async function updateCategory(category: Category) {
-    await withLoading(async () => {
+    await withLoading(loading, async () => {
       const { data } = await $api.put('categories/update', category)
 
       showToast({
@@ -140,7 +111,7 @@ export function useCategory() {
   }
 
   async function deleteCategory(category: Category) {
-    await withLoading(async () => {
+    await withLoading(loading, async () => {
       const { data } = await $api.put('categories/delete', {
         category_uuid: category.category_uuid,
       })
@@ -157,7 +128,7 @@ export function useCategory() {
   }
 
   async function restoreCategory(category: Category) {
-    await withLoading(async () => {
+    await withLoading(loading, async () => {
       const { data } = await $api.put('categories/restore', {
         category_uuid: category.category_uuid,
       })
@@ -173,7 +144,7 @@ export function useCategory() {
   }
 
   async function activateCategory(category: Category) {
-    await withLoading(async () => {
+    await withLoading(loading, async () => {
       const { data } = await $api.put('categories/updateStatus', {
         category_uuid: category.category_uuid,
         active: 1,
@@ -190,7 +161,7 @@ export function useCategory() {
   }
 
   async function deactivateCategory(category: Category) {
-    await withLoading(async () => {
+    await withLoading(loading, async () => {
       const { data } = await $api.put('categories/updateStatus', {
         category_uuid: category.category_uuid,
         active: 0,

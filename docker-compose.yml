@@ -9,7 +9,6 @@ services:
         # nginx, see nginx.conf), which is what makes the session-cookie auth work
         # with plain SameSite=Lax and no cross-origin cookie complexity.
         - NUXT_PUBLIC_API_BASE_URL=/api/v1/
-        - NUXT_PUBLIC_APP_URL=
     container_name: cms_ui
     restart: always
     ports:

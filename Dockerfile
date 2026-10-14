@@ -2,16 +2,14 @@
 FROM node:22-alpine AS build-stage
 
 ARG NUXT_PUBLIC_API_BASE_URL
-ARG NUXT_PUBLIC_APP_URL
 ENV NUXT_PUBLIC_API_BASE_URL=$NUXT_PUBLIC_API_BASE_URL
-ENV NUXT_PUBLIC_APP_URL=$NUXT_PUBLIC_APP_URL
 
-RUN corepack enable && corepack prepare pnpm@latest --activate
+# Uses the pnpm version pinned in package.json's packageManager field
+RUN corepack enable
 WORKDIR /app
 
-COPY package.json pnpm-lock.yaml* ./
-# Use --no-frozen-lockfile to bypass the mismatch error
-RUN pnpm install --no-frozen-lockfile --ignore-scripts
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml .npmrc ./
+RUN pnpm install --frozen-lockfile --ignore-scripts
 
 COPY . .
 RUN pnpm run build:icons

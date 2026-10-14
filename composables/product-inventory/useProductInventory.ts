@@ -3,6 +3,7 @@ import type { ApiClient } from '@/types/api'
 import { useAlert } from '@/composables/alerts/useAlert'
 import type { Pagination } from '@/schemas/pagination'
 import type { NewProductInventory, ProductInventory } from '@/schemas/productInventory'
+import { withLoading } from '@/utils/requests'
 
 export function useProductInventory() {
   const { $api } = useNuxtApp() as unknown as { $api: ApiClient }
@@ -17,29 +18,8 @@ export function useProductInventory() {
     lastPage: 1,
   })
 
-  async function withLoading(fn: () => Promise<void>) {
-    loading.value = true
-    try {
-      await fn()
-    }
-    catch (error: any) {
-      // plugins/01.api.ts already toasted HTTP errors with the server's message; don't overwrite it
-      if (error?.response)
-        return
-      showToast({
-        title: 'Error',
-        text: error?.message ?? 'Something went wrong',
-        color: 'error',
-        icon: '$error',
-      })
-    }
-    finally {
-      loading.value = false
-    }
-  }
-
   async function fetchAllProductInventory(options?: { page?: number; perPage?: number }) {
-    await withLoading(async () => {
+    await withLoading(loading, async () => {
       // FIX: Correctly update state based on options
       if (options?.page)
         pagination.value.currentPage = options.page
@@ -105,7 +85,7 @@ export function useProductInventory() {
   }
 
   async function createProductInventory() {
-    await withLoading(async () => {
+    await withLoading(loading, async () => {
       const { data } = await $api.post('product-inventory/create', newProductInventory.value)
 
       showToast({ title: 'Success', text: data.message, color: 'success', icon: '$success' })
@@ -123,7 +103,7 @@ export function useProductInventory() {
   }
 
   async function updateProductInventory(productInventory: ProductInventory) {
-    await withLoading(async () => {
+    await withLoading(loading, async () => {
       const { data } = await $api.put('product-inventory/updateStatus', productInventory)
 
       showToast({ title: 'Success', text: data.message, color: 'success', icon: '$success' })
@@ -141,7 +121,7 @@ export function useProductInventory() {
   }
 
   async function deleteProductInventory(productInventory: ProductInventory) {
-    await withLoading(async () => {
+    await withLoading(loading, async () => {
       const { data } = await $api.put('product-inventory/delete', {
         inventory_uuid: productInventory.inventory_uuid,
       })
@@ -153,7 +133,7 @@ export function useProductInventory() {
   }
 
   async function restoreProductInventory(productInventory: ProductInventory) {
-    await withLoading(async () => {
+    await withLoading(loading, async () => {
       const { data } = await $api.put('product-inventory/restore', {
         inventory_uuid: productInventory.inventory_uuid,
       })
@@ -164,7 +144,7 @@ export function useProductInventory() {
   }
 
   async function importProductInventoryCsv(file: File) {
-    await withLoading(async () => {
+    await withLoading(loading, async () => {
       const formData = new FormData()
 
       formData.append('file', file) // Ensure this key matches what PHP expects (e.g., 'file')

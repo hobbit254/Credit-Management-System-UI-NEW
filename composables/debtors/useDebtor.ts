@@ -2,6 +2,7 @@ import type { ApiClient } from '@/types/api'
 import type { Debtor, NewDebtor } from '@/schemas/debtors'
 import { useAlert } from '@/composables/alerts/useAlert'
 import type { Pagination } from '@/schemas/pagination'
+import { parsePage, withLoading } from '@/utils/requests'
 
 export function useDebtor() {
   const { $api } = useNuxtApp() as unknown as { $api: ApiClient }
@@ -16,29 +17,8 @@ export function useDebtor() {
     lastPage: 1,
   })
 
-  async function withLoading(fn: () => Promise<void>) {
-    loading.value = true
-    try {
-      await fn()
-    }
-    catch (error: any) {
-      // plugins/01.api.ts already toasted HTTP errors with the server's message; don't overwrite it
-      if (error?.response)
-        return
-      showToast({
-        title: 'Error',
-        text: error?.message ?? 'Something went wrong',
-        color: 'error',
-        icon: '$error',
-      })
-    }
-    finally {
-      loading.value = false
-    }
-  }
-
   async function fetchAllDebtors(options?: { page?: number; perPage?: number }) {
-    await withLoading(async () => {
+    await withLoading(loading, async () => {
       if (options?.page)
         pagination.value.currentPage = options.page
       if (options?.perPage)
@@ -51,19 +31,10 @@ export function useDebtor() {
         },
       })
 
-      const payload = data.value ?? data
+      const page = parsePage(data, pagination.value.perPage)
 
-      const [rows, pageInfo] = Array.isArray(payload.data)
-        ? payload.data
-        : [payload.data.rows, payload.data.pagination]
-
-      debtors.value = rows ?? []
-      pagination.value = {
-        total: pageInfo.total,
-        perPage: pagination.value.perPage,
-        currentPage: pageInfo.currentPage,
-        lastPage: pageInfo.lastPage,
-      }
+      debtors.value = page.rows
+      pagination.value = page.pagination
     })
   }
 
@@ -103,7 +74,7 @@ export function useDebtor() {
   }
 
   async function createDebtor() {
-    await withLoading(async () => {
+    await withLoading(loading, async () => {
       const { data } = await $api.post('debtors/create', newDebtor.value)
 
       showToast({ title: 'Create New Debtor', text: data.message, color: 'success', icon: '$success' })
@@ -121,7 +92,7 @@ export function useDebtor() {
   }
 
   async function updateDebtor(updated: Debtor) {
-    await withLoading(async () => {
+    await withLoading(loading, async () => {
       const { data } = await $api.put('debtors/update', updated)
 
       showToast({ title: 'Update Debtor Details', text: data.message, color: 'success', icon: '$success' })
@@ -139,7 +110,7 @@ export function useDebtor() {
   }
 
   async function deleteDebtor(debtor: Debtor) {
-    await withLoading(async () => {
+    await withLoading(loading, async () => {
       const { data } = await $api.put('debtors/delete', { debtor_uuid: debtor.debtor_uuid })
 
       showToast({ title: 'Delete Debtor', text: data.message, color: 'success', icon: '$success' })
@@ -149,7 +120,7 @@ export function useDebtor() {
   }
 
   async function restoreDebtor(debtor: Debtor) {
-    await withLoading(async () => {
+    await withLoading(loading, async () => {
       const { data } = await $api.put('debtors/restore', { debtor_uuid: debtor.debtor_uuid })
 
       showToast({ title: 'Restore Debtor', text: data.message, color: 'success', icon: '$success' })
@@ -158,7 +129,7 @@ export function useDebtor() {
   }
 
   async function activateDebtor(debtor: Debtor) {
-    await withLoading(async () => {
+    await withLoading(loading, async () => {
       const { data } = await $api.put('debtors/updateStatus', { debtor_uuid: debtor.debtor_uuid, active: 1 })
 
       showToast({ title: 'Activate Debtor', text: data.message, color: 'success', icon: '$success' })
@@ -167,7 +138,7 @@ export function useDebtor() {
   }
 
   async function deactivateDebtor(debtor: Debtor) {
-    await withLoading(async () => {
+    await withLoading(loading, async () => {
       const { data } = await $api.put('debtors/updateStatus', { debtor_uuid: debtor.debtor_uuid, active: 0 })
 
       showToast({ title: 'Deactivate Debtor', text: data.message, color: 'success', icon: '$success' })

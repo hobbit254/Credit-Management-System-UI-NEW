@@ -2,6 +2,7 @@ import type { ApiClient } from '@/types/api'
 import type { NewUser, User } from '@/schemas/users'
 import { useAlert } from '@/composables/alerts/useAlert'
 import type { Pagination } from '@/schemas/pagination'
+import { parsePage } from '@/utils/requests'
 
 export function useUsers() {
   const { $api } = useNuxtApp() as unknown as { $api: ApiClient }
@@ -32,19 +33,10 @@ export function useUsers() {
         },
       })
 
-      const payload = data.value ?? data
+      const page = parsePage(data, pagination.value.perPage)
 
-      const [rows, pageInfo] = Array.isArray(payload.data)
-        ? payload.data
-        : [payload.data.rows, payload.data.pagination]
-
-      users.value = rows ?? []
-      pagination.value = {
-        total: pageInfo.total,
-        perPage: pagination.value.perPage,
-        currentPage: pageInfo.currentPage,
-        lastPage: pageInfo.lastPage,
-      }
+      users.value = page.rows
+      pagination.value = page.pagination
     }
     finally {
       loading.value = false

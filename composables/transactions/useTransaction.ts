@@ -2,6 +2,7 @@ import type { ApiClient } from '@/types/api'
 import { useAlert } from '@/composables/alerts/useAlert'
 import type { NewTransaction, Transaction } from '@/schemas/transactions'
 import type { Pagination } from '@/schemas/pagination'
+import { parsePage, withLoading } from '@/utils/requests'
 
 export function useTransaction() {
   const { $api } = useNuxtApp() as unknown as { $api: ApiClient }
@@ -16,35 +17,8 @@ export function useTransaction() {
     lastPage: 1,
   })
 
-  async function withLoading(fn: () => Promise<void>) {
-    loading.value = true
-    try {
-      await fn()
-    }
-    catch (error: any) {
-      // Extract the actual API error message from the response body
-      const responseData = error?.response?._data ?? error?.response?.data
-
-      const message
-        = responseData?.message
-        ?? responseData?.error
-        ?? error?.message
-        ?? 'Something went wrong'
-
-      showToast({
-        title: 'Error',
-        text: message,
-        color: 'error',
-        icon: '$error',
-      })
-    }
-    finally {
-      loading.value = false
-    }
-  }
-
   async function fetchAllTransactions(options?: { page?: number; perPage?: number }) {
-    await withLoading(async () => {
+    await withLoading(loading, async () => {
       if (options?.page)
         pagination.value.currentPage = options.page
       if (options?.perPage)
@@ -57,19 +31,10 @@ export function useTransaction() {
         },
       })
 
-      const payload = data.value ?? data
+      const page = parsePage(data, pagination.value.perPage)
 
-      const [rows, pageInfo] = Array.isArray(payload.data)
-        ? payload.data
-        : [payload.data.rows, payload.data.pagination]
-
-      transactions.value = rows ?? []
-      pagination.value = {
-        total: pageInfo.total,
-        perPage: pagination.value.perPage,
-        currentPage: pageInfo.currentPage,
-        lastPage: pageInfo.lastPage,
-      }
+      transactions.value = page.rows
+      pagination.value = page.pagination
     })
   }
 
@@ -101,7 +66,7 @@ export function useTransaction() {
   }
 
   async function createTransaction() {
-    await withLoading(async () => {
+    await withLoading(loading, async () => {
       const { data } = await $api.post('transactions/create', newTransaction.value)
 
       showToast({
@@ -117,7 +82,7 @@ export function useTransaction() {
 
   async function updateTransactionItemStatus(transactionUuid: string, transactionItemUuid: string, status: string,
   ) {
-    await withLoading(async () => {
+    await withLoading(loading, async () => {
       const { data } = await $api.post('transaction-items/updateStatus', {
         transaction_item_uuid: transactionItemUuid,
         status,
@@ -134,7 +99,7 @@ export function useTransaction() {
   }
 
   async function updateTransactionStatus(transactionUuid: string, status: string) {
-    await withLoading(async () => {
+    await withLoading(loading, async () => {
       const { data } = await $api.put('transactions/updateStatus', {
         transaction_uuid: transactionUuid,
         status,

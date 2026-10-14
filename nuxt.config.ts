@@ -21,7 +21,6 @@ export default defineNuxtConfig({
   runtimeConfig: {
     public: {
       apiBaseUrl: process.env.NUXT_PUBLIC_API_BASE_URL,
-      appUrl: process.env.NUXT_PUBLIC_APP_URL,
     },
   },
 
@@ -96,11 +95,6 @@ export default defineNuxtConfig({
     '@configured-variables': fileURLToPath(new URL('./assets/styles/variables/_template.scss', import.meta.url)),
     '@db': fileURLToPath(new URL('./server/fake-db/', import.meta.url)),
     '@api-utils': fileURLToPath(new URL('./server/utils/', import.meta.url)),
-  },
-  vue: {
-    compilerOptions: {
-      isCustomElement: tag => tag === 'swiper-container' || tag === 'swiper-slide',
-    },
   },
 
   vite: {

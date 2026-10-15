@@ -52,8 +52,8 @@ const subtitle = computed(() => {
 const isImportOpen = ref(false)
 
 async function importCsv(file: File) {
-  await importProductInventoryCsv(file)
-  isImportOpen.value = false
+  if (await importProductInventoryCsv(file))
+    isImportOpen.value = false
 }
 </script>
 

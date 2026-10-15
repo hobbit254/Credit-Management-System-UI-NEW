@@ -190,7 +190,10 @@ export function useProduct() {
     })
   }
 
-  async function importProductsCsv(file: File) {
+  // Returns whether it was imported, so a refused file keeps its dialog open.
+  async function importProductsCsv(file: File): Promise<boolean> {
+    let imported = false
+
     await withLoading(loading, async () => {
       const formData = new FormData()
 
@@ -198,6 +201,7 @@ export function useProduct() {
 
       const { data } = await $api.post('products/importProduct', formData)
 
+      imported = true
       showToast({
         title: 'Import Successful',
         text: data.message || 'Products have been imported successfully.',
@@ -207,6 +211,8 @@ export function useProduct() {
 
       await fetchAllProducts()
     })
+
+    return imported
   }
 
   return {

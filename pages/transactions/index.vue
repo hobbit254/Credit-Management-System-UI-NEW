@@ -1,11 +1,12 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
-import { useTheme } from 'vuetify'
+import { computed, onMounted, ref, watch } from 'vue'
+import { watchDebounced } from '@vueuse/core'
 import { useTransaction } from '@/composables/transactions/useTransaction'
 import type { NewRefund, Refund, Transaction, TransactionItem } from '@/schemas/transactions'
 import type { AppAbility } from '@/composables/auth/useAbility'
 import { usePayments } from '@/composables/payments/usePayments'
-import { saleStatusColor } from '@/utils/formatters'
+import { saleStatusColor, saleStatusLabel } from '@/utils/formatters'
+import { daysSince } from '@/utils/owed'
 
 definePageMeta({
   subject: 'v1/transactions',
@@ -15,6 +16,7 @@ const {
   transactions,
   loading,
   pagination,
+  filters,
   showToast,
   fetchAllTransactions,
   openAdd,
@@ -26,85 +28,56 @@ const {
 } = useTransaction()
 
 const { createPayment } = usePayments()
-const theme = useTheme()
-const surfaceColor = computed(() => theme.current.value.colors.surface)
 
-// Modal States
+onMounted(() => fetchAllTransactions())
+
+// A new search or filter starts again from page 1.
+watchDebounced(() => filters.value.search, () => fetchAllTransactions({ page: 1 }), { debounce: 300 })
+watch(() => filters.value.show, () => fetchAllTransactions({ page: 1 }))
+
+const showOptions = [
+  { value: 'all', label: 'All' },
+  { value: 'open', label: 'Still owed money' },
+]
+
+const kes = (amount: number) => `KES ${Number(amount).toLocaleString('en-KE')}`
+
+function soldOn(date: string) {
+  const days = daysSince(date, Date.now())
+  const day = new Date(date).toLocaleDateString('en-KE', { day: 'numeric', month: 'short', year: 'numeric' })
+
+  return days === 0 ? `${day}, today` : days === 1 ? `${day}, yesterday` : `${day}, ${days} days ago`
+}
+
+// Share of what the sale should bring in that has been accepted. Nothing owed (every item returned) counts as settled.
+function paidPercent(sale: Transaction) {
+  const expected = Number(sale.total_expected) || 0
+  const paid = Number(sale.payments_sum_amount) || 0
+
+  return expected === 0 ? 100 : Math.min(Math.round(paid / expected * 100), 100)
+}
+
+const isOpen = (sale: Transaction) => ['UnPaid', 'Partially_Paid'].includes(sale.status)
+
+const rows = computed(() => transactions.value.map(sale => ({
+  sale,
+  percent: paidPercent(sale),
+  when: soldOn(sale.created_at),
+  people: [
+    sale.sales_person?.debtor_name && `Sold by ${sale.sales_person.debtor_name}`,
+    sale.runner?.full_name && `runner ${sale.runner.full_name}`,
+  ].filter(Boolean).join(', '),
+})))
+
+// Items and returns
 const openItemsModal = ref(false)
 const selectedItems = ref<TransactionItem[]>([])
 const selectedTransactionUuid = ref('')
-const openPaymentsModal = ref(false)
-const selectedPayments = ref<any[]>([])
-const selectedRefunds = ref<Refund[]>([])
-const selectedPaymentTransactionUuid = ref('')
-const openCreatePaymentModal = ref(false)
-const selectedTransactionForPayment = ref('')
 
-const perPageOptions = [5, 10, 25, 50, 100]
-
-// Logic Functions
-const viewItems = (item: any) => {
-  selectedItems.value = item.items
-  selectedTransactionUuid.value = item.transaction_uuid
+function viewItems(sale: Transaction) {
+  selectedItems.value = sale.items
+  selectedTransactionUuid.value = sale.transaction_uuid
   openItemsModal.value = true
-}
-
-const viewPayments = (item: any) => {
-  selectedPayments.value = item.payments ?? []
-  selectedRefunds.value = item.refunds ?? []
-  selectedPaymentTransactionUuid.value = item.transaction_uuid
-  openPaymentsModal.value = true
-}
-
-// Admins and accountants hold refunds/create (granted by the backend migration).
-const { $ability } = useNuxtApp() as unknown as { $ability: AppAbility }
-const canRecordRefund = computed(() => $ability.can('access', 'v1/refunds/create'))
-const openRefundModal = ref(false)
-const refundSale = ref<Transaction | null>(null)
-
-const recordRefundForTransaction = (item: Transaction) => {
-  refundSale.value = item
-  openRefundModal.value = true
-}
-
-async function handleRecordRefund(refund: NewRefund) {
-  if (await recordRefund(refund))
-    openRefundModal.value = false
-}
-
-const addPaymentForTransaction = (item: any) => {
-  selectedTransactionForPayment.value = item.transaction_uuid
-  openCreatePaymentModal.value = true
-}
-
-const changePerPage = (value: number) => {
-  pagination.value.perPage = value
-  pagination.value.currentPage = 1
-  fetchAllTransactions()
-}
-
-const copyUuid = (uuid: string) => {
-  navigator.clipboard.writeText(uuid)
-  showToast({ title: 'Copied', text: 'Transaction ID copied', color: 'success', icon: 'tabler-copy' })
-}
-
-// Progress based on payments_sum_amount
-const calculateProgress = (item: any) => {
-  const expected = Number(item.total_expected) || 0
-  const collected = Number(item.payments_sum_amount) || 0
-
-  // Nothing owed (e.g. every item returned) means the sale is settled.
-  if (expected === 0)
-    return 100
-
-  return Math.min(Math.round((collected / expected) * 100), 100)
-}
-
-async function handleCreatePayment(payment: any) {
-  if (!await createPayment(payment))
-    return
-  openCreatePaymentModal.value = false
-  await fetchAllTransactions() // so the sale's payment history includes it
 }
 
 async function handleUpdateItemStatus(item: TransactionItem, newStatus: string, reason: string) {
@@ -119,356 +92,265 @@ async function handleUpdateItemStatus(item: TransactionItem, newStatus: string, 
   }
 }
 
-const headers = [
-  { title: 'Transaction', key: 'transaction_type', fixed: true },
-  { title: 'Status', key: 'status', width: '150px' },
-  { title: 'Parties Involved', key: 'debtor.debtor_name' },
-  { title: 'Staffing', key: 'staff' },
-  { title: 'Financials (KES)', key: 'total_expected', align: 'end' },
-  { title: 'Inventory', key: 'items', align: 'center' },
-  { title: 'Activity', key: 'created_at' },
-  { title: 'Actions', key: 'actions', sortable: false, align: 'end' },
-] as const
+// Payment and refund history
+const openPaymentsModal = ref(false)
+const selectedPayments = ref<any[]>([])
+const selectedRefunds = ref<Refund[]>([])
+const selectedPaymentTransactionUuid = ref('')
 
-onMounted(async () => {
-  loading.value = true
-  try {
-    await fetchAllTransactions()
-  }
-  finally {
-    loading.value = false
-  }
-})
+function viewPayments(sale: Transaction) {
+  selectedPayments.value = sale.payments ?? []
+  selectedRefunds.value = sale.refunds ?? []
+  selectedPaymentTransactionUuid.value = sale.transaction_uuid
+  openPaymentsModal.value = true
+}
+
+// Recording a payment
+const openCreatePaymentModal = ref(false)
+const selectedTransactionForPayment = ref('')
+
+function addPaymentFor(sale: Transaction) {
+  selectedTransactionForPayment.value = sale.transaction_uuid
+  openCreatePaymentModal.value = true
+}
+
+async function handleCreatePayment(payment: any) {
+  if (!await createPayment(payment))
+    return
+  openCreatePaymentModal.value = false
+  await fetchAllTransactions() // so the sale's payment history includes it
+}
+
+// Admins and accountants hold refunds/create (granted by the backend migration).
+const { $ability } = useNuxtApp() as unknown as { $ability: AppAbility }
+const canRecordRefund = computed(() => $ability.can('access', 'v1/refunds/create'))
+const openRefundModal = ref(false)
+const refundSale = ref<Transaction | null>(null)
+
+function refundFor(sale: Transaction) {
+  refundSale.value = sale
+  openRefundModal.value = true
+}
+
+async function handleRecordRefund(refund: NewRefund) {
+  if (await recordRefund(refund))
+    openRefundModal.value = false
+}
+
+function copyId(uuid: string) {
+  navigator.clipboard.writeText(uuid)
+  showToast({ title: 'Copied', text: 'Sale ID copied', color: 'success', icon: 'tabler-copy' })
+}
+
+const firstShown = computed(() => (pagination.value.currentPage - 1) * pagination.value.perPage + 1)
+const lastShown = computed(() => Math.min(pagination.value.currentPage * pagination.value.perPage, pagination.value.total))
 </script>
 
 <template>
-  <VRow class="h-100">
-    <VCol
-      cols="12"
-      class="h-100 d-flex"
-    >
-      <VCard class="d-flex flex-column flex-grow-1 border shadow-sm">
-        <VCardTitle class="d-flex justify-space-between align-center pa-4">
-          <div class="d-flex align-center ga-3">
-            <VAvatar
-              color="primary"
-              variant="tonal"
-              size="42"
-              rounded="lg"
-            >
-              <VIcon size="24">
-                tabler-receipt-2
-              </VIcon>
-            </VAvatar>
-            <div class="d-flex flex-column">
-              <span class="text-h6 font-weight-bold">Transaction Ledger</span>
-              <span class="text-caption text-medium-emphasis">Audit payments and collection progress</span>
-            </div>
-          </div>
-          <div class="d-flex align-center ga-2">
-            <VBtn
-              color="primary"
-              prepend-icon="tabler-refresh"
-              variant="tonal"
-              :loading="loading"
-              @click="fetchAllTransactions"
-            >
-              Refresh
-            </VBtn>
+  <div class="sales">
+    <header class="d-flex flex-wrap align-end gap-4 mb-6">
+      <div class="flex-grow-1">
+        <h1 class="text-h2 mb-1">
+          Sales
+        </h1>
+        <p class="text-body-1 text-medium-emphasis mb-0">
+          {{ pagination.total }} {{ filters.show === 'open' ? 'still owed money' : (pagination.total === 1 ? 'sale' : 'sales') }}
+        </p>
+      </div>
+      <VBtn
+        prepend-icon="tabler-plus"
+        @click="addTransaction"
+      >
+        New sale
+      </VBtn>
+    </header>
 
-            <VBtn
-              color="primary"
-              prepend-icon="tabler-plus"
-              variant="elevated"
-              @click="addTransaction"
-            >
-              New Transaction
-            </VBtn>
-          </div>
-        </VCardTitle>
-
-        <VDivider />
-
-        <VDataTable
-          :headers="headers"
-          :items="transactions"
-          :loading="loading"
-          class="flex-grow-1 transaction-table"
-          :items-per-page="pagination.perPage"
-          hover
+    <div class="d-flex flex-wrap align-center gap-3 mb-6">
+      <AppTextField
+        v-model="filters.search"
+        aria-label="Search sales"
+        placeholder="Customer, sales person or runner"
+        prepend-inner-icon="tabler-search"
+        clearable
+        style="max-inline-size: 360px; min-inline-size: 220px;"
+      />
+      <VBtnToggle
+        v-model="filters.show"
+        mandatory
+        divided
+        variant="outlined"
+        color="primary"
+        aria-label="Show"
+      >
+        <VBtn
+          v-for="option in showOptions"
+          :key="option.value"
+          :value="option.value"
         >
-          <template #item.transaction_type="{ item }">
-            <div class="d-flex flex-column ga-1 py-2">
+          {{ option.label }}
+        </VBtn>
+      </VBtnToggle>
+    </div>
+
+    <VCard
+      border
+      flat
+    >
+      <VTable class="sale-table">
+        <thead>
+          <tr>
+            <th>Customer</th>
+            <th style="min-inline-size: 220px;">
+              Paid
+            </th>
+            <th>Status</th>
+            <th>Sold</th>
+            <th>
+              <span class="d-sr-only">Actions</span>
+            </th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr
+            v-for="{ sale, percent, when, people } in rows"
+            :key="sale.transaction_uuid"
+          >
+            <td class="py-3">
+              <div class="font-weight-medium text-body-1">
+                {{ sale.debtor?.debtor_name ?? 'Unknown customer' }}
+              </div>
+              <div class="text-body-2 text-medium-emphasis">
+                {{ sale.transaction_type === 'Credit' ? 'On credit' : 'Paid upfront' }},
+                <a
+                  href="#"
+                  class="text-primary"
+                  @click.prevent="viewItems(sale)"
+                >{{ sale.items?.length ?? 0 }} {{ sale.items?.length === 1 ? 'item' : 'items' }}</a>
+              </div>
+              <div
+                v-if="people"
+                class="text-body-2 text-medium-emphasis"
+              >
+                {{ people }}
+              </div>
+            </td>
+            <td>
+              <div class="text-body-1">
+                <span class="font-weight-bold">{{ kes(sale.payments_sum_amount || 0) }}</span>
+                <span class="text-medium-emphasis"> of {{ kes(sale.total_expected) }}</span>
+              </div>
+              <div
+                role="img"
+                :aria-label="`${percent} percent paid`"
+                class="paid-track my-1"
+              >
+                <div :style="{ inlineSize: `${percent}%` }" />
+              </div>
+              <div
+                v-if="Number(sale.overpaid) > 0"
+                class="text-body-2 text-error font-weight-medium"
+              >
+                {{ kes(sale.overpaid) }} to refund
+              </div>
+              <div
+                v-else-if="Number(sale.total_refunded) > 0"
+                class="text-body-2 text-medium-emphasis"
+              >
+                {{ kes(sale.total_refunded) }} refunded
+              </div>
+            </td>
+            <td>
               <VChip
-                :color="item.transaction_type === 'Sale' ? 'primary' : 'warning'"
-                size="x-small"
-                variant="flat"
-                label
-                class="font-weight-bold"
+                :color="saleStatusColor(sale.status)"
+                size="small"
               >
-                {{ item.transaction_type.toUpperCase() }}
+                {{ saleStatusLabel(sale.status) }}
               </VChip>
-              <span class="text-xxs font-mono text-disabled">#{{ item.transaction_uuid.split('-')[0] }}</span>
-            </div>
-          </template>
-
-          <!-- Set by the server from accepted payments and returns -->
-          <template #item.status="{ item }">
-            <VChip
-              :color="saleStatusColor(item.status)"
-              variant="tonal"
-              size="small"
-              class="font-weight-medium"
-            >
-              {{ item.status.replace(/_/g, ' ') }}
-            </VChip>
-          </template>
-
-          <template #item.debtor.debtor_name="{ item }">
-            <div class="d-flex flex-column ga-1">
-              <div class="d-flex align-center ga-2">
-                <VIcon
-                  size="14"
-                  color="primary"
-                >
-                  tabler-user-dollar
-                </VIcon>
-                <span class="text-body-2 font-weight-bold text-high-emphasis">{{ item.debtor?.debtor_name }}</span>
-              </div>
-              <div class="d-flex align-center ga-2 text-xxs text-medium-emphasis">
-                <VIcon size="12">
-                  tabler-briefcase
-                </VIcon>
-                <span>SP: {{ item.sales_person?.debtor_name || 'Direct' }}</span>
-              </div>
-            </div>
-          </template>
-
-          <template #item.staff="{ item }">
-            <div class="d-flex flex-column ga-2 py-1">
-              <div class="d-flex align-center ga-2">
-                <VAvatar
-                  size="22"
-                  color="secondary"
-                  variant="tonal"
-                  class="border"
-                >
-                  <span class="text-xxs font-weight-bold">{{ item.clerk?.full_name?.charAt(0) }}</span>
-                </VAvatar>
-                <div class="d-flex flex-column">
-                  <span
-                    class="text-xxs text-disabled font-weight-bold uppercase"
-                    style="line-height: 1;"
-                  >Clerk</span>
-                  <span
-                    class="text-caption text-high-emphasis font-weight-medium text-truncate"
-                    style="max-width: 120px;"
-                  >
-                    {{ item.clerk?.full_name || '—' }}
-                  </span>
-                </div>
-              </div>
-
-              <div class="d-flex align-center ga-2">
-                <VAvatar
-                  size="22"
-                  color="info"
-                  variant="tonal"
-                  class="border"
-                >
-                  <span class="text-xxs font-weight-bold">{{ item.runner?.full_name?.charAt(0) }}</span>
-                </VAvatar>
-                <div class="d-flex flex-column">
-                  <span
-                    class="text-xxs text-disabled font-weight-bold uppercase"
-                    style="line-height: 1;"
-                  >Runner</span>
-                  <span
-                    class="text-caption text-high-emphasis font-weight-medium text-truncate"
-                    style="max-width: 120px;"
-                  >
-                    {{ item.runner?.full_name || '—' }}
-                  </span>
-                </div>
-              </div>
-            </div>
-          </template>
-
-          <template #item.total_expected="{ item }">
-            <div class="d-flex flex-column align-end ga-1 py-1">
-              <div class="d-flex align-center ga-2">
-                <span class="text-xxs text-disabled font-weight-bold">TOTAL EXPECTED:</span>
-                <span class="text-body-2 font-weight-bold text-high-emphasis font-mono">
-                  {{ Number(item.total_expected).toLocaleString() }}
-                </span>
-              </div>
-              <div
-                class="d-flex align-center ga-2 border-t pt-1"
-                style="border-top: 1px dashed rgba(var(--v-border-color), 0.3) !important;"
-              >
-                <span class="text-xxs text-disabled font-weight-bold">TOTAL PAID:</span>
-                <span class="text-body-2 font-weight-bold text-success font-mono">
-                  {{ Number(item.payments_sum_amount || 0).toLocaleString() }}
-                </span>
-              </div>
-              <div
-                v-if="Number(item.total_refunded) > 0"
-                class="d-flex align-center ga-2"
-              >
-                <span class="text-xxs text-disabled font-weight-bold">REFUNDED:</span>
-                <span class="text-body-2 font-weight-bold font-mono">
-                  {{ Number(item.total_refunded).toLocaleString() }}
-                </span>
-              </div>
-              <!-- Accepted money beyond what is owed and not yet paid back, e.g. after a paid item came back -->
-              <div
-                v-if="Number(item.overpaid) > 0"
-                class="d-flex align-center ga-2"
-              >
-                <span class="text-xxs text-error font-weight-bold">REFUND DUE:</span>
-                <span class="text-body-2 font-weight-bold text-error font-mono">
-                  {{ Number(item.overpaid).toLocaleString() }}
-                </span>
-              </div>
-
-              <VProgressLinear
-                :model-value="calculateProgress(item)"
-                :color="calculateProgress(item) === 100 ? 'success' : 'warning'"
-                height="8"
-                rounded
-                style="width: 100px"
-                class="mt-1"
-              >
-                <template #default="{ value }">
-                  <span
-                    class="text-white font-weight-black"
-                    style="font-size: 8px;"
-                  >{{ Math.ceil(value) }}%</span>
-                </template>
-              </VProgressLinear>
-            </div>
-          </template>
-
-          <template #item.items="{ item }">
-            <VBtn
-              variant="tonal"
-              size="x-small"
-              color="secondary"
-              rounded="pill"
-              prepend-icon="tabler-box"
-              @click="viewItems(item)"
-            >
-              {{ item.items?.length || 0 }}
-            </VBtn>
-          </template>
-
-          <template #item.created_at="{ item }">
-            <div class="d-flex flex-column text-xxs text-medium-emphasis">
-              <div class="d-flex align-center ga-1">
-                <VIcon size="12">
-                  tabler-calendar-event
-                </VIcon><TableDate :value="item.created_at" />
-              </div>
-              <div class="d-flex align-center ga-1">
-                <VIcon size="12">
-                  tabler-history
-                </VIcon><TableDate :value="item.updated_at" />
-              </div>
-            </div>
-          </template>
-
-          <template #item.actions="{ item }">
-            <VMenu location="bottom end">
-              <template #activator="{ props: menuProps }">
+            </td>
+            <td class="text-body-2 text-medium-emphasis">
+              {{ when }}
+            </td>
+            <td class="text-end">
+              <div class="d-flex justify-end align-center gap-1">
                 <VBtn
-                  aria-label="Sale actions"
-                  icon="tabler-dots-vertical"
-                  variant="text"
-                  size="small"
-                  v-bind="menuProps"
-                />
-              </template>
-              <VList density="compact">
-                <VListItem
-                  color="success"
-                  @click="addPaymentForTransaction(item)"
-                >
-                  <template #prepend>
-                    <VIcon size="18">
-                      tabler-cash-banknote
-                    </VIcon>
-                  </template>
-                  <VListItemTitle>Record Payment</VListItemTitle>
-                </VListItem>
-                <!-- Admins and accountants (refunds/create), only while money is due back -->
-                <VListItem
-                  v-if="Number(item.overpaid) > 0 && canRecordRefund"
-                  color="error"
-                  @click="recordRefundForTransaction(item)"
-                >
-                  <template #prepend>
-                    <VIcon size="18">
-                      tabler-receipt-refund
-                    </VIcon>
-                  </template>
-                  <VListItemTitle>Record Refund</VListItemTitle>
-                </VListItem>
-                <VListItem @click="viewPayments(item)">
-                  <template #prepend>
-                    <VIcon size="18">
-                      tabler-receipt
-                    </VIcon>
-                  </template>
-                  <VListItemTitle>Payment History</VListItemTitle>
-                </VListItem>
-                <VDivider class="my-1" />
-                <VListItem @click="copyUuid(item.transaction_uuid)">
-                  <template #prepend>
-                    <VIcon size="18">
-                      tabler-copy
-                    </VIcon>
-                  </template>
-                  <VListItemTitle>Copy ID</VListItemTitle>
-                </VListItem>
-              </VList>
-            </VMenu>
-          </template>
-
-          <template #bottom>
-            <VDivider />
-            <div class="d-flex justify-space-between align-center flex-wrap ga-4 pa-4">
-              <div class="d-flex align-center ga-3">
-                <span class="text-caption text-medium-emphasis font-weight-medium">Items per page:</span>
-                <VSelect
-                  aria-label="Items per page"
-                  :model-value="pagination.perPage"
-                  :items="perPageOptions"
-                  density="compact"
+                  v-if="isOpen(sale)"
                   variant="outlined"
-                  hide-details
-                  style="width: 85px"
-                  @update:model-value="changePerPage"
-                />
+                  color="default"
+                  @click="addPaymentFor(sale)"
+                >
+                  Record payment
+                </VBtn>
+                <VMenu location="bottom end">
+                  <template #activator="{ props: menuProps }">
+                    <VBtn
+                      :aria-label="`More for ${sale.debtor?.debtor_name ?? 'this sale'}`"
+                      icon="tabler-dots-vertical"
+                      variant="text"
+                      color="default"
+                      v-bind="menuProps"
+                    />
+                  </template>
+                  <VList>
+                    <VListItem
+                      prepend-icon="tabler-receipt"
+                      title="Payments and refunds"
+                      @click="viewPayments(sale)"
+                    />
+                    <VListItem
+                      prepend-icon="tabler-box"
+                      title="Items and returns"
+                      @click="viewItems(sale)"
+                    />
+                    <!-- Admins and accountants (refunds/create), only while money is due back -->
+                    <VListItem
+                      v-if="Number(sale.overpaid) > 0 && canRecordRefund"
+                      prepend-icon="tabler-receipt-refund"
+                      title="Record refund"
+                      @click="refundFor(sale)"
+                    />
+                    <VDivider class="my-1" />
+                    <VListItem
+                      prepend-icon="tabler-copy"
+                      title="Copy ID"
+                      @click="copyId(sale.transaction_uuid)"
+                    />
+                  </VList>
+                </VMenu>
               </div>
-              <div class="d-flex align-center ga-4">
-                <span class="text-caption text-medium-emphasis">
-                  Page <span class="text-high-emphasis font-weight-bold">{{ pagination.currentPage }}</span> of {{ pagination.lastPage }}
-                </span>
-                <VPagination
-                  v-model="pagination.currentPage"
-                  :length="pagination.lastPage"
-                  :total-visible="5"
-                  density="compact"
-                  active-color="primary"
-                  @update:model-value="(page) => fetchAllTransactions({ page })"
-                />
-              </div>
-            </div>
-          </template>
-        </VDataTable>
-      </VCard>
-    </VCol>
-  </VRow>
+            </td>
+          </tr>
+          <tr v-if="!transactions.length && !loading">
+            <td
+              colspan="5"
+              class="text-body-1 text-medium-emphasis py-6"
+            >
+              {{ filters.search || filters.show !== 'all' ? 'No sales match. Try another name or filter.' : 'No sales yet. Start with New sale.' }}
+            </td>
+          </tr>
+        </tbody>
+      </VTable>
+      <VProgressLinear
+        v-if="loading"
+        indeterminate
+        color="primary"
+        height="2"
+      />
+    </VCard>
+
+    <nav
+      v-if="pagination.total"
+      aria-label="Pages"
+      class="d-flex flex-wrap justify-space-between align-center gap-3 mt-4"
+    >
+      <span class="text-body-1 text-medium-emphasis">Showing {{ firstShown }}–{{ lastShown }} of {{ pagination.total }}</span>
+      <VPagination
+        :model-value="pagination.currentPage"
+        :length="pagination.lastPage"
+        :total-visible="5"
+        @update:model-value="page => fetchAllTransactions({ page })"
+      />
+    </nav>
+  </div>
 
   <TransactionItemsModal
     v-model="openItemsModal"
@@ -504,16 +386,23 @@ onMounted(async () => {
 </template>
 
 <style scoped>
-.transaction-table :deep(td:first-child) {
-  position: sticky;
-  left: 0;
-  background: v-bind(surfaceColor) !important;
-  z-index: 1;
-  border-right: 1px solid rgba(var(--v-border-color), var(--v-border-opacity));
+.sales { max-width: 1120px; }
+
+.sale-table { overflow-x: auto; }
+.sale-table :deep(table) { min-inline-size: 860px; }
+.sale-table th { font-weight: 500 !important; }
+
+.paid-track {
+  overflow: hidden;
+  border-radius: 4px;
+  background: rgba(var(--v-track-bg));
+  block-size: 8px;
+  max-inline-size: 220px;
 }
-.text-xxs { font-size: 0.65rem; }
-.font-mono { font-family: 'Fira Code', 'Roboto Mono', monospace; }
-.border { border: 1px solid rgba(var(--v-border-color), 0.12) !important; }
-.ga-n2 { margin-left: 8px; }
-:deep(.v-progress-linear__content) { justify-content: center; }
+
+.paid-track > div {
+  border-radius: 4px;
+  background: rgb(var(--v-theme-primary));
+  block-size: 100%;
+}
 </style>

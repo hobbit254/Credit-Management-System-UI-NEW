@@ -1,5 +1,5 @@
 import { breakpointsVuetify } from '@vueuse/core'
-import { AppContentLayoutNav, ContentWidth, FooterType, HorizontalNavType, NavbarType } from '@layouts/enums'
+import { AppContentLayoutNav, ContentWidth, FooterType, NavbarType } from '@layouts/enums'
 import type { LayoutConfig } from '@layouts/types'
 
 export const layoutConfig: LayoutConfig = {
@@ -26,11 +26,6 @@ export const layoutConfig: LayoutConfig = {
   verticalNav: {
     isVerticalNavCollapsed: false,
     defaultNavItemIconProps: { icon: 'tabler-circle' },
-  },
-  horizontalNav: {
-    type: HorizontalNavType.Sticky,
-    transition: 'none',
-    popoverOffset: 0,
   },
   icons: {
     chevronDown: { icon: 'tabler-chevron-down' },

@@ -18,6 +18,7 @@ export const PaymentNestedTransactionSchema = z.object({
   created_at: z.string(),
   updated_at: z.string(),
   items: z.array(PaymentTransactionItemSchema),
+  debtor: z.object({ debtor_name: z.string(), debtor_phone: z.string() }).nullable().optional(),
 })
 export type PaymentNestedTransaction = z.infer<typeof PaymentNestedTransactionSchema>
 

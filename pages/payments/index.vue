@@ -1,320 +1,255 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
-import { useTheme } from 'vuetify'
+import { computed, onMounted, ref, watch } from 'vue'
+import { watchDebounced } from '@vueuse/core'
 import { usePayments } from '@/composables/payments/usePayments'
+import type { AppAbility } from '@/composables/auth/useAbility'
 import type { NewPayment, Payment, PaymentTransactionItem } from '@/schemas/payments'
+import { daysSince } from '@/utils/owed'
 
 definePageMeta({
   subject: 'v1/payments',
 })
 
-const {
-  payments,
-  loading,
-  pagination,
-  fetchAllPayments,
-  updatePaymentStatus,
-  createPayment,
-} = usePayments()
+const { $ability } = useNuxtApp() as unknown as { $ability: AppAbility }
+const { payments, loading, pagination, filters, fetchAllPayments, updatePaymentStatus, createPayment } = usePayments()
 
-const theme = useTheme()
-const surfaceColor = computed(() => theme.current.value.colors.surface)
+const canDecide = computed(() => $ability.can('access', 'v1/payments/updateStatus'))
 
-// Only a PENDING payment can be decided, and the decision is final.
-const paymentStatusOptions = ['ACCEPTED', 'REJECTED']
-const perPageOptions = [5, 10, 25, 50, 100]
+onMounted(() => fetchAllPayments())
 
-// Modal States
+// A new search or filter starts again from page 1.
+watchDebounced(() => filters.value.search, () => fetchAllPayments({ page: 1 }), { debounce: 300 })
+watch(() => filters.value.status, () => fetchAllPayments({ page: 1 }))
+
+const statusOptions = [
+  { value: 'all', label: 'All' },
+  { value: 'PENDING', label: 'Waiting for approval' },
+  { value: 'ACCEPTED', label: 'Accepted' },
+  { value: 'REJECTED', label: 'Rejected' },
+]
+
+const statusLabel: Record<string, { text: string; color: string }> = {
+  PENDING: { text: 'Waiting for approval', color: 'warning' },
+  ACCEPTED: { text: 'Accepted', color: 'success' },
+  REJECTED: { text: 'Rejected', color: 'error' },
+}
+
+const kes = (amount: number) => `KES ${Number(amount).toLocaleString('en-KE')}`
+
+function received(date: string) {
+  const days = daysSince(date, Date.now())
+
+  return {
+    date: new Date(date).toLocaleDateString('en-KE', { day: 'numeric', month: 'short', year: 'numeric' }),
+    ago: days === 0 ? 'Today' : days === 1 ? 'Yesterday' : `${days} days ago`,
+  }
+}
+
+const rows = computed(() => payments.value.map(payment => ({ payment, when: received(payment.created_at) })))
+
 const openItemsModal = ref(false)
-const selectedTransactionItems = ref<PaymentTransactionItem[]>([])
-const openCreateModal = ref(false)
+const selectedItems = ref<PaymentTransactionItem[]>([])
 
-// Logic Functions
-async function handleUpdatePaymentStatus(item: Payment, newStatus: string) {
-  await updatePaymentStatus(item.payment_uuid, newStatus)
-}
-
-function changePerPage(value: number) {
-  pagination.value.perPage = value
-  pagination.value.currentPage = 1
-  fetchAllPayments()
-}
-
-function viewTransactionItems(item: Payment) {
-  selectedTransactionItems.value = item.transaction?.items ?? []
+function viewItems(payment: Payment) {
+  selectedItems.value = payment.transaction?.items ?? []
   openItemsModal.value = true
 }
+
+const openCreateModal = ref(false)
 
 async function handleCreatePayment(payment: NewPayment) {
   if (await createPayment(payment))
     openCreateModal.value = false
 }
 
-// Strictly Typed Headers
-const headers = [
-  { title: 'Method & Ref', key: 'payment_method', fixed: true },
-  { title: 'Amount (KES)', key: 'amount', align: 'end' },
-  { title: 'Status', key: 'status', width: '160px' },
-  { title: 'Linked Transaction', key: 'transaction' },
-  { title: 'Inventory', key: 'transaction_items', align: 'center' },
-  { title: 'Timeline', key: 'created_at' },
-] as const
-
-onMounted(async () => {
-  loading.value = true
-  try {
-    await fetchAllPayments()
-  }
-  finally {
-    loading.value = false
-  }
-})
+const firstShown = computed(() => (pagination.value.currentPage - 1) * pagination.value.perPage + 1)
+const lastShown = computed(() => Math.min(pagination.value.currentPage * pagination.value.perPage, pagination.value.total))
 </script>
 
 <template>
-  <VRow class="h-100">
-    <VCol
-      cols="12"
-      class="h-100 d-flex"
-    >
-      <VCard class="d-flex flex-column flex-grow-1 border shadow-sm">
-        <VCardTitle class="d-flex justify-space-between align-center pa-4">
-          <div class="d-flex align-center ga-3">
-            <VAvatar
-              color="primary"
-              variant="tonal"
-              size="42"
-              rounded="lg"
-            >
-              <VIcon size="24">
-                tabler-credit-card
-              </VIcon>
-            </VAvatar>
-            <div class="d-flex flex-column">
-              <span class="text-h6 font-weight-bold">Payment Journal</span>
-              <span class="text-caption text-medium-emphasis">Verify incoming funds and reconcile transactions</span>
-            </div>
-          </div>
-          <VBtn
-            color="primary"
-            prepend-icon="tabler-plus"
-            variant="elevated"
-            @click="openCreateModal = true"
-          >
-            Add Payment
-          </VBtn>
-        </VCardTitle>
+  <div class="payments">
+    <header class="d-flex flex-wrap align-end gap-4 mb-6">
+      <div class="flex-grow-1">
+        <h1 class="text-h2 mb-1">
+          Payments
+        </h1>
+        <p class="text-body-1 text-medium-emphasis mb-0">
+          Check each M-Pesa, bank or cheque payment against the statement before you approve it. An approval or rejection is final.
+        </p>
+      </div>
+      <VBtn
+        prepend-icon="tabler-plus"
+        @click="openCreateModal = true"
+      >
+        Record payment
+      </VBtn>
+    </header>
 
-        <VDivider />
-
-        <VDataTable
-          :headers="headers"
-          :items="payments"
-          :loading="loading"
-          item-key="payment_uuid"
-          class="flex-grow-1 payment-table"
-          hover
+    <div class="d-flex flex-wrap align-center gap-3 mb-6">
+      <AppTextField
+        v-model="filters.search"
+        aria-label="Search payments"
+        placeholder="Receipt code or customer"
+        prepend-inner-icon="tabler-search"
+        clearable
+        style="max-inline-size: 360px; min-inline-size: 220px;"
+      />
+      <VBtnToggle
+        v-model="filters.status"
+        mandatory
+        divided
+        variant="outlined"
+        color="primary"
+        aria-label="Show"
+      >
+        <VBtn
+          v-for="option in statusOptions"
+          :key="option.value"
+          :value="option.value"
         >
-          <template #item.payment_method="{ item }">
-            <div class="d-flex flex-column ga-1 py-2">
-              <div class="d-flex align-center ga-2">
-                <VIcon
-                  size="16"
-                  :color="item.payment_method === 'Cash' ? 'success' : 'primary'"
-                >
-                  {{ item.payment_method === 'Cash' ? 'tabler-cash' : item.payment_method === 'M-Pesa' ? 'tabler-device-mobile' : 'tabler-building-bank' }}
-                </VIcon>
-                <span class="text-body-2 font-weight-bold">{{ item.payment_method }}</span>
+          {{ option.label }}
+        </VBtn>
+      </VBtnToggle>
+    </div>
+
+    <VCard
+      border
+      flat
+    >
+      <VTable class="payment-table">
+        <thead>
+          <tr>
+            <th>Customer</th>
+            <th class="text-end">
+              Amount
+            </th>
+            <th>Method</th>
+            <th>Received</th>
+            <th>Status</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr
+            v-for="{ payment, when } in rows"
+            :key="payment.payment_uuid"
+          >
+            <td class="py-3">
+              <div class="font-weight-medium text-body-1">
+                {{ payment.transaction?.debtor?.debtor_name ?? 'Unknown customer' }}
               </div>
+              <div class="text-body-2 text-medium-emphasis">
+                {{ payment.transaction?.transaction_type }} sale,
+                <a
+                  href="#"
+                  class="text-primary"
+                  @click.prevent="viewItems(payment)"
+                >{{ payment.transaction?.items?.length ?? 0 }} {{ payment.transaction?.items?.length === 1 ? 'item' : 'items' }}</a>
+              </div>
+            </td>
+            <td class="text-end font-weight-bold text-body-1">
+              {{ kes(payment.amount) }}
+            </td>
+            <td>
+              <div class="text-body-1">
+                {{ payment.payment_method }}
+              </div>
+              <div class="text-body-2 text-medium-emphasis">
+                {{ payment.reference_code || 'No receipt code' }}
+              </div>
+            </td>
+            <td>
+              <div class="text-body-1">
+                {{ when.date }}
+              </div>
+              <div class="text-body-2 text-medium-emphasis">
+                {{ when.ago }}
+              </div>
+            </td>
+            <td>
               <div
-                v-if="item.reference_code"
-                class="d-flex align-center ga-1"
+                v-if="payment.status === 'PENDING' && canDecide"
+                class="d-flex gap-2"
               >
-                <span class="text-xxs text-disabled font-weight-bold uppercase">Ref:</span>
-                <span class="text-xxs font-mono text-medium-emphasis">{{ item.reference_code }}</span>
-              </div>
-              <span
-                v-else
-                class="text-xxs text-disabled font-italic"
-              >No reference code</span>
-            </div>
-          </template>
-
-          <template #item.amount="{ item }">
-            <div class="d-flex flex-column align-end py-2">
-              <div class="d-flex align-center ga-1">
-                <span class="text-xxs text-disabled font-weight-bold">KES</span>
-                <span class="text-body-1 font-weight-black font-mono">
-                  {{ Number(item.amount).toLocaleString() }}
-                </span>
-              </div>
-            </div>
-          </template>
-
-          <template #item.status="{ item }">
-            <VMenu location="bottom center">
-              <template #activator="{ props: menuProps }">
-                <VChip
-                  :color="item.status === 'ACCEPTED' ? 'success' : item.status === 'PENDING' ? 'warning' : 'error'"
-                  size="small"
+                <VBtn
                   variant="tonal"
-                  class="cursor-pointer font-weight-bold"
-                  v-bind="menuProps"
+                  :disabled="loading"
+                  @click="updatePaymentStatus(payment.payment_uuid, 'ACCEPTED')"
                 >
-                  <VIcon
-                    start
-                    size="14"
-                  >
-                    {{ item.status === 'ACCEPTED' ? 'tabler-circle-check' : item.status === 'PENDING' ? 'tabler-clock' : 'tabler-circle-x' }}
-                  </VIcon>
-                  {{ item.status }}
-                  <VIcon
-                    end
-                    size="12"
-                  >
-                    tabler-chevron-down
-                  </VIcon>
-                </VChip>
-              </template>
-              <VList density="compact">
-                <VListSubheader>UPDATE STATUS</VListSubheader>
-                <VListItem
-                  v-for="status in paymentStatusOptions"
-                  :key="status"
-                  :disabled="item.status !== 'PENDING' || loading"
-                  @click="handleUpdatePaymentStatus(item, status)"
-                >
-                  <template #prepend>
-                    <VIcon
-                      size="18"
-                      :color="status === 'ACCEPTED' ? 'success' : status === 'PENDING' ? 'warning' : 'error'"
+                  Approve
+                </VBtn>
+                <VMenu location="bottom end">
+                  <template #activator="{ props: menuProps }">
+                    <VBtn
+                      variant="outlined"
+                      color="default"
+                      :disabled="loading"
+                      v-bind="menuProps"
                     >
-                      {{ status === 'ACCEPTED' ? 'tabler-circle-check' : status === 'PENDING' ? 'tabler-clock' : 'tabler-circle-x' }}
-                    </VIcon>
+                      Reject
+                    </VBtn>
                   </template>
-                  <VListItemTitle class="text-caption font-weight-bold">
-                    {{ status }}
-                  </VListItemTitle>
-                </VListItem>
-              </VList>
-            </VMenu>
-          </template>
-
-          <template #item.transaction="{ item }">
-            <div class="d-flex flex-column ga-1 py-1">
-              <div class="d-flex align-center ga-1">
-                <VChip
-                  :color="item.transaction?.transaction_type === 'Sale' ? 'primary' : 'warning'"
-                  size="x-small"
-                  variant="flat"
-                  label
-                >
-                  {{ item.transaction?.transaction_type ?? 'N/A' }}
-                </VChip>
-                <span class="text-xxs font-mono text-disabled">#{{ item.transaction?.transaction_uuid?.split('-')[0] }}</span>
+                  <VCard
+                    max-width="280"
+                    class="pa-4"
+                  >
+                    <p class="text-body-1 mb-3">
+                      Reject this {{ kes(payment.amount) }} payment? You can't undo this, but the customer can pay again with the same receipt code.
+                    </p>
+                    <VBtn
+                      block
+                      color="error"
+                      @click="updatePaymentStatus(payment.payment_uuid, 'REJECTED')"
+                    >
+                      Reject payment
+                    </VBtn>
+                  </VCard>
+                </VMenu>
               </div>
-              <div class="d-flex align-center ga-1 text-xxs">
-                <span class="text-disabled">Status:</span>
-                <span
-                  class="font-weight-bold"
-                  :class="item.transaction?.status === 'Paid' ? 'text-success' : 'text-warning'"
-                >
-                  {{ item.transaction?.status?.replace(/_/g, ' ') }}
-                </span>
-              </div>
-            </div>
-          </template>
-
-          <template #item.transaction_items="{ item }">
-            <VBtn
-              variant="tonal"
-              size="x-small"
-              color="secondary"
-              rounded="pill"
-              prepend-icon="tabler-package"
-              @click="viewTransactionItems(item)"
-            >
-              {{ item.transaction?.items?.length ?? 0 }} items
-            </VBtn>
-          </template>
-
-          <template #item.created_at="{ item }">
-            <div class="d-flex flex-column text-xxs text-medium-emphasis">
-              <div class="d-flex align-center ga-1">
-                <VIcon size="12">
-                  tabler-calendar-plus
-                </VIcon>
-                <TableDate :value="item.created_at" />
-              </div>
-              <div class="d-flex align-center ga-1">
-                <VIcon size="12">
-                  tabler-clock-edit
-                </VIcon>
-                <TableDate :value="item.updated_at" />
-              </div>
-            </div>
-          </template>
-
-          <template #no-data>
-            <div class="d-flex flex-column align-center justify-center pa-12 ga-2">
-              <VIcon
-                size="48"
-                color="secondary"
-                alpha="0.5"
-              >
-                tabler-credit-card-off
-              </VIcon>
-              <span class="text-h6 font-weight-light text-medium-emphasis">No payment records found</span>
-              <VBtn
-                color="primary"
-                variant="text"
+              <VChip
+                v-else
+                :color="statusLabel[payment.status]?.color ?? 'default'"
                 size="small"
-                @click="openCreateModal = true"
               >
-                Create your first payment
-              </VBtn>
-            </div>
-          </template>
+                {{ statusLabel[payment.status]?.text ?? payment.status }}
+              </VChip>
+            </td>
+          </tr>
+          <tr v-if="!payments.length && !loading">
+            <td
+              colspan="5"
+              class="text-body-1 text-medium-emphasis py-6"
+            >
+              {{ filters.search || filters.status !== 'all' ? 'No payments match. Try another code, name or filter.' : 'No payments yet. Record one when a customer pays.' }}
+            </td>
+          </tr>
+        </tbody>
+      </VTable>
+      <VProgressLinear
+        v-if="loading"
+        indeterminate
+        color="primary"
+        height="2"
+      />
+    </VCard>
 
-          <template #bottom>
-            <VDivider />
-            <div class="d-flex justify-space-between align-center flex-wrap ga-4 pa-4">
-              <div class="d-flex align-center ga-3">
-                <span class="text-caption text-medium-emphasis font-weight-medium">Items per page:</span>
-                <VSelect
-                  aria-label="Items per page"
-                  :model-value="pagination.perPage"
-                  :items="perPageOptions"
-                  density="compact"
-                  variant="outlined"
-                  hide-details
-                  style="width: 85px"
-                  @update:model-value="changePerPage"
-                />
-              </div>
-              <div class="d-flex align-center ga-4">
-                <span class="text-caption text-medium-emphasis">
-                  Page <span class="text-high-emphasis font-weight-bold">{{ pagination.currentPage }}</span> of {{ pagination.lastPage }}
-                </span>
-                <VPagination
-                  v-model="pagination.currentPage"
-                  :length="pagination.lastPage"
-                  :total-visible="5"
-                  density="compact"
-                  active-color="primary"
-                  @update:model-value="(page: number) => fetchAllPayments({ page })"
-                />
-              </div>
-            </div>
-          </template>
-        </VDataTable>
-      </VCard>
-    </VCol>
-  </VRow>
+    <nav
+      v-if="pagination.total"
+      aria-label="Pages"
+      class="d-flex flex-wrap justify-space-between align-center gap-3 mt-4"
+    >
+      <span class="text-body-1 text-medium-emphasis">Showing {{ firstShown }}–{{ lastShown }} of {{ pagination.total }}</span>
+      <VPagination
+        :model-value="pagination.currentPage"
+        :length="pagination.lastPage"
+        :total-visible="5"
+        @update:model-value="page => fetchAllPayments({ page })"
+      />
+    </nav>
+  </div>
 
   <PaymentTransactionItemsModal
     v-model="openItemsModal"
-    :items="selectedTransactionItems"
+    :items="selectedItems"
   />
 
   <CreatePaymentModal
@@ -325,19 +260,9 @@ onMounted(async () => {
 </template>
 
 <style scoped>
-.payment-table :deep(td:first-child) {
-  position: sticky;
-  left: 0;
-  background: v-bind(surfaceColor) !important;
-  z-index: 1;
-  border-right: 1px solid rgba(var(--v-border-color), 0.12);
-}
+.payments { max-width: 1120px; }
 
-.text-xxs { font-size: 0.65rem; }
-.font-mono { font-family: 'Fira Code', 'Roboto Mono', monospace; }
-.border { border: 1px solid rgba(var(--v-border-color), 0.12) !important; }
-
-:deep(.v-data-table__tr:hover) td {
-  background-color: rgba(var(--v-theme-primary,255,255,255), 0.02) !important;
-}
+.payment-table { overflow-x: auto; }
+.payment-table :deep(table) { min-inline-size: 820px; }
+.payment-table th { font-weight: 500 !important; }
 </style>

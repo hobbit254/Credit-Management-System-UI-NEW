@@ -35,14 +35,6 @@ export const useNotifications = () => {
 
   const unreadCount = computed(() => unreadTotal.value)
 
-  const unreadNotifications = computed(() =>
-    notifications.value.filter(n => !n.read),
-  )
-
-  const readNotifications = computed(() =>
-    notifications.value.filter(n => n.read),
-  )
-
   // ── Fetch notifications ────────────────────────────────────────────────────
   const fetchNotifications = async (page = 1) => {
     loading.value = true
@@ -102,8 +94,6 @@ export const useNotifications = () => {
 
     // Computed
     unreadCount,
-    unreadNotifications,
-    readNotifications,
 
     // Actions
     fetchNotifications,

@@ -75,3 +75,21 @@ const itemStatusLabels: Record<string, string> = {
 
 // A sold device's status, in words.
 export const itemStatusLabel = (status: string) => itemStatusLabels[status] ?? status
+
+// Money as the shop writes it: KES 12,300. An empty amount counts as 0.
+export const kes = (amount: number | string | null | undefined) => `KES ${Number(amount || 0).toLocaleString('en-KE')}`
+
+export const dateTime = (date: string) => new Date(date).toLocaleString('en-KE', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })
+
+// What a permission's request method lets someone do.
+const methodLabels: Record<string, string> = { GET: 'View', POST: 'Create', PUT: 'Change', PATCH: 'Change', DELETE: 'Delete' }
+
+export const methodLabel = (method: string) => methodLabels[method] ?? method
+
+const paymentStatuses: Record<string, { text: string; color: string }> = {
+  PENDING: { text: 'Waiting for approval', color: 'warning' },
+  ACCEPTED: { text: 'Accepted', color: 'success' },
+  REJECTED: { text: 'Rejected', color: 'error' },
+}
+
+export const paymentStatus = (status: string) => paymentStatuses[status] ?? { text: status, color: 'default' }

@@ -5,6 +5,7 @@ import { usePayments } from '@/composables/payments/usePayments'
 import type { AppAbility } from '@/composables/auth/useAbility'
 import type { NewPayment, Payment, PaymentTransactionItem } from '@/schemas/payments'
 import { daysSince } from '@/utils/owed'
+import { kes, paymentStatus } from '@/utils/formatters'
 
 definePageMeta({
   subject: 'v1/payments',
@@ -27,14 +28,6 @@ const statusOptions = [
   { value: 'ACCEPTED', label: 'Accepted' },
   { value: 'REJECTED', label: 'Rejected' },
 ]
-
-const statusLabel: Record<string, { text: string; color: string }> = {
-  PENDING: { text: 'Waiting for approval', color: 'warning' },
-  ACCEPTED: { text: 'Accepted', color: 'success' },
-  REJECTED: { text: 'Rejected', color: 'error' },
-}
-
-const kes = (amount: number) => `KES ${Number(amount).toLocaleString('en-KE')}`
 
 function received(date: string) {
   const days = daysSince(date, Date.now())
@@ -203,10 +196,10 @@ async function handleCreatePayment(payment: NewPayment) {
         </div>
         <VChip
           v-else
-          :color="statusLabel[payment.status]?.color ?? 'default'"
+          :color="paymentStatus(payment.status).color"
           size="small"
         >
-          {{ statusLabel[payment.status]?.text ?? payment.status }}
+          {{ paymentStatus(payment.status).text }}
         </VChip>
       </td>
     </tr>

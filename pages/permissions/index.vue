@@ -1,13 +1,15 @@
 <script setup lang="ts">
 import { onMounted } from 'vue'
 import { usePermissions } from '@/composables/permissions/usePermissions'
+import { methodLabel } from '@/utils/formatters'
+import { copyId } from '@/utils/clipboard'
 
 definePageMeta({
   subject: 'v1/permissions',
 })
 
 const {
-  permissions, pagination, fetchAllPermissions, showToast, loading,
+  permissions, pagination, fetchAllPermissions, loading,
   openAdd, newPermission, addPermission, createPermission,
   openEdit, permissionToEdit, editPermission, updatePermission,
   openDelete, permissionToDelete, deletePermissionModal, deletePermission,
@@ -15,14 +17,6 @@ const {
 } = usePermissions()
 
 onMounted(() => fetchAllPermissions())
-
-// What the request method lets someone do.
-const methodLabel: Record<string, string> = { GET: 'View', POST: 'Create', PUT: 'Change', PATCH: 'Change', DELETE: 'Delete' }
-
-function copyId(uuid: string) {
-  navigator.clipboard.writeText(uuid)
-  showToast({ title: 'Copied', text: 'Permission ID copied', color: 'success', icon: 'tabler-clipboard-check' })
-}
 </script>
 
 <template>
@@ -82,7 +76,7 @@ function copyId(uuid: string) {
         </div>
       </td>
       <td class="text-body-1">
-        {{ methodLabel[permission.permission_action] ?? permission.permission_action }}
+        {{ methodLabel(permission.permission_action) }}
       </td>
       <td
         class="text-body-1"
@@ -110,7 +104,7 @@ function copyId(uuid: string) {
             <VListItem
               prepend-icon="tabler-copy"
               title="Copy ID"
-              @click="copyId(permission.permission_uuid)"
+              @click="copyId(permission.permission_uuid, 'Permission')"
             />
             <!-- Archived rows are restored, not switched on -->
             <template v-if="!permission.deleted_at">

@@ -3,6 +3,7 @@ import { computed, onMounted } from 'vue'
 import { useDashboard } from '@/composables/dashboard/useDashboard'
 import type { AppAbility } from '@/composables/auth/useAbility'
 import { summarizeOwed } from '@/utils/owed'
+import { kes } from '@/utils/formatters'
 
 definePageMeta({
   subject: 'v1/dashboard_stats',
@@ -13,7 +14,6 @@ const { loading, dashboardStats, fetchDashboardStats, decidePayment } = useDashb
 
 const canDecidePayments = computed(() => $ability.can('access', 'v1/payments/updateStatus'))
 
-const kes = (amount: number) => `KES ${amount.toLocaleString('en-KE')}`
 const today = new Date().toLocaleDateString('en-KE', { weekday: 'long', day: 'numeric', month: 'long' })
 
 const owed = computed(() => summarizeOwed(dashboardStats.value.owed))

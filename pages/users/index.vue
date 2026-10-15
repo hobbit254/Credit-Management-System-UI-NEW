@@ -1,13 +1,14 @@
 <script setup lang="ts">
 import { onMounted } from 'vue'
 import { useUsers } from '@/composables/users/useUsers'
+import { copyId } from '@/utils/clipboard'
 
 definePageMeta({
   subject: 'v1/users',
 })
 
 const {
-  users, pagination, fetchAllUsers, showToast, loading,
+  users, pagination, fetchAllUsers, loading,
   openAdd, newUser, addUser, createUser,
   openEdit, editUser, updateUser, userToEdit,
   openDelete, deleteUserModal, deleteUser, userToDelete,
@@ -15,11 +16,6 @@ const {
 } = useUsers()
 
 onMounted(() => fetchAllUsers())
-
-function copyId(uuid: string) {
-  navigator.clipboard.writeText(uuid)
-  showToast({ title: 'Copied', text: 'User ID copied', color: 'success', icon: 'tabler-clipboard-check' })
-}
 </script>
 
 <template>
@@ -107,7 +103,7 @@ function copyId(uuid: string) {
             <VListItem
               prepend-icon="tabler-copy"
               title="Copy ID"
-              @click="copyId(user.user_uuid)"
+              @click="copyId(user.user_uuid, 'User')"
             />
             <!-- Archived rows are restored, not activated -->
             <template v-if="!user.deleted_at">

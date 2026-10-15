@@ -2,13 +2,15 @@
 import { computed, onMounted, ref, watch } from 'vue'
 import { watchDebounced } from '@vueuse/core'
 import { useProductInventory } from '@/composables/product-inventory/useProductInventory'
+import { kes } from '@/utils/formatters'
+import { copyId } from '@/utils/clipboard'
 
 definePageMeta({
   subject: 'v1/product-inventory',
 })
 
 const {
-  loading, showToast, productInventories, fetchAllProductInventory, pagination, filters,
+  loading, productInventories, fetchAllProductInventory, pagination, filters,
   openAdd, newProductInventory, addProductInventory, createProductInventory,
   editProductInventory, openEdit, productInventoryToEdit, updateProductInventory,
   deleteProductInventory, deleteProductInventoryModal, openDelete,
@@ -39,8 +41,6 @@ const statusLabel: Record<string, { text: string; color: string }> = {
   ReturnedToSupplier: { text: 'Back with supplier', color: 'default' },
 }
 
-const kes = (amount: number) => `KES ${Number(amount || 0).toLocaleString('en-KE')}`
-
 const subtitle = computed(() => {
   const label = statusOptions.find(o => o.value === filters.value.status)?.label.toLowerCase()
 
@@ -54,11 +54,6 @@ const isImportOpen = ref(false)
 async function importCsv(file: File) {
   await importProductInventoryCsv(file)
   isImportOpen.value = false
-}
-
-function copyId(uuid: string) {
-  navigator.clipboard.writeText(uuid)
-  showToast({ title: 'Copied', text: 'Device ID copied', color: 'success', icon: 'tabler-clipboard-check' })
 }
 </script>
 
@@ -206,7 +201,7 @@ function copyId(uuid: string) {
             <VListItem
               prepend-icon="tabler-copy"
               title="Copy ID"
-              @click="copyId(unit.inventory_uuid)"
+              @click="copyId(unit.inventory_uuid, 'Device')"
             />
             <VDivider class="my-1" />
             <VListItem

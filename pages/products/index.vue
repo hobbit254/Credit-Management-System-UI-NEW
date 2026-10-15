@@ -2,13 +2,15 @@
 import { onMounted, ref } from 'vue'
 import { watchDebounced } from '@vueuse/core'
 import { useProduct } from '@/composables/products/useProduct'
+import { kes } from '@/utils/formatters'
+import { copyId } from '@/utils/clipboard'
 
 definePageMeta({
   subject: 'v1/products',
 })
 
 const {
-  showToast, loading, products, pagination, filters, fetchAllProducts,
+  loading, products, pagination, filters, fetchAllProducts,
   openAdd, addProduct, newProduct, createProduct,
   openEdit, productToEdit, editProduct, updateProduct,
   openDelete, productToDelete, deleteProductModal, deleteProduct,
@@ -19,8 +21,6 @@ onMounted(() => fetchAllProducts())
 
 // A new search starts again from page 1.
 watchDebounced(() => filters.value.search, () => fetchAllProducts({ page: 1 }), { debounce: 300 })
-
-const kes = (amount: number) => `KES ${Number(amount || 0).toLocaleString('en-KE')}`
 
 // Same threshold as the overview's stock table.
 function stockText(count: number) {
@@ -35,11 +35,6 @@ const isImportOpen = ref(false)
 async function importCsv(file: File) {
   await importProductsCsv(file)
   isImportOpen.value = false
-}
-
-function copyId(uuid: string) {
-  navigator.clipboard.writeText(uuid)
-  showToast({ title: 'Copied', text: 'Product ID copied', color: 'success', icon: 'tabler-clipboard-check' })
 }
 </script>
 
@@ -155,7 +150,7 @@ function copyId(uuid: string) {
             <VListItem
               prepend-icon="tabler-copy"
               title="Copy ID"
-              @click="copyId(product.product_uuid)"
+              @click="copyId(product.product_uuid, 'Product')"
             />
             <!-- Archived rows are restored, not switched on -->
             <template v-if="!product.deleted_at">

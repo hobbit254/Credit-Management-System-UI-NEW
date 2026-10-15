@@ -2,13 +2,14 @@
 import { onMounted } from 'vue'
 import { watchDebounced } from '@vueuse/core'
 import { useSuppliers } from '@/composables/suppliers/useSuppliers'
+import { copyId } from '@/utils/clipboard'
 
 definePageMeta({
   subject: 'v1/suppliers',
 })
 
 const {
-  showToast, suppliers, loading, pagination, filters, fetchAllSuppliers,
+  suppliers, loading, pagination, filters, fetchAllSuppliers,
   newSupplier, openAdd, addSupplier, createSupplier,
   openEdit, supplierToEdit, editSupplier, updateSupplier,
   deactivateSupplier, activateSupplier, restoreSupplier,
@@ -19,11 +20,6 @@ onMounted(() => fetchAllSuppliers())
 
 // A new search starts again from page 1.
 watchDebounced(() => filters.value.search, () => fetchAllSuppliers({ page: 1 }), { debounce: 300 })
-
-function copyId(uuid: string) {
-  navigator.clipboard.writeText(uuid)
-  showToast({ title: 'Copied', text: 'Supplier ID copied', color: 'success', icon: 'tabler-clipboard-check' })
-}
 </script>
 
 <template>
@@ -119,7 +115,7 @@ function copyId(uuid: string) {
             <VListItem
               prepend-icon="tabler-copy"
               title="Copy ID"
-              @click="copyId(supplier.supplier_uuid)"
+              @click="copyId(supplier.supplier_uuid, 'Supplier')"
             />
             <!-- Archived rows are restored, not switched on -->
             <template v-if="!supplier.deleted_at">

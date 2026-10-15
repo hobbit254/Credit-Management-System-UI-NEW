@@ -2,7 +2,7 @@
 import { onMounted, ref, watch } from 'vue'
 import type { AuditLog } from '@/schemas/audit_logs'
 import { useAuditLogs } from '@/composables/audit-logs/useAuditLogs'
-import { describeAction } from '@/utils/formatters'
+import { dateTime, describeAction } from '@/utils/formatters'
 
 definePageMeta({
   subject: 'v1/audit_logs',
@@ -23,8 +23,6 @@ onMounted(() => load())
 
 // A new date range starts again from page 1.
 watch([startDate, endDate], () => load(1))
-
-const when = (date: string) => new Date(date).toLocaleString('en-KE', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })
 
 // Only what helps answer "who did this, from where": older rows also hold a sign-in token, which is never shown.
 const openDetails = ref(false)
@@ -96,7 +94,7 @@ function viewDetails(log: AuditLog) {
         {{ describeAction(log.action, log.entity) }}
       </td>
       <td class="text-body-2 text-medium-emphasis">
-        {{ when(log.created_at) }}
+        {{ dateTime(log.created_at) }}
       </td>
       <td class="text-end">
         <VBtn
@@ -124,7 +122,7 @@ function viewDetails(log: AuditLog) {
           <dt>By</dt>
           <dd>{{ selected.full_name }} ({{ selected.details?.email }})</dd>
           <dt>When</dt>
-          <dd>{{ when(selected.created_at) }}</dd>
+          <dd>{{ dateTime(selected.created_at) }}</dd>
           <dt>From</dt>
           <dd>{{ selected.details?.ip }}</dd>
           <dt>Browser</dt>

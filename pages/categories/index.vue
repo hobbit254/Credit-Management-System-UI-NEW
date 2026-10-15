@@ -1,13 +1,14 @@
 <script setup lang="ts">
 import { onMounted } from 'vue'
 import { useCategory } from '@/composables/categories/useCategory'
+import { copyId } from '@/utils/clipboard'
 
 definePageMeta({
   subject: 'v1/categories',
 })
 
 const {
-  pagination, categories, loading, showToast, fetchAllCategories,
+  pagination, categories, loading, fetchAllCategories,
   openAdd, addCategory, newCategory, createCategory,
   editCategory, updateCategory, openEdit, categoryToEdit,
   categoryToDelete, deleteCategoryModal, openDelete, deleteCategory,
@@ -17,11 +18,6 @@ const {
 onMounted(() => fetchAllCategories())
 
 const added = (date: string) => new Date(date).toLocaleDateString('en-KE', { day: 'numeric', month: 'short', year: 'numeric' })
-
-function copyId(uuid: string) {
-  navigator.clipboard.writeText(uuid)
-  showToast({ title: 'Copied', text: 'Category ID copied', color: 'success', icon: 'tabler-clipboard-check' })
-}
 </script>
 
 <template>
@@ -99,7 +95,7 @@ function copyId(uuid: string) {
             <VListItem
               prepend-icon="tabler-copy"
               title="Copy ID"
-              @click="copyId(category.category_uuid)"
+              @click="copyId(category.category_uuid, 'Category')"
             />
             <!-- Archived rows are restored, not switched on -->
             <template v-if="!category.deleted_at">

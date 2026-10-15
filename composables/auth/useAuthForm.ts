@@ -9,13 +9,15 @@ interface MeResponseUser extends Omit<User, 'role_name'> {
   roles?: RoleWithPermissions[]
 }
 
-// Forgets the signed-in user everywhere: state, localStorage, permissions, notifications.
+// Forgets the signed-in user everywhere: state, permissions, notifications.
 export function clearSession() {
   const { $ability } = useNuxtApp() as unknown as { $ability?: AppAbility }
 
   useState<User | null>('user').value = null
   $ability?.update([])
   clearNotifications()
+
+  // Older versions kept a copy of the user in localStorage; clear it on the way out.
   if (import.meta.client)
     localStorage.removeItem('user')
 }
@@ -48,8 +50,6 @@ export async function verifySession() {
 
     user.value = resolved
     $ability.update(buildRulesFromRole(roles?.[0]))
-    if (import.meta.client)
-      localStorage.setItem('user', JSON.stringify(resolved))
   }
   catch {
     clearSession()
@@ -72,10 +72,6 @@ export function useAuthForm() {
 
       if (data.status === 'success') {
         user.value = data.data.user
-
-        if (import.meta.client)
-          localStorage.setItem('user', JSON.stringify(data.data.user))
-
         await verifySession()
         showToast({
           title: 'Login Successful',

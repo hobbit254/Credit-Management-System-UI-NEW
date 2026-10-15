@@ -99,33 +99,39 @@ function copyId(uuid: string) {
         clearable
         style="max-inline-size: 360px; min-inline-size: 220px;"
       />
-      <VBtnToggle
+      <!-- Chips wrap onto a new line on narrow screens; a button group would overflow. -->
+      <VChipGroup
         v-model="filters.status"
         mandatory
-        divided
-        variant="outlined"
-        color="primary"
+        column
+        selected-class="bg-primary"
         aria-label="Show"
       >
-        <VBtn
+        <VChip
           v-for="option in statusOptions"
           :key="option.value"
           :value="option.value"
+          size="large"
+          variant="outlined"
         >
           {{ option.label }}
-        </VBtn>
-      </VBtnToggle>
+        </VChip>
+      </VChipGroup>
     </template>
 
     <template #head>
       <th>Device</th>
-      <th>Serial number</th>
+      <th class="fit">
+        Serial number
+      </th>
       <th>Supplier</th>
-      <th class="text-end">
+      <th class="fit text-end">
         Price
       </th>
-      <th>Status</th>
-      <th>
+      <th class="fit">
+        Status
+      </th>
+      <th class="fit">
         <span class="d-sr-only">Actions</span>
       </th>
     </template>
@@ -154,11 +160,11 @@ function copyId(uuid: string) {
           {{ unit.supplier_name }}
         </div>
       </td>
-      <td class="text-end text-body-1">
+      <td class="text-end text-body-1 text-no-wrap">
         {{ kes(unit.default_price) }}
       </td>
       <td>
-        <div class="d-flex flex-wrap gap-1">
+        <div class="d-flex gap-1">
           <VChip
             :color="statusLabel[unit.status]?.color ?? 'default'"
             size="small"

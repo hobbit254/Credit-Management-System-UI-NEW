@@ -141,31 +141,32 @@ function copyId(uuid: string) {
   navigator.clipboard.writeText(uuid)
   showToast({ title: 'Copied', text: 'Sale ID copied', color: 'success', icon: 'tabler-copy' })
 }
-
-const firstShown = computed(() => (pagination.value.currentPage - 1) * pagination.value.perPage + 1)
-const lastShown = computed(() => Math.min(pagination.value.currentPage * pagination.value.perPage, pagination.value.total))
 </script>
 
 <template>
-  <div class="sales">
-    <header class="d-flex flex-wrap align-end gap-4 mb-6">
-      <div class="flex-grow-1">
-        <h1 class="text-h2 mb-1">
-          Sales
-        </h1>
-        <p class="text-body-1 text-medium-emphasis mb-0">
-          {{ pagination.total }} {{ filters.show === 'open' ? 'still owed money' : (pagination.total === 1 ? 'sale' : 'sales') }}
-        </p>
-      </div>
+  <ListPage
+    title="Sales"
+    :loading="loading"
+    :pagination="pagination"
+    :row-count="transactions.length"
+    :columns="5"
+    :empty-text="filters.search || filters.show !== 'all' ? 'No sales match. Try another name or filter.' : 'No sales yet. Start with New sale.'"
+    @page="page => fetchAllTransactions({ page })"
+  >
+    <template #subtitle>
+      {{ pagination.total }} {{ filters.show === 'open' ? 'still owed money' : (pagination.total === 1 ? 'sale' : 'sales') }}
+    </template>
+
+    <template #actions>
       <VBtn
         prepend-icon="tabler-plus"
         @click="addTransaction"
       >
         New sale
       </VBtn>
-    </header>
+    </template>
 
-    <div class="d-flex flex-wrap align-center gap-3 mb-6">
+    <template #filters>
       <AppTextField
         v-model="filters.search"
         aria-label="Search sales"
@@ -174,183 +175,147 @@ const lastShown = computed(() => Math.min(pagination.value.currentPage * paginat
         clearable
         style="max-inline-size: 360px; min-inline-size: 220px;"
       />
-      <VBtnToggle
+      <!-- Chips wrap onto a new line on narrow screens; a button group would overflow. -->
+      <VChipGroup
         v-model="filters.show"
         mandatory
-        divided
-        variant="outlined"
-        color="primary"
+        column
+        selected-class="bg-primary"
         aria-label="Show"
       >
-        <VBtn
+        <VChip
           v-for="option in showOptions"
           :key="option.value"
           :value="option.value"
+          size="large"
+          variant="outlined"
         >
           {{ option.label }}
-        </VBtn>
-      </VBtnToggle>
-    </div>
+        </VChip>
+      </VChipGroup>
+    </template>
 
-    <VCard
-      border
-      flat
+    <template #head>
+      <th>Customer</th>
+      <th style="min-inline-size: 220px;">
+        Paid
+      </th>
+      <th>Status</th>
+      <th>Sold</th>
+      <th>
+        <span class="d-sr-only">Actions</span>
+      </th>
+    </template>
+
+    <tr
+      v-for="{ sale, percent, when, people } in rows"
+      :key="sale.transaction_uuid"
     >
-      <VTable class="sale-table">
-        <thead>
-          <tr>
-            <th>Customer</th>
-            <th style="min-inline-size: 220px;">
-              Paid
-            </th>
-            <th>Status</th>
-            <th>Sold</th>
-            <th>
-              <span class="d-sr-only">Actions</span>
-            </th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr
-            v-for="{ sale, percent, when, people } in rows"
-            :key="sale.transaction_uuid"
+      <td class="py-3">
+        <div class="font-weight-medium text-body-1">
+          {{ sale.debtor?.debtor_name ?? 'Unknown customer' }}
+        </div>
+        <div class="text-body-2 text-medium-emphasis">
+          {{ sale.transaction_type === 'Credit' ? 'On credit' : 'Paid upfront' }},
+          <a
+            href="#"
+            class="text-primary"
+            @click.prevent="viewItems(sale)"
+          >{{ sale.items?.length ?? 0 }} {{ sale.items?.length === 1 ? 'item' : 'items' }}</a>
+        </div>
+        <div
+          v-if="people"
+          class="text-body-2 text-medium-emphasis"
+        >
+          {{ people }}
+        </div>
+      </td>
+      <td>
+        <div class="text-body-1">
+          <span class="font-weight-bold">{{ kes(sale.payments_sum_amount || 0) }}</span>
+          <span class="text-medium-emphasis"> of {{ kes(sale.total_expected) }}</span>
+        </div>
+        <div
+          role="img"
+          :aria-label="`${percent} percent paid`"
+          class="paid-track my-1"
+        >
+          <div :style="{ inlineSize: `${percent}%` }" />
+        </div>
+        <div
+          v-if="Number(sale.overpaid) > 0"
+          class="text-body-2 text-error font-weight-medium"
+        >
+          {{ kes(sale.overpaid) }} to refund
+        </div>
+        <div
+          v-else-if="Number(sale.total_refunded) > 0"
+          class="text-body-2 text-medium-emphasis"
+        >
+          {{ kes(sale.total_refunded) }} refunded
+        </div>
+      </td>
+      <td>
+        <VChip
+          :color="saleStatusColor(sale.status)"
+          size="small"
+        >
+          {{ saleStatusLabel(sale.status) }}
+        </VChip>
+      </td>
+      <td class="text-body-2 text-medium-emphasis">
+        {{ when }}
+      </td>
+      <td class="text-end">
+        <div class="d-flex justify-end align-center gap-1">
+          <VBtn
+            v-if="isOpen(sale)"
+            variant="outlined"
+            color="default"
+            @click="addPaymentFor(sale)"
           >
-            <td class="py-3">
-              <div class="font-weight-medium text-body-1">
-                {{ sale.debtor?.debtor_name ?? 'Unknown customer' }}
-              </div>
-              <div class="text-body-2 text-medium-emphasis">
-                {{ sale.transaction_type === 'Credit' ? 'On credit' : 'Paid upfront' }},
-                <a
-                  href="#"
-                  class="text-primary"
-                  @click.prevent="viewItems(sale)"
-                >{{ sale.items?.length ?? 0 }} {{ sale.items?.length === 1 ? 'item' : 'items' }}</a>
-              </div>
-              <div
-                v-if="people"
-                class="text-body-2 text-medium-emphasis"
-              >
-                {{ people }}
-              </div>
-            </td>
-            <td>
-              <div class="text-body-1">
-                <span class="font-weight-bold">{{ kes(sale.payments_sum_amount || 0) }}</span>
-                <span class="text-medium-emphasis"> of {{ kes(sale.total_expected) }}</span>
-              </div>
-              <div
-                role="img"
-                :aria-label="`${percent} percent paid`"
-                class="paid-track my-1"
-              >
-                <div :style="{ inlineSize: `${percent}%` }" />
-              </div>
-              <div
-                v-if="Number(sale.overpaid) > 0"
-                class="text-body-2 text-error font-weight-medium"
-              >
-                {{ kes(sale.overpaid) }} to refund
-              </div>
-              <div
-                v-else-if="Number(sale.total_refunded) > 0"
-                class="text-body-2 text-medium-emphasis"
-              >
-                {{ kes(sale.total_refunded) }} refunded
-              </div>
-            </td>
-            <td>
-              <VChip
-                :color="saleStatusColor(sale.status)"
-                size="small"
-              >
-                {{ saleStatusLabel(sale.status) }}
-              </VChip>
-            </td>
-            <td class="text-body-2 text-medium-emphasis">
-              {{ when }}
-            </td>
-            <td class="text-end">
-              <div class="d-flex justify-end align-center gap-1">
-                <VBtn
-                  v-if="isOpen(sale)"
-                  variant="outlined"
-                  color="default"
-                  @click="addPaymentFor(sale)"
-                >
-                  Record payment
-                </VBtn>
-                <VMenu location="bottom end">
-                  <template #activator="{ props: menuProps }">
-                    <VBtn
-                      :aria-label="`More for ${sale.debtor?.debtor_name ?? 'this sale'}`"
-                      icon="tabler-dots-vertical"
-                      variant="text"
-                      color="default"
-                      v-bind="menuProps"
-                    />
-                  </template>
-                  <VList>
-                    <VListItem
-                      prepend-icon="tabler-receipt"
-                      title="Payments and refunds"
-                      @click="viewPayments(sale)"
-                    />
-                    <VListItem
-                      prepend-icon="tabler-box"
-                      title="Items and returns"
-                      @click="viewItems(sale)"
-                    />
-                    <!-- Admins and accountants (refunds/create), only while money is due back -->
-                    <VListItem
-                      v-if="Number(sale.overpaid) > 0 && canRecordRefund"
-                      prepend-icon="tabler-receipt-refund"
-                      title="Record refund"
-                      @click="refundFor(sale)"
-                    />
-                    <VDivider class="my-1" />
-                    <VListItem
-                      prepend-icon="tabler-copy"
-                      title="Copy ID"
-                      @click="copyId(sale.transaction_uuid)"
-                    />
-                  </VList>
-                </VMenu>
-              </div>
-            </td>
-          </tr>
-          <tr v-if="!transactions.length && !loading">
-            <td
-              colspan="5"
-              class="text-body-1 text-medium-emphasis py-6"
-            >
-              {{ filters.search || filters.show !== 'all' ? 'No sales match. Try another name or filter.' : 'No sales yet. Start with New sale.' }}
-            </td>
-          </tr>
-        </tbody>
-      </VTable>
-      <VProgressLinear
-        v-if="loading"
-        indeterminate
-        color="primary"
-        height="2"
-      />
-    </VCard>
-
-    <nav
-      v-if="pagination.total"
-      aria-label="Pages"
-      class="d-flex flex-wrap justify-space-between align-center gap-3 mt-4"
-    >
-      <span class="text-body-1 text-medium-emphasis">Showing {{ firstShown }}–{{ lastShown }} of {{ pagination.total }}</span>
-      <VPagination
-        :model-value="pagination.currentPage"
-        :length="pagination.lastPage"
-        :total-visible="5"
-        @update:model-value="page => fetchAllTransactions({ page })"
-      />
-    </nav>
-  </div>
+            Record payment
+          </VBtn>
+          <VMenu location="bottom end">
+            <template #activator="{ props: menuProps }">
+              <VBtn
+                :aria-label="`More for ${sale.debtor?.debtor_name ?? 'this sale'}`"
+                icon="tabler-dots-vertical"
+                variant="text"
+                color="default"
+                v-bind="menuProps"
+              />
+            </template>
+            <VList>
+              <VListItem
+                prepend-icon="tabler-receipt"
+                title="Payments and refunds"
+                @click="viewPayments(sale)"
+              />
+              <VListItem
+                prepend-icon="tabler-box"
+                title="Items and returns"
+                @click="viewItems(sale)"
+              />
+              <!-- Admins and accountants (refunds/create), only while money is due back -->
+              <VListItem
+                v-if="Number(sale.overpaid) > 0 && canRecordRefund"
+                prepend-icon="tabler-receipt-refund"
+                title="Record refund"
+                @click="refundFor(sale)"
+              />
+              <VDivider class="my-1" />
+              <VListItem
+                prepend-icon="tabler-copy"
+                title="Copy ID"
+                @click="copyId(sale.transaction_uuid)"
+              />
+            </VList>
+          </VMenu>
+        </div>
+      </td>
+    </tr>
+  </ListPage>
 
   <TransactionItemsModal
     v-model="openItemsModal"
@@ -386,12 +351,6 @@ const lastShown = computed(() => Math.min(pagination.value.currentPage * paginat
 </template>
 
 <style scoped>
-.sales { max-width: 1120px; }
-
-.sale-table { overflow-x: auto; }
-.sale-table :deep(table) { min-inline-size: 860px; }
-.sale-table th { font-weight: 500 !important; }
-
 .paid-track {
   overflow: hidden;
   border-radius: 4px;

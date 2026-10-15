@@ -2,6 +2,7 @@
 import { NewPaymentSchema } from '@/schemas/payments'
 import type { NewPayment } from '@/schemas/payments'
 import { useTransaction } from '@/composables/transactions/useTransaction'
+import type { AppAbility } from '@/composables/auth/useAbility'
 
 const props = defineProps<{
   modelValue: boolean
@@ -24,10 +25,14 @@ const paymentMethodOptions = ['Cash', 'M-Pesa', 'Bank', 'Cheque']
 const { transactions, fetchAllTransactions } = useTransaction()
 const loadingTransactions = ref(false)
 
+// Picking a sale needs the sales list; without it the request would only come back refused.
+const { $ability } = useNuxtApp() as unknown as { $ability: AppAbility }
+const canListSales = computed(() => $ability.can('access', 'v1/transactions'))
+
 // Load each time the dialog opens: the page mounts it once, so loading on mount kept
 // lists from when the page opened (e.g. a unit sold a minute ago still offered).
 watch(() => props.modelValue, async open => {
-  if (!open)
+  if (!open || !canListSales.value)
     return
   loadingTransactions.value = true
   try {
@@ -114,6 +119,12 @@ const selectedTransaction = computed(() =>
           For <span class="font-weight-medium">{{ selectedTransaction?.debtor?.debtor_name ?? 'this sale' }}</span><template v-if="selectedTransaction">
             , {{ owedText(selectedTransaction) }}
           </template>
+        </p>
+        <p
+          v-else-if="!canListSales"
+          class="text-body-1 text-medium-emphasis mb-4"
+        >
+          Your role can't see the list of sales, so you can't pick one here. Ask an administrator for access to Sales.
         </p>
         <AppAutocomplete
           v-else

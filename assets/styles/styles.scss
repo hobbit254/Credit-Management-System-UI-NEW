@@ -1,1 +1,18 @@
-// Write your overrides
+// Headings in Bricolage Grotesque; everything else stays Public Sans.
+h1, h2, h3, h4, h5, h6,
+.text-h1, .text-h2, .text-h3, .text-h4, .text-h5, .text-h6,
+.v-card-title {
+  font-family: "Bricolage Grotesque", "Public Sans", sans-serif;
+  letter-spacing: -0.01em;
+}
+
+// Money and counts line up in columns.
+body {
+  font-variant-numeric: tabular-nums;
+}
+
+// The app title is the lower-case cookie namespace too (themeConfig), so capitalize it on screen.
+.app-title {
+  font-family: "Bricolage Grotesque", "Public Sans", sans-serif;
+  text-transform: capitalize;
+}

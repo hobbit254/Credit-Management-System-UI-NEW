@@ -1,4 +1,5 @@
 import { ref } from 'vue'
+import { withLoading } from '@/utils/requests'
 import type { ApiClient } from '@/types/api'
 import type { DashboardStats } from '@/schemas/dashboard_stats'
 
@@ -11,6 +12,8 @@ export function useDashboard() {
     transactions: [],
     payments: [],
     refunds: 0,
+    owed: [],
+    pending_payments: [],
   })
 
   async function fetchDashboardStats() {
@@ -31,9 +34,18 @@ export function useDashboard() {
     }
   }
 
+  // Errors are toasted by the API plugin; on success the queue and totals reload.
+  async function decidePayment(paymentUuid: string, status: 'ACCEPTED' | 'REJECTED') {
+    await withLoading(loading, async () => {
+      await $api.put('payments/updateStatus', { payment_uuid: paymentUuid, status })
+      await fetchDashboardStats()
+    })
+  }
+
   return {
     loading,
     dashboardStats,
     fetchDashboardStats,
+    decidePayment,
   }
 }

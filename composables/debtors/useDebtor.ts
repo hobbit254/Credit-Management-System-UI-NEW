@@ -17,6 +17,9 @@ export function useDebtor() {
     lastPage: 1,
   })
 
+  // show: 'all' | 'owing' (still owes money) | 'over_limit' (owes more than their credit limit)
+  const filters = ref({ search: '', show: 'all' })
+
   async function fetchAllDebtors(options?: { page?: number; perPage?: number }) {
     await withLoading(loading, async () => {
       if (options?.page)
@@ -28,6 +31,8 @@ export function useDebtor() {
         params: {
           page: pagination.value.currentPage,
           per_page: pagination.value.perPage,
+          search: filters.value.search || undefined,
+          show: filters.value.show === 'all' ? undefined : filters.value.show,
         },
       })
 
@@ -150,6 +155,7 @@ export function useDebtor() {
     debtors,
     loading,
     pagination,
+    filters,
     showToast,
     fetchAllDebtors,
     openAdd,

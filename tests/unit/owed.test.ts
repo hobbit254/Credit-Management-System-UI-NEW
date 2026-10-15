@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { summarizeOwed } from '@/utils/owed'
+import { creditUse, summarizeOwed } from '@/utils/owed'
 
 const now = new Date('2026-10-14T12:00:00Z').getTime()
 const daysAgo = (n: number) => new Date(now - n * 86_400_000).toISOString()
@@ -30,5 +30,19 @@ describe('summarizeOwed', () => {
 
   it('handles nothing owed', () => {
     expect(summarizeOwed([], now)).toMatchObject({ total: 0, count: 0, quietOver60: 0, followUps: [] })
+  })
+})
+
+describe('creditUse', () => {
+  it('flags near at 80% and over only past the limit', () => {
+    expect(creditUse(790, 1000)).toEqual({ percent: 79, level: 'ok' })
+    expect(creditUse(800, 1000)).toEqual({ percent: 80, level: 'near' })
+    expect(creditUse(1000, 1000)).toEqual({ percent: 100, level: 'near' })
+    expect(creditUse(1030, 1000)).toEqual({ percent: 103, level: 'over' })
+  })
+
+  it('treats any debt on a zero limit as over, and nothing owed as fine', () => {
+    expect(creditUse(50, 0)).toEqual({ percent: 100, level: 'over' })
+    expect(creditUse(0, 0)).toEqual({ percent: 0, level: 'ok' })
   })
 })

@@ -64,3 +64,14 @@ export function describeAction(action: string, entity: string) {
 
   return verb.startsWith('Signed') ? verb : `${verb} ${entity.replace(/_/g, ' ')}`
 }
+
+const itemStatusLabels: Record<string, string> = {
+  OnSale: 'On a sale',
+  OnCredit: 'On credit',
+  Paid: 'Paid',
+  Sold: 'Sold',
+  Returned: 'Returned',
+}
+
+// A sold device's status, in words.
+export const itemStatusLabel = (status: string) => itemStatusLabels[status] ?? status

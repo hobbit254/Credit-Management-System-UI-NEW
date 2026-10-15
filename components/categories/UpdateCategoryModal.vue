@@ -15,10 +15,6 @@ const isOpen = computed({
   set: value => emit('update:modelValue', value),
 })
 
-function closeModal() {
-  isOpen.value = false
-}
-
 // Local editable copy
 const localCategory = ref<Partial<Category>>({
   category_name: '',
@@ -46,97 +42,22 @@ function handleConfirm() {
 </script>
 
 <template>
-  <VDialog
+  <FormDialog
     v-model="isOpen"
-    max-width="500"
-    scrollable
+    title="Edit category"
+    confirm-text="Save changes"
+    :loading="props.loading"
+    @confirm="handleConfirm"
   >
-    <VCard>
-      <VCardTitle class="d-flex align-center ga-3 pa-4">
-        <VAvatar
-          color="primary"
-          variant="tonal"
-          size="40"
-        >
-          <VIcon>tabler-edit</VIcon>
-        </VAvatar>
-        <div class="d-flex flex-column">
-          <span class="text-h6 font-weight-bold">Edit Category</span>
-          <span class="text-caption text-medium-emphasis">Modify the category name or settings</span>
-        </div>
-      </VCardTitle>
-
-      <VDivider />
-
-      <VCardText class="pa-4">
-        <VForm @submit.prevent="handleConfirm">
-          <VRow dense>
-            <VCol
-              cols="12"
-              class="mb-2"
-            >
-              <div class="d-flex align-center ga-2 pa-2 rounded bg-var-theme-background border-dashed">
-                <VIcon
-                  size="16"
-                  color="primary"
-                >
-                  tabler-info-circle
-                </VIcon>
-                <span class="text-caption text-medium-emphasis">
-                  Editing: <strong>{{ props.category?.category_name }}</strong>
-                </span>
-              </div>
-            </VCol>
-
-            <VCol cols="12">
-              <p class="text-caption text-medium-emphasis font-weight-medium mb-1 text-uppercase">
-                Category Name
-              </p>
-              <AppTextField
-                v-model="localCategory.category_name"
-                label="Category Name*"
-                placeholder="Enter category name"
-                autofocus
-              >
-                <template #prepend-inner>
-                  <VIcon size="18">
-                    tabler-tag
-                  </VIcon>
-                </template>
-              </AppTextField>
-            </VCol>
-          </VRow>
-        </VForm>
-      </VCardText>
-
-      <VDivider />
-
-      <VCardActions class="pa-3">
-        <VSpacer />
-        <VBtn
-          variant="plain"
-          prepend-icon="tabler-x"
-          :disabled="props.loading"
-          @click="closeModal"
-        >
-          Cancel
-        </VBtn>
-        <VBtn
-          color="primary"
-          variant="tonal"
-          prepend-icon="tabler-check"
-          :loading="props.loading"
-          @click="handleConfirm"
-        >
-          Update Category
-        </VBtn>
-      </VCardActions>
-    </VCard>
-  </VDialog>
+    <VRow dense>
+      <VCol cols="12">
+        <AppTextField
+          v-model="localCategory.category_name"
+          label="Category Name*"
+          placeholder="Enter category name"
+          autofocus
+        />
+      </VCol>
+    </VRow>
+  </FormDialog>
 </template>
-
-<style scoped>
-.border-dashed {
-  border: 1px dashed rgba(var(--v-border-color), var(--v-border-opacity));
-}
-</style>

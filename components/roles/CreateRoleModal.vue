@@ -28,10 +28,6 @@ watch(localRole, newVal => {
   emit('update:role', newVal)
 }, { deep: true })
 
-function closeModal() {
-  isOpen.value = false
-}
-
 function handleConfirm() {
   emit('confirm')
 }
@@ -46,136 +42,44 @@ const slugPreview = computed(() => {
 </script>
 
 <template>
-  <VDialog
+  <FormDialog
     v-model="isOpen"
-    max-width="550"
-    scrollable
+    title="Add a role"
+    description="Then choose what it may do under Who can do what."
+    confirm-text="Add role"
+    :loading="props.loading"
+    @confirm="handleConfirm"
   >
-    <VCard>
-      <VCardTitle class="d-flex align-center ga-3 pa-4">
-        <VAvatar
-          color="primary"
-          variant="tonal"
-          size="40"
-        >
-          <VIcon>tabler-shield-plus</VIcon>
-        </VAvatar>
-        <div class="d-flex flex-column">
-          <span class="text-h6 font-weight-bold">Add New Role</span>
-          <span class="text-caption text-medium-emphasis">Define system access levels and permissions</span>
-        </div>
-      </VCardTitle>
+    <VRow dense>
+      <VCol cols="12">
+        <AppTextField
+          v-model="localRole.role_name"
+          label="Role Name*"
+          placeholder="e.g. Warehouse Manager"
+          :hint="slugPreview ? `Saved as ${slugPreview}` : undefined"
+          persistent-hint
+          autofocus
+        />
+      </VCol>
 
-      <VDivider />
+      <VCol cols="12">
+        <AppTextarea
+          v-model="localRole.description"
+          label="Description"
+          placeholder="Describe what users with this role can do..."
+          auto-grow
+          rows="3"
+        />
+      </VCol>
 
-      <VCardText class="pa-4">
-        <VForm @submit.prevent="handleConfirm">
-          <VRow dense>
-            <VCol cols="12">
-              <p class="text-caption text-medium-emphasis font-weight-medium mb-1 text-uppercase">
-                Role Identity
-              </p>
-              <AppTextField
-                v-model="localRole.role_name"
-                label="Role Name*"
-                placeholder="e.g. Warehouse Manager"
-                autofocus
-              >
-                <template #prepend-inner>
-                  <VIcon size="18">
-                    tabler-user-check
-                  </VIcon>
-                </template>
-              </AppTextField>
-            </VCol>
-
-            <VCol
-              cols="12"
-              class="mb-2"
-            >
-              <div class="d-flex align-center ga-2 px-3 py-2 rounded bg-var-theme-background border-dashed">
-                <VIcon
-                  size="14"
-                  color="secondary"
-                >
-                  tabler-link
-                </VIcon>
-                <span class="text-caption text-medium-emphasis">
-                  System Slug: <code class="text-primary font-weight-bold">{{ slugPreview }}</code>
-                </span>
-              </div>
-            </VCol>
-
-            <VCol cols="12">
-              <p class="text-caption text-medium-emphasis font-weight-medium mb-1 text-uppercase">
-                Access Description
-              </p>
-              <AppTextarea
-                v-model="localRole.description"
-                label="Description"
-                placeholder="Describe what users with this role can do..."
-                auto-grow
-                rows="3"
-              >
-                <template #prepend-inner>
-                  <VIcon size="18">
-                    tabler-align-left
-                  </VIcon>
-                </template>
-              </AppTextarea>
-            </VCol>
-
-            <VCol
-              cols="12"
-              class="mt-2"
-            >
-              <VAlert
-                color="warning"
-                variant="tonal"
-                density="compact"
-                class="text-caption"
-                border="start"
-              >
-                <template #prepend>
-                  <VIcon size="18">
-                    tabler-alert-circle
-                  </VIcon>
-                </template>
-                New roles have no permissions by default. You will need to assign permissions after creation.
-              </VAlert>
-            </VCol>
-          </VRow>
-        </VForm>
-      </VCardText>
-
-      <VDivider />
-
-      <VCardActions class="pa-3">
-        <VSpacer />
-        <VBtn
-          variant="plain"
-          prepend-icon="tabler-x"
-          :disabled="props.loading"
-          @click="closeModal"
-        >
-          Cancel
-        </VBtn>
-        <VBtn
-          color="primary"
-          variant="tonal"
-          prepend-icon="tabler-check"
-          :loading="props.loading"
-          @click="handleConfirm"
-        >
-          Create Role
-        </VBtn>
-      </VCardActions>
-    </VCard>
-  </VDialog>
+      <VCol
+        cols="12"
+        class="mt-2"
+      >
+        <p class="text-body-2 text-medium-emphasis mb-0">
+          New roles have no permissions by default. You will need to assign permissions after creation.
+        </p>
+      </VCol>
+    </VRow>
+  </FormDialog>
 </template>
-
-<style scoped>
-.border-dashed {
-  border: 1px dashed rgba(var(--v-border-color), var(--v-border-opacity));
-}
-</style>

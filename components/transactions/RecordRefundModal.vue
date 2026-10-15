@@ -48,79 +48,57 @@ function handleConfirm() {
 </script>
 
 <template>
-  <VDialog
+  <FormDialog
     :model-value="modelValue"
-    max-width="480"
+    title="Record a refund"
+    confirm-text="Record refund"
+    :loading="loading"
     @update:model-value="emit('update:modelValue', $event)"
+    @confirm="handleConfirm"
   >
-    <VCard>
-      <VCardTitle class="pa-4">
-        Record Refund
-      </VCardTitle>
-      <VCardText>
-        <p class="text-body-2 mb-4">
-          <strong>KES {{ due.toLocaleString() }}</strong> is due back to {{ sale?.debtor?.debtor_name ?? 'the customer' }}
-          on this sale. Record the money once it has been paid back.
-        </p>
-        <VRow>
-          <VCol cols="12">
-            <AppTextField
-              v-model="refund.amount"
-              label="Amount*"
-              type="number"
-              prefix="KES"
-              :error-messages="fieldErrors.amount"
-            />
-          </VCol>
-          <VCol cols="12">
-            <AppSelect
-              v-model="refund.refund_method"
-              :items="refundMethodOptions"
-              label="Paid back by*"
-              placeholder="Select method"
-              :error-messages="fieldErrors.refund_method"
-            />
-          </VCol>
-          <VCol
-            v-if="refund.refund_method && refund.refund_method !== 'Cash'"
-            cols="12"
-          >
-            <AppTextField
-              v-model="refund.reference_code"
-              label="Reference Code*"
-              placeholder="e.g. the M-Pesa reversal code"
-              :error-messages="fieldErrors.reference_code"
-            />
-          </VCol>
-          <VCol cols="12">
-            <AppTextarea
-              v-model="refund.note"
-              label="Note"
-              rows="2"
-              counter="255"
-              maxlength="255"
-            />
-          </VCol>
-        </VRow>
-      </VCardText>
-      <VCardActions class="pa-4">
-        <VSpacer />
-        <VBtn
-          variant="tonal"
-          :disabled="loading"
-          @click="emit('update:modelValue', false)"
-        >
-          Cancel
-        </VBtn>
-        <VBtn
-          color="primary"
-          variant="flat"
-          :loading="loading"
-          @click="handleConfirm"
-        >
-          Record Refund
-        </VBtn>
-      </VCardActions>
-    </VCard>
-  </VDialog>
+    <p class="text-body-1 mb-5">
+      <span class="font-weight-medium">KES {{ due.toLocaleString('en-KE') }}</span> is due back to {{ sale?.debtor?.debtor_name ?? 'the customer' }}
+      on this sale. Record it once the money has been paid back.
+    </p>
+    <VRow>
+      <VCol cols="12">
+        <AppTextField
+          v-model="refund.amount"
+          label="Amount*"
+          type="number"
+          prefix="KES"
+          :error-messages="fieldErrors.amount"
+        />
+      </VCol>
+      <VCol cols="12">
+        <AppSelect
+          v-model="refund.refund_method"
+          :items="refundMethodOptions"
+          label="Paid back by*"
+          placeholder="Select method"
+          :error-messages="fieldErrors.refund_method"
+        />
+      </VCol>
+      <VCol
+        v-if="refund.refund_method && refund.refund_method !== 'Cash'"
+        cols="12"
+      >
+        <AppTextField
+          v-model="refund.reference_code"
+          label="Reference code*"
+          placeholder="e.g. the M-Pesa reversal code"
+          :error-messages="fieldErrors.reference_code"
+        />
+      </VCol>
+      <VCol cols="12">
+        <AppTextarea
+          v-model="refund.note"
+          label="Note"
+          rows="2"
+          counter="255"
+          maxlength="255"
+        />
+      </VCol>
+    </VRow>
+  </FormDialog>
 </template>

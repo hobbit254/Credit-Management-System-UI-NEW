@@ -54,10 +54,11 @@ watch(() => props.modelValue, async open => {
   }
 }, { immediate: true })
 
-function closeModal() {
-  isOpen.value = false
-  fieldErrors.value = {}
-}
+// Clear old errors once the pop-up has closed.
+watch(isOpen, open => {
+  if (!open)
+    fieldErrors.value = {}
+})
 
 function handleConfirm() {
   const result = NewUserSchema.safeParse(localUser.value)
@@ -72,177 +73,73 @@ function handleConfirm() {
 </script>
 
 <template>
-  <VDialog
+  <FormDialog
     v-model="isOpen"
-    max-width="550"
-    scrollable
-    persistent
+    title="Add a user"
+    description="We email them a link to verify their address."
+    confirm-text="Add user"
+    :loading="props.loading"
+    @confirm="handleConfirm"
   >
-    <VCard>
-      <VCardTitle class="d-flex align-center ga-3 pa-4">
-        <VAvatar
-          color="primary"
-          variant="tonal"
-          size="40"
-        >
-          <VIcon>tabler-user-plus</VIcon>
-        </VAvatar>
-        <div class="d-flex flex-column">
-          <span class="text-h6 font-weight-bold">Add New User</span>
-          <span class="text-caption text-medium-emphasis">Create a new account and assign access</span>
-        </div>
-      </VCardTitle>
+    <VRow dense>
+      <VCol cols="12">
+        <AppTextField
+          v-model="localUser.full_name"
+          label="Full Name*"
+          placeholder="John Doe"
+          :error-messages="fieldErrors.full_name"
+          autofocus
+        />
+      </VCol>
 
-      <VDivider />
+      <VCol cols="12">
+        <AppTextField
+          v-model="localUser.email"
+          label="Email Address*"
+          type="email"
+          placeholder="john@example.com"
+          :error-messages="fieldErrors.email"
+        />
+      </VCol>
 
-      <VCardText class="pa-4">
-        <VForm @submit.prevent="handleConfirm">
-          <VRow dense>
-            <VCol cols="12">
-              <p class="text-caption text-medium-emphasis font-weight-medium mb-1 text-uppercase">
-                Personal Information
-              </p>
-            </VCol>
+      <VCol cols="12">
+        <AppSelect
+          v-model="localUser.role_uuid"
+          :items="roles"
+          item-title="role_name"
+          item-value="roles_uuid"
+          :loading="loadingRoles"
+          label="Assigned Role*"
+          placeholder="Select a role"
+          :error-messages="fieldErrors.role_uuid"
+        />
+      </VCol>
 
-            <VCol cols="12">
-              <AppTextField
-                v-model="localUser.full_name"
-                label="Full Name*"
-                placeholder="John Doe"
-                :error-messages="fieldErrors.full_name"
-                autofocus
-              >
-                <template #prepend-inner>
-                  <VIcon size="18">
-                    tabler-user
-                  </VIcon>
-                </template>
-              </AppTextField>
-            </VCol>
+      <VCol cols="12">
+        <AppTextField
+          v-model="localUser.password"
+          label="Password*"
+          placeholder="············"
+          :type="isPasswordVisible ? 'text' : 'password'"
+          autocomplete="new-password"
+          :error-messages="fieldErrors.password"
+          :append-inner-icon="isPasswordVisible ? 'tabler-eye-off' : 'tabler-eye'"
+          @click:append-inner="isPasswordVisible = !isPasswordVisible"
+        />
+      </VCol>
 
-            <VCol cols="12">
-              <AppTextField
-                v-model="localUser.email"
-                label="Email Address*"
-                type="email"
-                placeholder="john@example.com"
-                :error-messages="fieldErrors.email"
-              >
-                <template #prepend-inner>
-                  <VIcon size="18">
-                    tabler-mail
-                  </VIcon>
-                </template>
-              </AppTextField>
-            </VCol>
-
-            <VCol
-              cols="12"
-              class="mt-4"
-            >
-              <p class="text-caption text-medium-emphasis font-weight-medium mb-1 text-uppercase">
-                Access Control
-              </p>
-            </VCol>
-
-            <VCol cols="12">
-              <AppSelect
-                v-model="localUser.role_uuid"
-                :items="roles"
-                item-title="role_name"
-                item-value="roles_uuid"
-                :loading="loadingRoles"
-                label="Assigned Role*"
-                placeholder="Select a role"
-                :error-messages="fieldErrors.role_uuid"
-              >
-                <template #prepend-inner>
-                  <VIcon size="18">
-                    tabler-shield-lock
-                  </VIcon>
-                </template>
-              </AppSelect>
-            </VCol>
-
-            <VCol
-              cols="12"
-              class="mt-4"
-            >
-              <p class="text-caption text-medium-emphasis font-weight-medium mb-1 text-uppercase">
-                Security
-              </p>
-            </VCol>
-
-            <VCol cols="12">
-              <AppTextField
-                v-model="localUser.password"
-                label="Password*"
-                placeholder="············"
-                :type="isPasswordVisible ? 'text' : 'password'"
-                autocomplete="new-password"
-                :error-messages="fieldErrors.password"
-                :append-inner-icon="isPasswordVisible ? 'tabler-eye-off' : 'tabler-eye'"
-                @click:append-inner="isPasswordVisible = !isPasswordVisible"
-              >
-                <template #prepend-inner>
-                  <VIcon size="18">
-                    tabler-lock
-                  </VIcon>
-                </template>
-              </AppTextField>
-            </VCol>
-
-            <VCol cols="12">
-              <AppTextField
-                v-model="localUser.password_confirmation"
-                label="Confirm Password*"
-                placeholder="············"
-                :type="isConfirmPasswordVisible ? 'text' : 'password'"
-                autocomplete="new-password"
-                :error-messages="fieldErrors.password_confirmation"
-                :append-inner-icon="isConfirmPasswordVisible ? 'tabler-eye-off' : 'tabler-eye'"
-                @click:append-inner="isConfirmPasswordVisible = !isConfirmPasswordVisible"
-              >
-                <template #prepend-inner>
-                  <VIcon size="18">
-                    tabler-lock-check
-                  </VIcon>
-                </template>
-              </AppTextField>
-            </VCol>
-          </VRow>
-        </VForm>
-      </VCardText>
-
-      <VDivider />
-
-      <VCardActions class="pa-3">
-        <VSpacer />
-        <VBtn
-          variant="plain"
-          prepend-icon="tabler-x"
-          :disabled="props.loading"
-          @click="closeModal"
-        >
-          Cancel
-        </VBtn>
-        <VBtn
-          color="primary"
-          variant="tonal"
-          prepend-icon="tabler-check"
-          :loading="props.loading"
-          @click="handleConfirm"
-        >
-          Create User
-        </VBtn>
-      </VCardActions>
-    </VCard>
-  </VDialog>
+      <VCol cols="12">
+        <AppTextField
+          v-model="localUser.password_confirmation"
+          label="Confirm Password*"
+          placeholder="············"
+          :type="isConfirmPasswordVisible ? 'text' : 'password'"
+          autocomplete="new-password"
+          :error-messages="fieldErrors.password_confirmation"
+          :append-inner-icon="isConfirmPasswordVisible ? 'tabler-eye-off' : 'tabler-eye'"
+          @click:append-inner="isConfirmPasswordVisible = !isConfirmPasswordVisible"
+        />
+      </VCol>
+    </VRow>
+  </FormDialog>
 </template>
-
-<style scoped>
-/* Removed var(--v-theme-...) to prevent CSS resolution errors */
-.v-card-text {
-  background-color: rgb(var(--v-theme-surface, 255,255,255)) !important;
-}
-</style>

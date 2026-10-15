@@ -1,7 +1,5 @@
 import type { Router } from 'vue-router'
 import { layoutConfig } from '@layouts/config'
-import { AppContentLayoutNav } from '@layouts/enums'
-import { useLayoutConfigStore } from '@layouts/stores/config'
 import type { NavGroup, NavLink, NavLinkProps } from '@layouts/types'
 
 export const openGroups = ref<string[]>([])
@@ -99,64 +97,6 @@ export const getDynamicI18nProps = (key: string, tag = 'span') => {
     tag,
     scope: 'global',
   }
-}
-
-export const switchToVerticalNavOnLtOverlayNavBreakpoint = () => {
-  const configStore = useLayoutConfigStore()
-
-  /*
-      ℹ️ This is flag will hold nav type need to render when switching between lgAndUp from mdAndDown window width
-
-      Requirement: When we nav is set to `horizontal` and we hit the `mdAndDown` breakpoint nav type shall change to `vertical` nav
-      Now if we go back to `lgAndUp` breakpoint from `mdAndDown` how we will know which was previous nav type in large device?
-
-      Let's assign value of `appContentLayoutNav` as default value of lgAndUpNav. Why 🤔?
-        If template is viewed in lgAndUp
-          We will assign `appContentLayoutNav` value to `lgAndUpNav` because at this point both constant is same
-          Hence, for `lgAndUpNav` it will take value from theme config file
-        else
-          It will always show vertical nav and if user increase the window width it will fallback to `appContentLayoutNav` value
-          But `appContentLayoutNav` will be value set in theme config file
-    */
-  const lgAndUpNav = ref(configStore.appContentLayoutNav)
-
-  /*
-      There might be case where we manually switch from vertical to horizontal nav and vice versa in `lgAndUp` screen
-      So when user comes back from `mdAndDown` to `lgAndUp` we can set updated nav type
-      For this we need to update the `lgAndUpNav` value if screen is `lgAndUp`
-    */
-  watch(
-    () => configStore.appContentLayoutNav,
-    value => {
-      if (!configStore.isLessThanOverlayNavBreakpoint)
-        lgAndUpNav.value = value
-    },
-  )
-
-  /*
-      This is layout switching part
-      If it's `mdAndDown` => We will use vertical nav no matter what previous nav type was
-      Or if it's `lgAndUp` we need to switch back to `lgAndUp` nav type. For this we will tracker property `lgAndUpNav`
-    */
-  const shouldChangeContentLayoutNav = refAutoReset(true, 500)
-
-  shouldChangeContentLayoutNav.value = false
-
-  watch(() => configStore.isLessThanOverlayNavBreakpoint, val => {
-    if (!val) {
-      configStore.appContentLayoutNav = lgAndUpNav.value
-    }
-    else {
-      if (!shouldChangeContentLayoutNav.value) {
-        setTimeout(() => {
-          configStore.appContentLayoutNav = AppContentLayoutNav.Vertical
-        }, 500)
-      }
-      else {
-        configStore.appContentLayoutNav = AppContentLayoutNav.Vertical
-      }
-    }
-  }, { immediate: true })
 }
 
 /**

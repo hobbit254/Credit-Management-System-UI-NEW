@@ -47,6 +47,5 @@ import { VerticalNavLayout } from '@layouts'
     <template #footer>
       <Footer />
     </template>
-
   </VerticalNavLayout>
 </template>

@@ -32,3 +32,12 @@ const saleStatusColors: Record<string, string> = {
 }
 
 export const saleStatusColor = (status?: string) => saleStatusColors[status ?? ''] ?? 'error'
+
+const saleStatusLabels: Record<string, string> = {
+  UnPaid: 'Unpaid',
+  Partially_Paid: 'Part paid',
+  Paid: 'Paid',
+  Closed_With_Returns: 'Closed with returns',
+}
+
+export const saleStatusLabel = (status: string) => saleStatusLabels[status] ?? status.replace(/_/g, ' ')

@@ -18,6 +18,9 @@ export function useTransaction() {
   })
 
   // open: only sales that still owe money (UnPaid or Partially Paid).
+  // search: customer, sales person or runner name; show 'open': only sales that still owe money
+  const filters = ref({ search: '', show: 'all' })
+
   async function fetchAllTransactions(options?: { page?: number; perPage?: number; open?: boolean }) {
     await withLoading(loading, async () => {
       if (options?.page)
@@ -29,7 +32,8 @@ export function useTransaction() {
         params: {
           page: pagination.value.currentPage,
           per_page: pagination.value.perPage,
-          ...(options?.open ? { open: 1 } : {}),
+          full_name: filters.value.search || undefined,
+          ...(options?.open || filters.value.show === 'open' ? { open: 1 } : {}),
         },
       })
 
@@ -128,6 +132,7 @@ export function useTransaction() {
     transactions,
     loading,
     pagination,
+    filters,
     showToast,
     fetchAllTransactions,
     openAdd,

@@ -1,4 +1,5 @@
 import { z } from 'zod'
+import { phoneNumber } from '@/schemas/phone'
 
 export interface Supplier {
   supplier_uuid: string
@@ -18,8 +19,6 @@ export const NewSupplierSchema = z.object({
   supplier_name: z.string()
     .min(2)
     .max(200),
-  supplier_phone: z.string()
-    .min(12)
-    .max(20),
+  supplier_phone: phoneNumber,
 })
 export type NewSupplier = z.infer<typeof NewSupplierSchema>

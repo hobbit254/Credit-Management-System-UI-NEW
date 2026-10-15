@@ -93,19 +93,22 @@ export function usePermissionMatrix() {
         icon: '$success',
       })
     }
-    catch {
+    catch (error: any) {
       // 🔹 Revert on failure
       if (exists)
         matrix.value[roleId].add(permId)
       else
         matrix.value[roleId].delete(permId)
 
-      showToast({
-        title: 'Update Failed',
-        text: 'Could not update permission',
-        color: 'error',
-        icon: '$error',
-      })
+      // A refused request was already toasted with the server's reason by the API plugin.
+      if (!error?.response) {
+        showToast({
+          title: 'Update Failed',
+          text: 'Could not update permission',
+          color: 'error',
+          icon: '$error',
+        })
+      }
     }
   }
 

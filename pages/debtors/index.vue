@@ -4,13 +4,15 @@ import { watchDebounced } from '@vueuse/core'
 import { useDebtor } from '@/composables/debtors/useDebtor'
 import type { Debtor } from '@/schemas/debtors'
 import { creditUse, daysSince } from '@/utils/owed'
+import { kes } from '@/utils/formatters'
+import { copyId } from '@/utils/clipboard'
 
 definePageMeta({
   subject: 'v1/debtors',
 })
 
 const {
-  debtors, loading, pagination, filters, showToast, fetchAllDebtors,
+  debtors, loading, pagination, filters, fetchAllDebtors,
   openAdd, newDebtor, addDebtor, createDebtor,
   openEdit, debtorToEdit, editDebtor, updateDebtor,
   openDelete, deleteDebtorModal, debtorToDelete, deleteDebtor,
@@ -29,8 +31,6 @@ const showOptions = [
   { value: 'over_limit', label: 'Over limit' },
 ]
 
-const kes = (amount: number) => `KES ${amount.toLocaleString('en-KE')}`
-
 const barColor = { ok: 'rgb(var(--v-theme-primary))', near: 'rgb(var(--v-theme-warning))', over: 'rgb(var(--v-theme-error))' }
 
 function lastPaid(debtor: Debtor) {
@@ -41,11 +41,6 @@ function lastPaid(debtor: Debtor) {
   const date = new Date(debtor.last_paid_at).toLocaleDateString('en-KE', { day: 'numeric', month: 'short' })
 
   return { date, ago: days === 0 ? 'Today' : days === 1 ? 'Yesterday' : `${days} days ago`, late: debtor.owed > 0 && days > 60 }
-}
-
-function copyId(uuid: string) {
-  navigator.clipboard.writeText(uuid)
-  showToast({ title: 'Copied', text: 'Debtor ID copied', color: 'success', icon: 'tabler-clipboard-check' })
 }
 
 const rows = computed(() => debtors.value.map(debtor => ({
@@ -212,7 +207,7 @@ const rows = computed(() => debtors.value.map(debtor => ({
             <VListItem
               prepend-icon="tabler-copy"
               title="Copy ID"
-              @click="copyId(debtor.debtor_uuid)"
+              @click="copyId(debtor.debtor_uuid, 'Debtor')"
             />
             <!-- Archived rows are restored, not unsuspended -->
             <template v-if="!debtor.deleted_at">

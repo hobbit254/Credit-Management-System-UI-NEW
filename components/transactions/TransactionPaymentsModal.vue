@@ -2,6 +2,7 @@
 import { usePayments } from '@/composables/payments/usePayments'
 import type { Refund } from '@/schemas/transactions'
 import type { AppAbility } from '@/composables/auth/useAbility'
+import { kes, paymentStatus } from '@/utils/formatters'
 
 const props = withDefaults(defineProps<{
   modelValue: boolean
@@ -24,14 +25,6 @@ const { loading, updatePaymentStatus } = usePayments()
 // Only a PENDING payment can be decided, and the decision is final.
 const { $ability } = useNuxtApp() as unknown as { $ability: AppAbility }
 const canDecide = computed(() => $ability.can('access', 'v1/payments/updateStatus'))
-
-const statusLabel: Record<string, { text: string; color: string }> = {
-  PENDING: { text: 'Waiting for approval', color: 'warning' },
-  ACCEPTED: { text: 'Accepted', color: 'success' },
-  REJECTED: { text: 'Rejected', color: 'error' },
-}
-
-const kes = (amount: number | string) => `KES ${Number(amount).toLocaleString('en-KE')}`
 
 async function handleStatusChange(item: any, newStatus: string) {
   await updatePaymentStatus(item.payment_uuid, newStatus)
@@ -125,10 +118,10 @@ const acceptedTotal = computed(() =>
             </div>
             <VChip
               v-else
-              :color="statusLabel[payment.status]?.color ?? 'default'"
+              :color="paymentStatus(payment.status).color"
               size="small"
             >
-              {{ statusLabel[payment.status]?.text ?? payment.status }}
+              {{ paymentStatus(payment.status).text }}
             </VChip>
           </td>
         </tr>

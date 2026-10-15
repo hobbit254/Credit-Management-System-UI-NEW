@@ -5,8 +5,9 @@ import { useTransaction } from '@/composables/transactions/useTransaction'
 import type { NewRefund, Refund, Transaction, TransactionItem } from '@/schemas/transactions'
 import type { AppAbility } from '@/composables/auth/useAbility'
 import { usePayments } from '@/composables/payments/usePayments'
-import { saleStatusColor, saleStatusLabel } from '@/utils/formatters'
+import { kes, saleStatusColor, saleStatusLabel } from '@/utils/formatters'
 import { daysSince } from '@/utils/owed'
+import { copyId } from '@/utils/clipboard'
 
 definePageMeta({
   subject: 'v1/transactions',
@@ -17,7 +18,6 @@ const {
   loading,
   pagination,
   filters,
-  showToast,
   fetchAllTransactions,
   openAdd,
   newTransaction,
@@ -39,8 +39,6 @@ const showOptions = [
   { value: 'all', label: 'All' },
   { value: 'open', label: 'Still owed money' },
 ]
-
-const kes = (amount: number) => `KES ${Number(amount).toLocaleString('en-KE')}`
 
 function soldOn(date: string) {
   const days = daysSince(date, Date.now())
@@ -135,11 +133,6 @@ function refundFor(sale: Transaction) {
 async function handleRecordRefund(refund: NewRefund) {
   if (await recordRefund(refund))
     openRefundModal.value = false
-}
-
-function copyId(uuid: string) {
-  navigator.clipboard.writeText(uuid)
-  showToast({ title: 'Copied', text: 'Sale ID copied', color: 'success', icon: 'tabler-copy' })
 }
 </script>
 
@@ -308,7 +301,7 @@ function copyId(uuid: string) {
               <VListItem
                 prepend-icon="tabler-copy"
                 title="Copy ID"
-                @click="copyId(sale.transaction_uuid)"
+                @click="copyId(sale.transaction_uuid, 'Sale')"
               />
             </VList>
           </VMenu>

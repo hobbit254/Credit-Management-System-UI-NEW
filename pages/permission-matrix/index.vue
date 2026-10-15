@@ -2,6 +2,7 @@
 import { computed, onMounted, reactive, ref } from 'vue'
 import { usePermissionMatrix } from '@/composables/permission-matrix/usePermissionMatrix'
 import { useAlert } from '@/composables/alerts/useAlert'
+import { methodLabel } from '@/utils/formatters'
 
 definePageMeta({
   subject: 'v1/permission-matrix',
@@ -28,8 +29,6 @@ async function load(currentPage = 1) {
     loading.value = false
   }
 }
-
-const methodLabel: Record<string, string> = { GET: 'View', POST: 'Create', PUT: 'Change', PATCH: 'Change', DELETE: 'Delete' }
 
 const pagination = computed(() => ({ ...page }))
 
@@ -69,7 +68,7 @@ onMounted(() => load())
           {{ permission.permission_name }}
         </div>
         <div class="text-body-2 text-medium-emphasis">
-          {{ methodLabel[permission.permission_action] ?? permission.permission_action }}
+          {{ methodLabel(permission.permission_action) }}
         </div>
       </td>
       <td

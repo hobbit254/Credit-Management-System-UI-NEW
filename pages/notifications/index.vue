@@ -2,6 +2,7 @@
 import { onMounted, ref } from 'vue'
 import type { Notification } from '@/schemas/notifications'
 import { useNotifications } from '@/composables/notifications/useNotification'
+import { dateTime } from '@/utils/formatters'
 
 definePageMeta({
   subject: 'v1/notifications',
@@ -18,8 +19,6 @@ async function openNotification(notification: Notification) {
   if (!notification.read)
     await markAsRead(notification.notification_uuid)
 }
-
-const when = (date: string) => new Date(date).toLocaleString('en-KE', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })
 
 onMounted(() => fetchNotifications(1))
 </script>
@@ -68,7 +67,7 @@ onMounted(() => fetchNotifications(1))
         </div>
       </td>
       <td class="text-body-2 text-medium-emphasis text-no-wrap">
-        {{ when(notification.created_at) }}
+        {{ dateTime(notification.created_at) }}
       </td>
     </tr>
   </ListPage>

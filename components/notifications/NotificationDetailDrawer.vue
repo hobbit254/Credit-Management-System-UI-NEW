@@ -1,14 +1,12 @@
 <script lang="ts" setup>
 import type { Notification } from '@/schemas/notifications'
-import { itemStatusLabel } from '@/utils/formatters'
+import { dateTime, itemStatusLabel } from '@/utils/formatters'
 
 const props = defineProps<{
   notification: Notification | null
 }>()
 
 const isOpen = defineModel<boolean>({ required: true })
-
-const when = (date: string) => new Date(date).toLocaleString('en-KE', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })
 
 // Overdue warnings carry the sale's items; import results carry counts.
 const items = computed(() => Array.isArray(props.notification?.details) ? props.notification.details : [])
@@ -39,7 +37,7 @@ const counts = computed(() => props.notification?.details && !Array.isArray(prop
         />
       </div>
       <p class="text-body-2 text-medium-emphasis mb-4">
-        {{ when(notification.created_at) }}
+        {{ dateTime(notification.created_at) }}
       </p>
       <p class="text-body-1 mb-6">
         {{ notification.message }}

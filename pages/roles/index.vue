@@ -2,13 +2,14 @@
 import { computed, onMounted } from 'vue'
 import { useRoles } from '@/composables/roles/useRoles'
 import type { AppAbility } from '@/composables/auth/useAbility'
+import { copyId } from '@/utils/clipboard'
 
 definePageMeta({
   subject: 'v1/roles',
 })
 
 const {
-  showToast, roles, loading, fetchAllRoles, openAdd, newRole, addRole, createRole, openEdit,
+  roles, loading, fetchAllRoles, openAdd, newRole, addRole, createRole, openEdit,
   roleToEdit, editRole, updateRole, openDelete, roleToDelete, deleteRoleModal,
   deleteRole, restoreRole, deactivateRole, activateRole,
 } = useRoles()
@@ -25,11 +26,6 @@ onMounted(async () => {
     loading.value = false
   }
 })
-
-function copyId(uuid: string) {
-  navigator.clipboard.writeText(uuid)
-  showToast({ title: 'Copied', text: 'Role ID copied', color: 'success', icon: 'tabler-clipboard-check' })
-}
 </script>
 
 <template>
@@ -119,7 +115,7 @@ function copyId(uuid: string) {
             <VListItem
               prepend-icon="tabler-copy"
               title="Copy ID"
-              @click="copyId(role.roles_uuid)"
+              @click="copyId(role.roles_uuid, 'Role')"
             />
             <!-- Archived rows are restored, not switched on -->
             <template v-if="!role.deleted_at">

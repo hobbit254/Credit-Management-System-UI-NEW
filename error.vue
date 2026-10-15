@@ -15,7 +15,7 @@ const errToShow = computed(() => {
   const is404 = props.error?.statusCode === 404 || props.error.message?.includes('404')
 
   if (is404)
-    return { title: 'Page not found', description: 'This address doesn\'t match any page. Check it, or start again from the overview.' }
+    return { title: 'Page not found', description: 'This address doesn\'t match any page. Check it, or go back to your start page.' }
 
   if (props.error?.statusCode === 403)
     return { title: 'You can\'t open this page', description: props.error.statusMessage || 'Your role doesn\'t allow it. Ask an administrator if you need access.' }
@@ -49,7 +49,7 @@ const handleError = () => clearError({ redirect: '/' })
         size="large"
         @click="handleError"
       >
-        Go to the overview
+        Go to your start page
       </VBtn>
 
       <!-- eslint-disable vue/no-v-html -->

@@ -3,6 +3,7 @@ import { type LoginForm, type LoginResponse, type User, createLoginForm } from '
 import { useAlert } from '@/composables/alerts/useAlert'
 import { type AppAbility, type RoleWithPermissions, buildRulesFromRole } from '@/composables/auth/useAbility'
 import { clearNotifications } from '@/composables/notifications/useNotification'
+import { homePath } from '@/utils/home'
 
 interface MeResponseUser extends Omit<User, 'role_name'> {
   roles?: RoleWithPermissions[]
@@ -56,7 +57,7 @@ export async function verifySession() {
 }
 
 export function useAuthForm() {
-  const { $api, $ensureCsrfToken } = useNuxtApp() as unknown as { $api: ApiClient; $ensureCsrfToken: () => Promise<string | null> }
+  const { $api, $ensureCsrfToken, $ability } = useNuxtApp() as unknown as { $api: ApiClient; $ensureCsrfToken: () => Promise<string | null>; $ability: AppAbility }
   const { alert: showToast } = useAlert()
   const user = useState<User | null>('user', () => null)
   const loginForm = ref<LoginForm>(createLoginForm())
@@ -82,7 +83,7 @@ export function useAuthForm() {
           color: 'success',
           icon: '$success',
         })
-        navigateTo('/dashboard')
+        navigateTo(homePath($ability))
       }
       else {
         showToast({

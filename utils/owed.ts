@@ -30,3 +30,11 @@ export function summarizeOwed(sales: OwedSale[], now = Date.now()) {
     followUps: rows.sort((a, b) => b.quietDays - a.quietDays).slice(0, 5),
   }
 }
+
+// How much of a credit limit is used. A limit of 0 means no credit, so any debt is over it.
+export function creditUse(owed: number, limit: number) {
+  const percent = limit > 0 ? Math.round(owed / limit * 100) : (owed > 0 ? 100 : 0)
+  const level: 'ok' | 'near' | 'over' = owed > limit ? 'over' : percent >= 80 ? 'near' : 'ok'
+
+  return { percent, level }
+}

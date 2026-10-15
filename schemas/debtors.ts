@@ -11,6 +11,8 @@ export interface Debtor {
   deleted_at: string
   created_at: string
   updated_at: string
+  owed: number // on open sales, accepted payments only
+  last_paid_at: string | null
 }
 
 export const NewDebtorSchema = z.object({

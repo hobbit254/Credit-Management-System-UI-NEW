@@ -126,7 +126,10 @@ export function useProductInventory() {
     })
   }
 
-  async function importProductInventoryCsv(file: File) {
+  // Returns whether it was imported, so a refused file keeps its dialog open.
+  async function importProductInventoryCsv(file: File): Promise<boolean> {
+    let imported = false
+
     await withLoading(loading, async () => {
       const formData = new FormData()
 
@@ -135,6 +138,7 @@ export function useProductInventory() {
       // REMOVE the manual Content-Type header
       const { data } = await $api.post('product-inventory/importProductInventory', formData)
 
+      imported = true
       showToast({
         title: 'Import Successful',
         text: data.message || 'Inventory items have been imported.',
@@ -144,6 +148,8 @@ export function useProductInventory() {
 
       await fetchAllProductInventory()
     })
+
+    return imported
   }
 
   return {

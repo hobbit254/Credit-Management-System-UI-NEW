@@ -33,8 +33,8 @@ function stockText(count: number) {
 const isImportOpen = ref(false)
 
 async function importCsv(file: File) {
-  await importProductsCsv(file)
-  isImportOpen.value = false
+  if (await importProductsCsv(file))
+    isImportOpen.value = false
 }
 </script>
 

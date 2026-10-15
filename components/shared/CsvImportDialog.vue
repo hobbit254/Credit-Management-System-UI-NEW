@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, watch } from 'vue'
 
 defineProps<{ title: string; hint: string; loading: boolean }>()
 
@@ -10,8 +10,13 @@ const file = ref<File | null>(null)
 function upload() {
   if (file.value)
     emit('upload', file.value)
-  file.value = null
 }
+
+// Keep the chosen file while the dialog is open (a refused import can be retried); forget it on close.
+watch(isOpen, open => {
+  if (!open)
+    file.value = null
+})
 </script>
 
 <template>

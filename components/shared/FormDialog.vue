@@ -20,14 +20,11 @@ const isOpen = defineModel<boolean>({ required: true })
     :max-width="width ?? 520"
     scrollable
   >
-    <VCard
-      border
-      flat
-    >
-      <VForm
-        class="d-flex flex-column"
-        style="max-block-size: inherit;"
-        @submit.prevent="emit('confirm')"
+    <!-- Form outside the card, as Vuetify expects: then only the fields scroll and the buttons stay in view. -->
+    <VForm @submit.prevent="emit('confirm')">
+      <VCard
+        border
+        flat
       >
         <VCardTitle class="pt-6 px-6 pb-0 text-wrap">
           <h2 class="text-h4">
@@ -63,7 +60,7 @@ const isOpen = defineModel<boolean>({ required: true })
             {{ confirmText }}
           </VBtn>
         </VCardActions>
-      </VForm>
-    </VCard>
+      </VCard>
+    </VForm>
   </VDialog>
 </template>

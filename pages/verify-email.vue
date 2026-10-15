@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { useAuthForm } from '@/composables/auth/useAuthForm'
+import { isOwnApiUrl } from '@/utils/url'
 
 definePageMeta({
   layout: 'blank',
@@ -18,23 +19,10 @@ const sending = ref(false)
 // Only these answers mean the address is verified; "Invalid verification link." also comes back as 200.
 const VERIFIED_MESSAGES = ['Your email has been verified.', 'Email already verified.']
 
-// The link must point at our own API. Otherwise a crafted link could make this
-// page fetch another site and show that site's message as ours.
-function isOwnApiUrl(url: string) {
-  const apiOrigin = new URL(useRuntimeConfig().public.apiBaseUrl as string || '/api', window.location.origin).origin
-
-  try {
-    return new URL(url, apiOrigin).origin === apiOrigin
-  }
-  catch {
-    return false
-  }
-}
-
 onMounted(async () => {
   const redirect = decodeURIComponent(route.query.redirect as string || '')
 
-  if (!redirect || !isOwnApiUrl(redirect)) {
+  if (!redirect || !isOwnApiUrl(redirect, useRuntimeConfig().public.apiBaseUrl as string, window.location.origin)) {
     state.value = 'failed'
 
     return

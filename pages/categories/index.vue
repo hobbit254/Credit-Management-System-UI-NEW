@@ -1,6 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted } from 'vue'
-import { useTheme } from 'vuetify'
+import { onMounted } from 'vue'
 import { useCategory } from '@/composables/categories/useCategory'
 
 definePageMeta({
@@ -15,261 +14,119 @@ const {
   restoreCategory, activateCategory, deactivateCategory,
 } = useCategory()
 
-const theme = useTheme()
-const surfaceColor = computed(() => theme.current.value.colors.surface)
-const errorColor = computed(() => theme.current.value.colors.error)
+onMounted(() => fetchAllCategories())
 
-onMounted(async () => {
-  loading.value = true
-  try {
-    await fetchAllCategories()
-  }
-  finally {
-    loading.value = false
-  }
-})
+const added = (date: string) => new Date(date).toLocaleDateString('en-KE', { day: 'numeric', month: 'short', year: 'numeric' })
 
-const perPageOptions = [5, 10, 25, 50, 100]
-
-function changePerPage(value: number) {
-  pagination.value.perPage = value
-  pagination.value.currentPage = 1
-  fetchAllCategories()
-}
-
-function copyUuid(uuid: string) {
+function copyId(uuid: string) {
   navigator.clipboard.writeText(uuid)
-  showToast({
-    title: 'Copied',
-    text: 'Category UUID copied',
-    color: 'success',
-    icon: 'tabler-clipboard-check',
-  })
-}
-
-const headers = [
-  { title: 'Category Identity', key: 'category_name', fixed: true },
-  { title: 'Status', key: 'active', align: 'center', width: '120px' },
-  { title: 'Last Activity', key: 'updated_at', width: '200px' },
-  { title: 'Lifecycle', key: 'deleted_at', width: '150px' },
-  { title: 'Actions', key: 'actions', sortable: false, align: 'end' },
-] as const
-
-function getRowProps({ item }: { item: any }) {
-  return item.deleted_at !== null ? { class: 'deleted-row-style text-error italic' } : {}
+  showToast({ title: 'Copied', text: 'Category ID copied', color: 'success', icon: 'tabler-clipboard-check' })
 }
 </script>
 
 <template>
-  <VRow class="h-100">
-    <VCol
-      cols="12"
-      class="h-100 d-flex"
+  <ListPage
+    title="Categories"
+    subtitle="Groups for your products, such as phones or accessories."
+    :loading="loading"
+    :pagination="pagination"
+    :row-count="categories.length"
+    :columns="3"
+    empty-text="No categories yet. Add one before adding products."
+    @page="page => fetchAllCategories({ page })"
+  >
+    <template #actions>
+      <VBtn
+        prepend-icon="tabler-plus"
+        @click="addCategory"
+      >
+        Add category
+      </VBtn>
+    </template>
+
+    <template #head>
+      <th>Category</th>
+      <th>Added</th>
+      <th>
+        <span class="d-sr-only">Actions</span>
+      </th>
+    </template>
+
+    <tr
+      v-for="category in categories"
+      :key="category.category_uuid"
+      :class="{ archived: category.deleted_at }"
     >
-      <VCard class="d-flex flex-column flex-grow-1 border">
-        <VCardTitle class="d-flex justify-space-between align-center pa-4">
-          <div class="d-flex align-center ga-3">
-            <VAvatar
-              color="primary"
-              variant="tonal"
-              size="40"
-            >
-              <VIcon>tabler-hierarchy-2</VIcon>
-            </VAvatar>
-            <div class="d-flex flex-column">
-              <span class="text-h6 font-weight-bold">Product Categories</span>
-              <span class="text-caption text-medium-emphasis">Classify and organize your product catalog</span>
-            </div>
-          </div>
-          <VBtn
-            color="primary"
-            prepend-icon="tabler-folder-plus"
-            variant="elevated"
-            @click="addCategory"
+      <td class="py-3">
+        <div class="d-flex flex-wrap align-center gap-2">
+          <span class="font-weight-medium text-body-1">{{ category.category_name }}</span>
+          <VChip
+            v-if="category.deleted_at"
+            color="error"
+            size="small"
           >
-            New Category
-          </VBtn>
-        </VCardTitle>
-
-        <VDivider />
-
-        <VDataTable
-          :headers="headers"
-          :items="categories"
-          :loading="loading"
-          item-key="category_uuid"
-          class="flex-grow-1 category-table"
-          :items-per-page="-1"
-          :row-props="getRowProps"
-          hover
-        >
-          <template #item.category_name="{ item }">
-            <div class="d-flex align-center ga-3 py-2">
-              <VAvatar
-                size="36"
-                color="primary"
-                variant="tonal"
-              >
-                <span class="text-subtitle-2 font-weight-bold">
-                  {{ item.category_name?.charAt(0)?.toUpperCase() ?? '?' }}
-                </span>
-              </VAvatar>
-              <div class="d-flex flex-column overflow-hidden">
-                <span class="text-body-2 font-weight-bold text-high-emphasis text-truncate">
-                  {{ item.category_name ?? 'Unnamed Category' }}
-                </span>
-                <span class="text-xxs text-medium-emphasis font-mono">
-                  ID: {{ item.category_uuid.split('-')[0] }}...
-                </span>
-              </div>
-            </div>
+            Archived
+          </VChip>
+          <VChip
+            v-else-if="!category.active"
+            color="warning"
+            size="small"
+          >
+            Switched off
+          </VChip>
+        </div>
+      </td>
+      <td class="text-body-1 text-medium-emphasis">
+        {{ added(category.created_at) }}
+      </td>
+      <td class="text-end">
+        <VMenu location="bottom end">
+          <template #activator="{ props: menuProps }">
+            <VBtn
+              :aria-label="`Actions for ${category.category_name}`"
+              icon="tabler-dots-vertical"
+              variant="text"
+              color="default"
+              v-bind="menuProps"
+            />
           </template>
-
-          <template #item.active="{ item }">
-            <StatusBadge :active="item.active" />
-          </template>
-
-          <template #item.updated_at="{ item }">
-            <div class="d-flex flex-column ga-1">
-              <div class="d-flex align-center ga-2 text-xxs text-medium-emphasis">
-                <VIcon size="12">
-                  tabler-calendar-plus
-                </VIcon>
-                <TableDate :value="item.created_at" />
-              </div>
-              <div class="d-flex align-center ga-2 text-xxs text-primary">
-                <VIcon size="12">
-                  tabler-clock-edit
-                </VIcon>
-                <TableDate :value="item.updated_at" />
-              </div>
-            </div>
-          </template>
-
-          <template #item.deleted_at="{ item }">
-            <div
-              v-if="item.deleted_at"
-              class="d-flex align-center ga-1 text-xxs text-error font-weight-medium"
-            >
-              <VIcon size="12">
-                tabler-trash-x
-              </VIcon>
-              <TableDate :value="item.deleted_at" />
-            </div>
-            <span
+          <VList>
+            <VListItem
+              prepend-icon="tabler-edit"
+              title="Edit"
+              @click="editCategory(category)"
+            />
+            <VListItem
+              prepend-icon="tabler-copy"
+              title="Copy ID"
+              @click="copyId(category.category_uuid)"
+            />
+            <!-- Archived rows are restored, not switched on -->
+            <template v-if="!category.deleted_at">
+              <VDivider class="my-1" />
+              <VListItem
+                :prepend-icon="category.active ? 'tabler-lock-pause' : 'tabler-lock-open'"
+                :title="category.active ? 'Switch off' : 'Switch on'"
+                @click="category.active ? deactivateCategory(category) : activateCategory(category)"
+              />
+              <VListItem
+                prepend-icon="tabler-archive"
+                title="Archive"
+                base-color="error"
+                @click="deleteCategoryModal(category)"
+              />
+            </template>
+            <VListItem
               v-else
-              class="text-caption text-disabled"
-            >—</span>
-          </template>
-
-          <template #item.actions="{ item }">
-            <VMenu location="bottom end">
-              <template #activator="{ props: menuProps }">
-                <VBtn
-                  aria-label="Category actions"
-                  icon="tabler-dots-vertical"
-                  variant="text"
-                  size="small"
-                  v-bind="menuProps"
-                />
-              </template>
-              <VList density="compact">
-                <VListItem @click="copyUuid(item.category_uuid)">
-                  <template #prepend>
-                    <VIcon size="18">
-                      tabler-fingerprint
-                    </VIcon>
-                  </template>
-                  <VListItemTitle>Copy UUID</VListItemTitle>
-                </VListItem>
-                <VDivider class="my-1" />
-                <VListItem @click="editCategory(item)">
-                  <template #prepend>
-                    <VIcon size="18">
-                      tabler-edit
-                    </VIcon>
-                  </template>
-                  <VListItemTitle>Edit Account</VListItemTitle>
-                </VListItem>
-                <VListItem
-                  v-if="item.deleted_at !== null"
-                  color="success"
-                  @click="restoreCategory(item)"
-                >
-                  <template #prepend>
-                    <VIcon size="18">
-                      tabler-restore
-                    </VIcon>
-                  </template>
-                  <VListItemTitle>Restore Account</VListItemTitle>
-                </VListItem>
-                <VListItem
-                  v-else
-                  color="error"
-                  @click="deleteCategoryModal(item)"
-                >
-                  <template #prepend>
-                    <VIcon size="18">
-                      tabler-archive
-                    </VIcon>
-                  </template>
-                  <VListItemTitle>Archive Account</VListItemTitle>
-                </VListItem>
-                <!-- Archived rows are restored, not unsuspended -->
-                <VDivider
-                  v-if="item.deleted_at === null"
-                  class="my-1"
-                />
-                <VListItem
-                  v-if="item.deleted_at === null"
-                  :color="item.active === 1 ? 'warning' : 'success'"
-                  @click="item.active === 1 ? deactivateCategory(item) : activateCategory(item)"
-                >
-                  <template #prepend>
-                    <VIcon size="18">
-                      {{ item.active === 1 ? 'tabler-lock-pause' : 'tabler-lock-open' }}
-                    </VIcon>
-                  </template>
-                  <VListItemTitle>{{ item.active === 1 ? 'Suspend Account' : 'Unsuspend Account' }}</VListItemTitle>
-                </VListItem>
-              </VList>
-            </VMenu>
-          </template>
-
-          <template #bottom>
-            <VDivider />
-            <div class="d-flex justify-space-between align-center flex-wrap ga-4 pa-4 bg-var-theme-surface">
-              <div class="d-flex align-center ga-2">
-                <span class="text-caption text-medium-emphasis">Rows per page</span>
-                <VSelect
-                  aria-label="Items per page"
-                  :model-value="pagination.perPage"
-                  :items="perPageOptions"
-                  density="compact"
-                  variant="outlined"
-                  hide-details
-                  style="width: 80px"
-                  @update:model-value="changePerPage"
-                />
-              </div>
-              <div class="d-flex align-center ga-4">
-                <span class="text-caption text-medium-emphasis">
-                  Page {{ pagination.currentPage }} of {{ pagination.lastPage }}
-                </span>
-                <VPagination
-                  v-model="pagination.currentPage"
-                  :length="pagination.lastPage"
-                  :total-visible="5"
-                  density="compact"
-                  @update:model-value="(page: number) => fetchAllCategories({ page })"
-                />
-              </div>
-            </div>
-          </template>
-        </VDataTable>
-      </VCard>
-    </VCol>
-  </VRow>
+              prepend-icon="tabler-restore"
+              title="Restore"
+              @click="restoreCategory(category)"
+            />
+          </VList>
+        </VMenu>
+      </td>
+    </tr>
+  </ListPage>
 
   <CreateCategoryModal
     v-model:model-value="openAdd"
@@ -290,25 +147,3 @@ function getRowProps({ item }: { item: any }) {
     @confirm="deleteCategory"
   />
 </template>
-
-<style scoped>
-.category-table :deep(td:first-child) {
-  position: sticky;
-  left: 0;
-  background: v-bind(surfaceColor) !important;
-  z-index: 1;
-  border-right: 1px solid rgba(var(--v-border-color), var(--v-border-opacity));
-}
-
-:deep(.deleted-row-style) td {
-  background-color: v-bind(`${errorColor}1F`) !important;
-}
-
-.text-xxs {
-  font-size: 0.65rem;
-}
-
-.italic {
-  font-style: italic;
-}
-</style>

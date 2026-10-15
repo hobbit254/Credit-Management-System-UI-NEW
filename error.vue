@@ -1,9 +1,5 @@
 <script setup lang="ts">
 import type { NuxtError } from 'nuxt/app'
-import { useGenerateImageVariant } from '@core/composable/useGenerateImageVariant'
-import misc404 from '@images/pages/404.png'
-import miscMaskDark from '@images/pages/misc-mask-dark.png'
-import miscMaskLight from '@images/pages/misc-mask-light.png'
 
 defineOptions({
   inheritAttrs: false,
@@ -13,38 +9,21 @@ const props = defineProps<{
   error: NuxtError
 }>()
 
-const authThemeMask = useGenerateImageVariant(miscMaskLight, miscMaskDark)
-
-const isDev = process.dev
+const isDev = import.meta.dev
 
 const errToShow = computed(() => {
   const is404 = props.error?.statusCode === 404 || props.error.message?.includes('404')
 
-  if (is404) {
-    return {
-      title: 'Page Not Found',
-      description: 'We couldn\'t find the page you are looking for.',
-    }
-  }
+  if (is404)
+    return { title: 'Page not found', description: 'This address doesn\'t match any page. Check it, or start again from the overview.' }
 
-  if (props.error?.statusCode === 403) {
-    return {
-      title: 'Access Denied',
-      description: props.error.statusMessage || 'You do not have permission to view this page.',
-    }
-  }
+  if (props.error?.statusCode === 403)
+    return { title: 'You can\'t open this page', description: props.error.statusMessage || 'Your role doesn\'t allow it. Ask an administrator if you need access.' }
 
-  else if (isDev) {
-    return {
-      title: props.error?.statusMessage,
-      description: props.error.message,
-    }
-  }
+  if (isDev)
+    return { title: props.error?.statusMessage || 'Error', description: props.error.message }
 
-  return {
-    title: 'Oops! Something went wrong.',
-    description: 'We are working on it and we\'ll get it fixed as soon as we can',
-  }
+  return { title: 'Something went wrong', description: 'Reload the page. If it keeps happening, tell an administrator what you were doing.' }
 })
 
 const handleError = () => clearError({ redirect: '/' })
@@ -52,48 +31,35 @@ const handleError = () => clearError({ redirect: '/' })
 
 <template>
   <NuxtLayout name="blank">
-    <div class="misc-wrapper">
-      <ErrorHeader
-        :status-code="props.error.statusCode"
-        :title="errToShow.title"
-        :description="errToShow.description"
-      />
+    <BrandShell>
+      <p
+        v-if="error.statusCode"
+        class="text-body-1 text-medium-emphasis mb-1"
+      >
+        Error {{ error.statusCode }}
+      </p>
+      <h1 class="text-h3 mb-2">
+        {{ errToShow.title }}
+      </h1>
+      <p class="text-body-1 mb-6">
+        {{ errToShow.description }}
+      </p>
+      <VBtn
+        block
+        size="large"
+        @click="handleError"
+      >
+        Go to the overview
+      </VBtn>
 
       <!-- eslint-disable vue/no-v-html -->
       <div
         v-if="isDev"
-        style="max-inline-size: 80dvw; overflow-x: scroll;"
+        class="mt-6"
+        style="overflow-x: auto;"
         v-html="error.stack"
       />
       <!-- eslint-enable -->
-
-      <VBtn
-        class="mb-11"
-        @click="handleError"
-      >
-        Back to Home
-      </VBtn>
-
-      <!-- 👉 Image -->
-      <div class="misc-avatar w-100 text-center">
-        <VImg
-          :src="misc404"
-          alt="error 404"
-          :max-height="$vuetify.display.smAndDown ? 350 : 500"
-          class="mx-auto"
-        />
-      </div>
-
-      <img
-        class="misc-footer-img d-none d-md-block"
-        :src="authThemeMask"
-        alt="misc-footer-img"
-        height="320"
-      >
-    </div>
+    </BrandShell>
   </NuxtLayout>
 </template>
-
-<style lang="scss">
-@use "@core/scss/template/pages/misc.scss";
-</style>

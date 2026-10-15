@@ -1,4 +1,5 @@
 import { z } from 'zod'
+import { phoneNumber } from '@/schemas/phone'
 
 export interface Transaction {
   transaction_uuid: string
@@ -133,7 +134,7 @@ export type NewTransactionItem = z.infer<typeof NewTransactionItemSchema>
 const NewRunnerSchema = z.object({
   full_name: z.string().min(1, 'Full name is required'),
   id_number: z.string().min(1, 'ID number is required'),
-  phone_number: z.string().min(1, 'Phone number is required'),
+  phone_number: phoneNumber,
 })
 
 export const NewTransactionSchema = z.object({

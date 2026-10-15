@@ -1,5 +1,6 @@
 <script lang="ts" setup>
 import { computed, ref, watch } from 'vue'
+import { phoneNumber } from '@/schemas/phone'
 import type { Supplier } from '@/schemas/suppliers'
 
 const props = defineProps<{
@@ -33,15 +34,24 @@ watch(
   { immediate: true, deep: true },
 )
 
+// Same phone rule as adding one.
+const phoneError = ref('')
+
 function handleConfirm() {
   if (!props.supplier)
+    return
+
+  const phone = phoneNumber.safeParse(localSupplierPhone.value)
+
+  phoneError.value = phone.success ? '' : phone.error.issues[0]?.message ?? ''
+  if (!phone.success)
     return
 
   emit('confirm', {
     supplier_uuid: props.supplier.supplier_uuid,
     supplier_name: localSupplierName.value,
     supplier_shop_name: localSupplierShopName.value,
-    supplier_phone: localSupplierPhone.value,
+    supplier_phone: phone.data,
   })
 }
 </script>
@@ -76,6 +86,7 @@ function handleConfirm() {
       <VCol cols="12">
         <AppTextField
           v-model="localSupplierPhone"
+          :error-messages="phoneError"
           label="Contact Phone Number"
           placeholder="e.g. 0712 345 678"
           type="tel"

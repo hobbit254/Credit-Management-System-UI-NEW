@@ -38,7 +38,14 @@ function handleConfirm() {
   const result = NewTransactionSchema.safeParse(localTransaction.value)
 
   if (!result.success) {
-    fieldErrors.value = result.error.flatten().fieldErrors
+    // Keyed by full path ("new_runner.phone_number") for the field, and by its first part for the group.
+    const errors: Record<string, string[]> = {}
+    for (const issue of result.error.issues) {
+      const path = issue.path.join('.')
+      for (const key of new Set([path, String(issue.path[0])]))
+        (errors[key] ??= []).push(issue.message)
+    }
+    fieldErrors.value = errors
 
     return
   }

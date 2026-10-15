@@ -1,5 +1,6 @@
 <script lang="ts" setup>
 import { computed, ref, watch } from 'vue'
+import { phoneNumber } from '@/schemas/phone'
 import type { Debtor } from '@/schemas/debtors'
 
 const props = defineProps<{
@@ -36,15 +37,24 @@ watch(
   { immediate: true, deep: true },
 )
 
+// Same phone rule as adding one.
+const phoneError = ref('')
+
 function handleConfirm() {
   if (!props.debtor)
+    return
+
+  const phone = phoneNumber.safeParse(localDebtorPhone.value)
+
+  phoneError.value = phone.success ? '' : phone.error.issues[0]?.message ?? ''
+  if (!phone.success)
     return
 
   emit('confirm', {
     debtor_uuid: props.debtor.debtor_uuid,
     debtor_name: localDebtorName.value,
     debtor_email: localDebtorEmail.value,
-    debtor_phone: localDebtorPhone.value,
+    debtor_phone: phone.data,
     debtor_type: localDebtorType.value,
     credit_limit: localCreditLimit.value,
   })
@@ -93,6 +103,7 @@ const debtorTypes = [
       >
         <AppTextField
           v-model="localDebtorPhone"
+          :error-messages="phoneError"
           label="Phone Number"
           placeholder="07XX XXX XXX"
           persistent-placeholder

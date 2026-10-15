@@ -21,11 +21,32 @@ export const PaymentStatSchema = z.object({
   payment_method: z.string(),
 })
 
+export const OwedSaleSchema = z.object({
+  transaction_uuid: z.string(),
+  debtor_name: z.string().nullable(),
+  debtor_phone: z.string().nullable(),
+  balance: z.number(),
+  sold_at: z.string(),
+  last_paid_at: z.string().nullable(),
+})
+
+export const PendingPaymentSchema = z.object({
+  payment_uuid: z.string(),
+  amount: z.number(),
+  payment_method: z.string(),
+  reference_code: z.string().nullable(),
+  debtor_name: z.string().nullable(),
+})
+
 export const DashboardStatsSchema = z.object({
   products: z.array(ProductStatSchema),
   transactions: z.array(TransactionStatSchema),
   payments: z.array(PaymentStatSchema),
   refunds: z.number(),
+  owed: z.array(OwedSaleSchema),
+  pending_payments: z.array(PendingPaymentSchema),
 })
+
+export type OwedSale = z.infer<typeof OwedSaleSchema>
 
 export type DashboardStats = z.infer<typeof DashboardStatsSchema>

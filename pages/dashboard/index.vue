@@ -1,358 +1,349 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
+import { computed, onMounted } from 'vue'
 import { useDashboard } from '@/composables/dashboard/useDashboard'
+import type { AppAbility } from '@/composables/auth/useAbility'
+import { summarizeOwed } from '@/utils/owed'
 
 definePageMeta({
   subject: 'v1/dashboard_stats',
 })
 
-const { loading, dashboardStats, fetchDashboardStats } = useDashboard()
+const { $ability } = useNuxtApp() as unknown as { $ability: AppAbility }
+const { loading, dashboardStats, fetchDashboardStats, decidePayment } = useDashboard()
 
-const search = ref('')
+const canDecidePayments = computed(() => $ability.can('access', 'v1/payments/updateStatus'))
 
-const productHeaders = [
-  { title: 'Product Info', key: 'product_name', align: 'start' },
-  { title: 'Model', key: 'product_model_number' },
-  { title: 'Source', key: 'source_type', align: 'center' },
-  { title: 'Status', key: 'status', align: 'center' },
-  { title: 'Qty', key: 'total', align: 'end', sortable: true },
-] as const
+const kes = (amount: number) => `KES ${amount.toLocaleString('en-KE')}`
+const today = new Date().toLocaleDateString('en-KE', { weekday: 'long', day: 'numeric', month: 'long' })
 
-const stats = computed(() => {
-  const data = dashboardStats.value
-  const p = data?.products ?? []
-  const t = data?.transactions ?? []
-  const pay = data?.payments ?? []
+const owed = computed(() => summarizeOwed(dashboardStats.value.owed))
 
-  const totalT = t.reduce((a, b) => a + b.total, 0)
+// Oldest debt in the warmest color, so the eye lands on what is most at risk.
+const bucketColors = ['rgb(var(--v-theme-primary))', 'rgba(var(--v-theme-primary), 0.45)', 'rgb(var(--v-theme-warning))', 'rgb(var(--v-theme-error))']
 
-  // Closed with returns is settled too: what was kept is paid for.
-  const paidT = t.filter(i => ['Paid', 'Closed_With_Returns'].includes(i.status)).reduce((a, b) => a + b.total, 0)
+const agingLabel = computed(() => `Money owed by days since the sale: ${owed.value.buckets.map(b => `${b.label} ${kes(b.amount)}`).join('; ')}`)
 
-  return {
-    // Money kept: accepted payments less what was paid back.
-    revenue: pay.filter(i => i.status === 'ACCEPTED').reduce((a, b) => a + b.total, 0) - (data?.refunds ?? 0),
-    inStock: p.filter(i => i.status === 'InStock').reduce((a, b) => a + b.total, 0),
-    lowStockCount: p.filter(i => i.status === 'InStock' && i.total <= 2).length,
-    totalTrans: totalT,
-    collectionRate: totalT > 0 ? Math.ceil((paidT / totalT) * 100) : 0,
+// One row per model: units in the shop, out on credit, and sold.
+const stock = computed(() => {
+  const models = new Map<string, { model: string; brand: string; inStock: number; onCredit: number; sold: number }>()
+  for (const p of dashboardStats.value.products) {
+    const row = models.get(p.product_model_number)
+      ?? { model: p.product_name, brand: p.product_brand, inStock: 0, onCredit: 0, sold: 0 }
 
-    // Rows are grouped per product, so add up their counts to get units.
-    onCreditCount: p.filter(f => f.status === 'OnCredit').reduce((a, b) => a + b.total, 0),
+    if (p.status === 'InStock')
+      row.inStock += p.total
+    else if (p.status === 'OnCredit')
+      row.onCredit += p.total
+    else if (p.status === 'Sold')
+      row.sold += p.total
+    models.set(p.product_model_number, row)
   }
+
+  return [...models.values()].sort((a, b) => b.onCredit + b.inStock - (a.onCredit + a.inStock))
 })
 
-onMounted(() => {
-  fetchDashboardStats()
-})
+onMounted(fetchDashboardStats)
 </script>
 
 <template>
-  <div class="dashboard-page pa-6 bg-grey-lighten-4 min-vh-100">
-    <VContainer fluid>
-      <VRow
-        class="mb-6"
-        align="center"
+  <div class="overview">
+    <div class="d-flex flex-wrap align-center gap-4 mb-8">
+      <span class="text-body-1 text-medium-emphasis flex-grow-1">{{ today }}</span>
+      <VBtn
+        variant="outlined"
+        color="default"
+        prepend-icon="tabler-refresh"
+        :loading="loading"
+        @click="fetchDashboardStats"
       >
-        <VCol
-          cols="12"
-          md="6"
-        >
-          <div class="d-flex align-center">
-            <VIcon
-              icon="tabler-layout-dashboard"
-              size="32"
-              color="primary"
-              class="me-3"
-            />
-            <h1 class="text-h4 font-weight-black text-grey-darken-3">
-              Inventory Insights
-            </h1>
-          </div>
-        </VCol>
-        <VCol
-          cols="12"
-          md="6"
-          class="d-flex align-center justify-md-end gap-3"
-        >
-          <VTextField
-            v-model="search"
-            aria-label="Search products"
-            prepend-inner-icon="tabler-search"
-            placeholder="Search models, brands..."
-            variant="solo"
-            flat
-            hide-details
-            rounded="lg"
-            class="max-width-300"
-          />
-          <VBtn
-            aria-label="Refresh"
-            :loading="loading"
-            color="primary"
-            rounded="lg"
-            icon="tabler-refresh"
-            variant="tonal"
-            @click="fetchDashboardStats"
-          />
-        </VCol>
-      </VRow>
+        Refresh
+      </VBtn>
+    </div>
 
-      <VRow>
-        <VCol
-          v-for="(card, i) in [
-            { title: 'Total Revenue', value: `KES ${stats.revenue.toLocaleString()}`, icon: 'tabler-cash', color: 'primary' },
-            { title: 'In Stock', value: stats.inStock, icon: 'tabler-box', color: 'success' },
-            { title: 'Low Stock Alerts', value: stats.lowStockCount, icon: 'tabler-alert-triangle', color: stats.lowStockCount > 0 ? 'error' : 'grey' },
-            { title: 'Collection Rate', value: `${stats.collectionRate}%`, icon: 'tabler-chart-pie', color: 'info' },
-          ]"
-          :key="i"
-          cols="12"
-          sm="6"
-          lg="3"
+    <section
+      aria-labelledby="owed-heading"
+      class="mb-10"
+    >
+      <h1
+        id="owed-heading"
+        class="headline mb-7"
+      >
+        <template v-if="owed.count">
+          Customers owe you <b>{{ kes(owed.total) }}</b> across <b>{{ owed.count }} {{ owed.count === 1 ? 'sale' : 'sales' }}</b>.
+          <template v-if="owed.quietOver60">
+            {{ owed.quietOver60 }} {{ owed.quietOver60 === 1 ? 'has' : 'have' }} had no payment in over 60 days.
+          </template>
+        </template>
+        <template v-else-if="!loading">
+          Nobody owes you anything right now.
+        </template>
+      </h1>
+
+      <template v-if="owed.count">
+        <div
+          role="img"
+          :aria-label="agingLabel"
+          class="aging-bar mb-4"
         >
-          <VCard
-            border
-            flat
-            class="pa-4 rounded-xl shadow-card bg-white"
+          <div
+            v-for="(bucket, i) in owed.buckets"
+            v-show="bucket.amount > 0"
+            :key="bucket.label"
+            :style="{ flexGrow: bucket.amount, background: bucketColors[i] }"
+          />
+        </div>
+        <div class="aging-legend">
+          <div
+            v-for="(bucket, i) in owed.buckets"
+            :key="bucket.label"
+            class="d-flex gap-2 align-baseline"
           >
-            <div class="d-flex align-center">
-              <VAvatar
-                :color="card.color"
-                variant="tonal"
-                rounded="lg"
-                size="48"
-                class="me-4"
-              >
-                <VIcon
-                  :icon="card.icon"
-                  size="24"
-                />
-              </VAvatar>
-              <div>
-                <div class="text-caption font-weight-bold text-uppercase text-medium-emphasis">
-                  {{ card.title }}
-                </div>
-                <div class="text-h5 font-weight-black">
-                  {{ card.value }}
-                </div>
+            <span
+              aria-hidden="true"
+              class="swatch"
+              :style="{ background: bucketColors[i] }"
+            />
+            <div>
+              <div class="text-body-2 text-medium-emphasis">
+                {{ bucket.label }}
+              </div>
+              <div class="text-body-1 font-weight-medium">
+                {{ kes(bucket.amount) }}
               </div>
             </div>
-          </VCard>
-        </VCol>
-      </VRow>
+          </div>
+        </div>
+      </template>
+    </section>
 
-      <VRow class="mt-4">
-        <VCol
-          cols="12"
-          lg="9"
+    <VRow class="mb-2">
+      <VCol
+        cols="12"
+        md="7"
+      >
+        <VCard
+          border
+          flat
+          class="pa-6 h-100"
         >
-          <VCard
-            border
-            flat
-            class="rounded-xl overflow-hidden shadow-card"
-          >
-            <VDataTable
-              :headers="productHeaders"
-              :items="dashboardStats?.products ?? []"
-              :search="search"
-              :loading="loading"
-              hover
+          <div class="d-flex justify-space-between align-baseline gap-3 mb-1">
+            <h2 class="text-h5">
+              Follow up today
+            </h2>
+            <NuxtLink
+              to="/debtors"
+              class="text-primary font-weight-medium"
             >
-              <template #[`item.product_name`]="{ item }">
-                <div class="d-flex align-center py-2">
-                  <div class="d-flex flex-column">
-                    <span class="font-weight-bold text-body-2">{{ item.product_name }}</span>
-                    <span class="text-caption text-medium-emphasis">{{ item.product_brand }}</span>
-                  </div>
-                  <VTooltip
-                    v-if="item.total <= 2 && item.status === 'InStock'"
-                    text="Low Stock: Restock Soon"
-                  >
-                    <template #activator="{ props }">
-                      <VIcon
-                        v-bind="props"
-                        icon="tabler-alert-circle"
-                        color="error"
-                        size="18"
-                        class="ms-2 animate-pulse"
-                      />
-                    </template>
-                  </VTooltip>
-                </div>
-              </template>
-
-              <template #[`item.status`]="{ item }">
-                <VChip
-                  size="x-small"
-                  class="font-weight-bold px-3"
-                  :color="item.status === 'InStock' ? 'success' : item.status === 'Sold' ? 'grey' : 'warning'"
-                  :variant="item.status === 'InStock' ? 'flat' : 'tonal'"
-                >
-                  {{ item.status }}
-                </VChip>
-              </template>
-
-              <template #[`item.total`]="{ item }">
-                <span
-                  :class="item.total <= 2 && item.status === 'InStock' ? 'text-error font-weight-black' : 'font-weight-bold'"
-                  class="text-body-1"
-                >
-                  {{ item.total }}
-                </span>
-              </template>
-            </VDataTable>
-          </VCard>
-        </VCol>
-
-        <VCol
-          cols="12"
-          lg="3"
-        >
-          <VCard
-            border
-            flat
-            class="rounded-xl pa-5 bg-white mb-4 shadow-card"
+              All debtors
+            </NuxtLink>
+          </div>
+          <p class="text-body-1 text-medium-emphasis mb-3">
+            Longest since their last payment first.
+          </p>
+          <div
+            v-for="sale in owed.followUps"
+            :key="sale.transaction_uuid"
+            class="row d-flex flex-wrap align-center gap-4"
           >
-            <h3 class="text-subtitle-1 font-weight-bold mb-4 d-flex align-center">
-              <VIcon
-                icon="tabler-shield-check"
-                color="success"
-                class="me-2"
-              />
-              Financial Risk
-            </h3>
-            <div class="text-center py-4">
-              <div class="text-h3 font-weight-black text-warning">
-                {{ stats.onCreditCount }}
+            <div class="flex-grow-1">
+              <div class="font-weight-medium text-body-1">
+                {{ sale.debtor_name ?? 'Unknown customer' }}
               </div>
-              <div class="text-caption text-medium-emphasis">
-                Items currently on credit
+              <div class="text-body-2 text-medium-emphasis">
+                {{ sale.debtor_phone }}
+              </div>
+            </div>
+            <div class="text-end">
+              <div class="font-weight-bold text-body-1">
+                {{ kes(sale.balance) }}
+              </div>
+              <div
+                class="text-body-2"
+                :class="sale.quietDays > 60 ? 'text-error font-weight-medium' : 'text-medium-emphasis'"
+              >
+                {{ sale.quietDays }} days since {{ sale.paidBefore ? 'last payment' : 'the sale, nothing paid' }}
+              </div>
+            </div>
+            <div class="d-flex gap-2">
+              <VBtn
+                v-if="sale.debtor_phone"
+                :href="`tel:${sale.debtor_phone}`"
+                :aria-label="`Call ${sale.debtor_name}`"
+                icon="tabler-phone"
+                variant="outlined"
+                color="default"
+              />
+              <VBtn
+                to="/payments"
+                variant="outlined"
+                color="default"
+              >
+                Record payment
+              </VBtn>
+            </div>
+          </div>
+          <p
+            v-if="!owed.followUps.length && !loading"
+            class="text-body-1 text-medium-emphasis mb-0"
+          >
+            No one to chase. Every sale is paid up.
+          </p>
+        </VCard>
+      </VCol>
+
+      <VCol
+        cols="12"
+        md="5"
+      >
+        <VCard
+          border
+          flat
+          class="pa-6 h-100"
+        >
+          <h2 class="text-h5 mb-1">
+            Payments to approve
+          </h2>
+          <p class="text-body-1 text-medium-emphasis mb-3">
+            Check each one against the M-Pesa or bank statement.
+          </p>
+          <div
+            v-for="payment in dashboardStats.pending_payments"
+            :key="payment.payment_uuid"
+            class="row d-flex align-center gap-3"
+          >
+            <div class="flex-grow-1">
+              <div class="font-weight-medium text-body-1">
+                {{ kes(payment.amount) }}
+              </div>
+              <div class="text-body-2 text-medium-emphasis">
+                {{ payment.debtor_name ?? 'Unknown customer' }}, {{ payment.payment_method }} {{ payment.reference_code }}
               </div>
             </div>
             <VBtn
-              block
-              color="warning"
+              v-if="canDecidePayments"
               variant="tonal"
-              rounded="lg"
-              class="mt-2"
-              size="small"
-              to="/transactions"
+              :disabled="loading"
+              @click="decidePayment(payment.payment_uuid, 'ACCEPTED')"
             >
-              View Credit Ledger
+              Approve
             </VBtn>
-          </VCard>
-
-          <VCard
-            border
-            flat
-            class="rounded-xl pa-5 bg-white mb-4 shadow-card"
+          </div>
+          <p
+            v-if="!dashboardStats.pending_payments.length && !loading"
+            class="text-body-1 text-medium-emphasis mb-0"
           >
-            <h3 class="text-subtitle-1 font-weight-bold mb-4">
-              Payment Channels
-            </h3>
-            <VList
-              bg-color="transparent"
-              density="compact"
-              class="pa-0"
-            >
-              <VListItem
-                v-for="(p, i) in (dashboardStats?.payments ?? [])"
-                :key="i"
-                class="px-0 mb-2"
-              >
-                <template #prepend>
-                  <VIcon
-                    :icon="p.status === 'ACCEPTED' ? 'tabler-circle-check-filled' : 'tabler-circle-x-filled'"
-                    :color="p.status === 'ACCEPTED' ? 'success' : 'error'"
-                    class="me-2"
-                  />
-                </template>
-                <VListItemTitle class="text-body-2 font-weight-bold">
-                  {{ p.payment_method }}
-                </VListItemTitle>
-                <template #append>
-                  <span class="text-body-2 font-weight-black">KES {{ p.total.toLocaleString() }}</span>
-                </template>
-              </VListItem>
-              <!-- Paid back to customers; revenue above is net of this -->
-              <VListItem
-                v-if="(dashboardStats?.refunds ?? 0) > 0"
-                class="px-0 mb-2"
-              >
-                <template #prepend>
-                  <VIcon
-                    icon="tabler-receipt-refund"
-                    color="warning"
-                    class="me-2"
-                  />
-                </template>
-                <VListItemTitle class="text-body-2 font-weight-bold">
-                  Refunds
-                </VListItemTitle>
-                <template #append>
-                  <span class="text-body-2 font-weight-black">− KES {{ dashboardStats.refunds.toLocaleString() }}</span>
-                </template>
-              </VListItem>
-              <div
-                v-if="!dashboardStats?.payments?.length && !loading"
-                class="text-caption text-center py-4 text-disabled"
-              >
-                No payment data available
-              </div>
-            </VList>
-          </VCard>
+            Nothing waiting. New payments show up here until someone approves them.
+          </p>
+        </VCard>
+      </VCol>
+    </VRow>
 
-          <VCard
-            border
-            flat
-            class="rounded-xl pa-5 bg-white shadow-card"
+    <VCard
+      border
+      flat
+      class="pa-6"
+    >
+      <div class="d-flex justify-space-between align-baseline gap-3 mb-4">
+        <h2 class="text-h5">
+          Stock
+        </h2>
+        <NuxtLink
+          to="/product-inventory"
+          class="text-primary font-weight-medium"
+        >
+          All devices
+        </NuxtLink>
+      </div>
+      <VTable class="stock-table">
+        <thead>
+          <tr>
+            <th>Model</th>
+            <th class="text-end">
+              In the shop
+            </th>
+            <th class="text-end">
+              Out on credit
+            </th>
+            <th class="text-end">
+              Sold
+            </th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr
+            v-for="row in stock"
+            :key="row.model + row.brand"
           >
-            <h3 class="text-subtitle-1 font-weight-bold mb-4">
-              Top Models
-            </h3>
-            <div
-              v-for="product in (dashboardStats?.products?.slice(0, 3) ?? [])"
-              :key="product.product_model_number"
-              class="mb-4"
+            <td>
+              <span class="font-weight-medium">{{ row.model }}</span>
+              <span class="text-medium-emphasis ms-1">{{ row.brand }}</span>
+            </td>
+            <td
+              class="text-end"
+              :class="{ 'text-error font-weight-bold': row.inStock <= 2 }"
             >
-              <div class="d-flex justify-space-between text-caption font-weight-bold mb-1">
-                <span>{{ product.product_model_number }}</span>
-                <span>{{ product.total }} left</span>
-              </div>
-              <VProgressLinear
-                :model-value="(product.total / 10) * 100"
-                color="primary"
-                height="8"
-                rounded
-              />
-            </div>
-          </VCard>
-        </VCol>
-      </VRow>
-    </VContainer>
+              {{ row.inStock <= 2 ? `${row.inStock} left` : row.inStock }}
+            </td>
+            <td class="text-end">
+              {{ row.onCredit }}
+            </td>
+            <td class="text-end">
+              {{ row.sold }}
+            </td>
+          </tr>
+          <tr v-if="!stock.length && !loading">
+            <td
+              colspan="4"
+              class="text-medium-emphasis"
+            >
+              No devices yet. Add them under Stock, Devices.
+            </td>
+          </tr>
+        </tbody>
+      </VTable>
+    </VCard>
   </div>
 </template>
 
 <style scoped>
-.shadow-card { box-shadow: 0 4px 24px -4px rgba(0,0,0,0.04) !important; }
-.max-width-300 { max-width: 300px; }
-.gap-3 { gap: 12px; }
+.overview { max-width: 1120px; }
 
-@keyframes pulse {
-  0% { opacity: 1; }
-  50% { opacity: 0.5; }
-  100% { opacity: 1; }
+.headline {
+  max-width: 24ch;
+  font-size: clamp(2rem, 4.4vw, 3.5rem);
+  font-weight: 400;
+  line-height: 1.08;
+  letter-spacing: -0.02em;
 }
 
-.animate-pulse { animation: pulse 2s infinite ease-in-out; }
+.headline b { font-weight: 700; }
 
-:deep(.v-data-table) { background: transparent !important; }
-
-:deep(.v-data-table-header th) {
-  text-transform: uppercase !important;
-  font-size: 0.75rem !important;
-  letter-spacing: 1px !important;
-  color: #9e9e9e !important;
+.aging-bar {
+  display: flex;
+  gap: 3px;
+  block-size: 18px;
+  border-radius: 9px;
+  overflow: hidden;
 }
+
+.aging-legend {
+  display: grid;
+  gap: 12px 24px;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+}
+
+.swatch {
+  flex: none;
+  border-radius: 3px;
+  block-size: 10px;
+  inline-size: 10px;
+}
+
+.row {
+  border-block-start: 1px solid rgba(var(--v-border-color), var(--v-border-opacity));
+  padding-block: 14px;
+}
+
+.stock-table { overflow-x: auto; }
+.stock-table th { font-weight: 500 !important; }
 </style>

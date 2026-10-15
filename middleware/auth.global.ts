@@ -1,5 +1,6 @@
 import type { AppAbility } from '@/composables/auth/useAbility'
 import type { User } from '@/schemas/auth'
+import { homePath } from '@/utils/home'
 
 export default defineNuxtRouteMiddleware(to => {
   if (import.meta.server)
@@ -22,19 +23,17 @@ export default defineNuxtRouteMiddleware(to => {
     return
   }
 
+  const { $ability } = useNuxtApp() as unknown as { $ability: AppAbility }
+
   if (isGuestOnly)
-    return navigateTo('/dashboard')
+    return navigateTo(homePath($ability))
 
   const subject = to.meta.subject as string | undefined
 
-  if (subject) {
-    const { $ability } = useNuxtApp() as unknown as { $ability: AppAbility }
-
-    if (!$ability.can('access', subject)) {
-      return abortNavigation(createError({
-        statusCode: 403,
-        statusMessage: 'You do not have permission to view this page.',
-      }))
-    }
+  if (subject && !$ability.can('access', subject)) {
+    return abortNavigation(createError({
+      statusCode: 403,
+      statusMessage: 'You do not have permission to view this page.',
+    }))
   }
 })

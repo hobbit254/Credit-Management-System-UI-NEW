@@ -1,5 +1,7 @@
 <script setup lang="ts">
 import type { User } from '@/schemas/auth'
+import type { AppAbility } from '@/composables/auth/useAbility'
+import { homePath } from '@/utils/home'
 
 definePageMeta({
   public: true,
@@ -7,7 +9,9 @@ definePageMeta({
 
 const user = useState<User | null>('user')
 
-await navigateTo(user.value ? '/dashboard' : '/login', { replace: true })
+const { $ability } = useNuxtApp() as unknown as { $ability: AppAbility }
+
+await navigateTo(user.value ? homePath($ability) : '/login', { replace: true })
 </script>
 
 <template>

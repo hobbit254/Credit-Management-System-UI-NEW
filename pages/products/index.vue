@@ -182,7 +182,7 @@ async function importCsv(file: File) {
   <CsvImportDialog
     v-model="isImportOpen"
     title="Import products"
-    hint="Upload a CSV with one product per row, in the same columns as the import template."
+    hint="Upload a CSV with one product per row and these columns: product_name, product_model_number, category_uuid, product_brand, default_price. Copy a category's ID from the Categories list."
     :loading="loading"
     @upload="importCsv"
   />

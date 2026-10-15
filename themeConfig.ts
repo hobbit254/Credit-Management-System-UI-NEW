@@ -15,27 +15,7 @@ export const { themeConfig, layoutConfig } = defineThemeConfig({
     contentWidth: ContentWidth.Fluid, // tables use the whole width of the screen
     contentLayoutNav: AppContentLayoutNav.Vertical,
     overlayNavFromBreakpoint: breakpointsVuetifyV3.lg - 1, // 1 for matching with vuetify breakpoint. Docs: https://next.vuetifyjs.com/en/features/display-and-platform/
-    i18n: {
-      enable: false,
-      defaultLocale: 'en',
-      langConfig: [
-        {
-          label: 'English',
-          i18nLang: 'en',
-          isRTL: false,
-        },
-        {
-          label: 'French',
-          i18nLang: 'fr',
-          isRTL: false,
-        },
-        {
-          label: 'Arabic',
-          i18nLang: 'ar',
-          isRTL: true,
-        },
-      ],
-    },
+    i18n: { enable: false, defaultLocale: 'en', langConfig: [] }, // English only; the translation module is not installed
     theme: 'system',
     skin: Skins.Default,
     iconRenderer: VIcon,

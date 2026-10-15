@@ -8,6 +8,7 @@ export default defineNuxtConfig({
   app: {
     head: {
       title: 'Plugpoint CMS',
+      htmlAttrs: { lang: 'en' },
 
       link: [{
         rel: 'icon',
@@ -139,5 +140,5 @@ export default defineNuxtConfig({
   },
 
   compatibilityDate: '2025-07-15',
-  modules: ['@vueuse/nuxt', '@nuxtjs/i18n', '@nuxtjs/device', '@pinia/nuxt'],
+  modules: ['@vueuse/nuxt', '@nuxtjs/device', '@pinia/nuxt'],
 })

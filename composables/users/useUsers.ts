@@ -49,9 +49,7 @@ export function useUsers() {
     const { data } = await $api.get('users/me')
     let result: User | null = null
 
-    if (Array.isArray(data))
-      result = data[0] ?? null
-    else if (data && Array.isArray(data.data))
+    if (data && Array.isArray(data.data))
       result = data.data[0] ?? null
     else if (data && data.data)
       result = data.data

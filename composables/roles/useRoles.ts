@@ -13,11 +13,7 @@ export function useRoles() {
   async function fetchAllRoles() {
     const { data } = await $api.get('roles')
 
-    let result: Role[] = []
-    if (Array.isArray(data))
-      result = data
-    else if (data && Array.isArray(data.data))
-      result = data.data
+    const result: Role[] = Array.isArray(data?.data) ? data.data : []
 
     roles.value = result // <-- update reactive state here
 
@@ -27,11 +23,7 @@ export function useRoles() {
   async function fetchAllActiveRoles() {
     const { data } = await $api.get('roles/active')
 
-    let result: Role[] = []
-    if (Array.isArray(data))
-      result = data
-    else if (data && Array.isArray(data.data))
-      result = data.data
+    const result: Role[] = Array.isArray(data?.data) ? data.data : []
 
     roles.value = result // <-- update reactive state here
 

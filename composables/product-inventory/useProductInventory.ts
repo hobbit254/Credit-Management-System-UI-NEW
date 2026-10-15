@@ -47,7 +47,7 @@ export function useProductInventory() {
 
   async function fetchAllActiveProductInventory() {
     const { data } = await $api.get('product-inventory/active')
-    const result = Array.isArray(data) ? data : (data?.data || [])
+    const result = data?.data || []
 
     productInventories.value = result
 

@@ -188,11 +188,7 @@ export function useSuppliers() {
 
   async function fetchActiveSupplier() {
     const { data } = await $api.get('/suppliers/active')
-    let result: Supplier[] = []
-    if (Array.isArray(data))
-      result = data
-    else if (data && Array.isArray(data.data))
-      result = data.data
+    const result: Supplier[] = Array.isArray(data?.data) ? data.data : []
 
     suppliers.value = result
 

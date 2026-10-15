@@ -46,11 +46,7 @@ export function useDebtor() {
   async function fetchAllActiveDebtors() {
     const { data } = await $api.get('debtors/active')
 
-    let result: Debtor[] = []
-    if (Array.isArray(data))
-      result = data
-    else if (data && Array.isArray(data.data))
-      result = data.data
+    const result: Debtor[] = Array.isArray(data?.data) ? data.data : []
 
     debtors.value = result // <-- update reactive state here
 

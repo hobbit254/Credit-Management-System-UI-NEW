@@ -132,8 +132,9 @@ export const NewTransactionItemSchema = z.object({
 export type NewTransactionItem = z.infer<typeof NewTransactionItemSchema>
 
 const NewRunnerSchema = z.object({
-  full_name: z.string().min(1, 'Full name is required'),
-  id_number: z.string().min(1, 'ID number is required'),
+  // Same limits as the server.
+  full_name: z.string().trim().min(3, 'Full name must be at least 3 characters').max(255),
+  id_number: z.string().trim().min(5, 'ID number must be 5 to 20 characters').max(20, 'ID number must be 5 to 20 characters'),
   phone_number: phoneNumber,
 })
 

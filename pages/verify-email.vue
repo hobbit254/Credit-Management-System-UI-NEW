@@ -1,11 +1,4 @@
 <script setup lang="ts">
-import { useGenerateImageVariant } from '@core/composable/useGenerateImageVariant'
-import authV2VerifyEmailIllustrationDark from '@images/pages/auth-v2-verify-email-illustration-dark.png'
-import authV2VerifyEmailIllustrationLight from '@images/pages/auth-v2-verify-email-illustration-light.png'
-import authV2MaskDark from '@images/pages/misc-mask-dark.png'
-import authV2MaskLight from '@images/pages/misc-mask-light.png'
-import { VNodeRenderer } from '@layouts/components/VNodeRenderer'
-import { themeConfig } from '@themeConfig'
 import { useAuthForm } from '@/composables/auth/useAuthForm'
 
 definePageMeta({
@@ -14,17 +7,13 @@ definePageMeta({
 
 })
 
-const authThemeImg = useGenerateImageVariant(
-  authV2VerifyEmailIllustrationLight,
-  authV2VerifyEmailIllustrationDark,
-)
-
-const authThemeMask = useGenerateImageVariant(authV2MaskLight, authV2MaskDark)
 const route = useRoute()
 const { verifyEmail, resendEmail } = useAuthForm()
-const message = ref('Verifying email...')
-const status = ref(false)
+
+// checking until the link's answer comes back; the page shows nothing final before that.
+const state = ref<'checking' | 'verified' | 'failed'>('checking')
 const email = ref('')
+const sending = ref(false)
 
 // Only these answers mean the address is verified; "Invalid verification link." also comes back as 200.
 const VERIFIED_MESSAGES = ['Your email has been verified.', 'Email already verified.']
@@ -45,117 +34,101 @@ function isOwnApiUrl(url: string) {
 onMounted(async () => {
   const redirect = decodeURIComponent(route.query.redirect as string || '')
 
-  if (redirect && isOwnApiUrl(redirect)) {
-    try {
-      const res = await verifyEmail(redirect)
+  if (!redirect || !isOwnApiUrl(redirect)) {
+    state.value = 'failed'
 
-      message.value = res?.message || 'Verification complete.'
-      status.value = VERIFIED_MESSAGES.includes(res?.message)
-      email.value = res?.email ?? ''
-    }
-    catch {
-      message.value = 'Verification failed.'
-    }
+    return
   }
-  else {
-    message.value = 'Invalid verification link.'
+  try {
+    const res = await verifyEmail(redirect)
+
+    state.value = VERIFIED_MESSAGES.includes(res?.message) ? 'verified' : 'failed'
+    email.value = res?.email ?? ''
+  }
+  catch {
+    state.value = 'failed'
   }
 })
+
+// The API plugin already toasts a refused request.
+async function resend() {
+  sending.value = true
+  try {
+    await resendEmail(email.value)
+  }
+  catch {}
+  finally {
+    sending.value = false
+  }
+}
 </script>
 
 <template>
-  <NuxtLink to="/">
-    <div class="auth-logo d-flex align-center gap-x-3">
-      <VNodeRenderer :nodes="themeConfig.app.logo" />
-      <h1 class="auth-title">
-        {{ themeConfig.app.title }}
+  <BrandShell>
+    <template v-if="state === 'checking'">
+      <h1 class="text-h3 mb-4">
+        Checking your link
       </h1>
-    </div>
-  </NuxtLink>
+      <VProgressLinear
+        indeterminate
+        color="primary"
+      />
+    </template>
 
-  <VRow
-    class="auth-wrapper bg-surface"
-    no-gutters
-  >
-    <VCol
-      md="8"
-      class="d-none d-md-flex"
-    >
-      <div class="position-relative bg-background w-100 me-0">
-        <div
-          class="d-flex align-center justify-center w-100 h-100"
-          style="padding-inline: 150px;"
-        >
-          <VImg
-            max-width="431"
-            :src="authThemeImg"
-            class="auth-illustration mt-16 mb-2"
-          />
-        </div>
-
-        <img
-          class="auth-footer-mask flip-in-rtl"
-          :src="authThemeMask"
-          alt="auth-footer-mask"
-          height="280"
-          width="100"
-        >
-      </div>
-    </VCol>
-
-    <VCol
-      cols="12"
-      md="4"
-      class="auth-card-v2 d-flex align-center justify-center"
-    >
-      <VCard
-        flat
-        :max-width="500"
-        class="mt-12 mt-sm-0 pa-6"
+    <template v-else-if="state === 'verified'">
+      <h1 class="text-h3 mb-2">
+        Email verified
+      </h1>
+      <p class="text-body-1 mb-6">
+        <template v-if="email">
+          <span class="font-weight-medium">{{ email }}</span> is confirmed.
+        </template>
+        You can sign in now.
+      </p>
+      <VBtn
+        block
+        size="large"
+        to="/login"
       >
-        <VCardText v-if="status === false">
-          <h4 class="text-h4 mb-1">
-            Verify your email ✉️
-          </h4>
-          <p class="text-body-1 mb-4">
-            This link is invalid or has expired (links last an hour). Enter your email to get a new one.
-          </p>
-          <!-- An expired link never reaches the server's verify step, so the page can't know the email: ask for it. -->
-          <AppTextField
-            v-model="email"
-            type="email"
-            label="Your email"
-            placeholder="you@example.com"
-          />
-          <VBtn
-            block
-            class="my-5"
-            :disabled="!email.includes('@')"
-            @click="resendEmail(email)"
-          >
-            Resend Verification Link
-          </VBtn>
-        </VCardText>
-        <VCardText v-else>
-          <h4 class="text-h4 mb-1">
-            Verify your email ✉️
-          </h4>
-          <p class="text-body-1 mb-0">
-            Account activation for <span class="font-weight-medium text-high-emphasis">{{ email }} </span> was successful. Please follow the link inside to continue.
-          </p>
-          <VBtn
-            block
-            to="/"
-            class="my-5"
-          >
-            Go To Login
-          </VBtn>
-        </VCardText>
-      </VCard>
-    </VCol>
-  </VRow>
-</template>
+        Go to sign in
+      </VBtn>
+    </template>
 
-<style lang="scss">
-@use "@core/scss/template/pages/page-auth.scss";
-</style>
+    <form
+      v-else
+      @submit.prevent="resend"
+    >
+      <h1 class="text-h3 mb-2">
+        This link doesn't work
+      </h1>
+      <!-- An expired link never reaches the server's verify step, so the page can't know the email: ask for it. -->
+      <p class="text-body-1 mb-6">
+        It may have expired (links last an hour) or been copied wrongly. Enter your email and we'll send a new one.
+      </p>
+      <AppTextField
+        v-model="email"
+        type="email"
+        label="Email"
+        autocomplete="email"
+        class="mb-5"
+      />
+      <VBtn
+        block
+        size="large"
+        type="submit"
+        :loading="sending"
+        :disabled="!email.includes('@') || sending"
+      >
+        Send a new link
+      </VBtn>
+      <p class="text-body-2 text-medium-emphasis mt-5 mb-0">
+        Already verified? <NuxtLink
+          to="/login"
+          class="text-primary"
+        >
+          Sign in
+        </NuxtLink>
+      </p>
+    </form>
+  </BrandShell>
+</template>

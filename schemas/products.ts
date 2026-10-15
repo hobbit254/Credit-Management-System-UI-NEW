@@ -20,6 +20,9 @@ export const NewProductSchema = z.object({
   product_model_number: z.string().min(1, 'Product model number is required'),
   category_uuid: z.string().min(1, 'Category uuid is required'),
   product_brand: z.string().min(1, 'Product brand is required'),
-  default_price: z.coerce.number().optional(),
+
+  // An emptied field must be an error, not a silent KES 0 (coerce turns '' into 0).
+  default_price: z.preprocess(v => (v === '' || v == null ? undefined : v),
+    z.coerce.number({ error: 'Enter a price' }).min(0, 'The price can\'t be negative')),
 })
 export type NewProduct = z.infer<typeof NewProductSchema>

@@ -21,10 +21,7 @@ export function useCollectors() {
     await withLoading(loading, async () => {
       const { data } = await $api.get('collectors/active')
 
-      if (Array.isArray(data))
-        result = data
-      else if (data && Array.isArray(data.data))
-        result = data.data
+      result = Array.isArray(data?.data) ? data.data : []
 
       collectors.value = result
     })

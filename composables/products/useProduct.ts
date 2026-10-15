@@ -45,11 +45,7 @@ export function useProduct() {
 
   async function fetchActiveProducts() {
     const { data } = await $api.get('products/active')
-    let result: Product[] = []
-    if (Array.isArray(data))
-      result = data
-    else if (data && Array.isArray(data.data))
-      result = data.data
+    const result: Product[] = Array.isArray(data?.data) ? data.data : []
 
     products.value = result
 

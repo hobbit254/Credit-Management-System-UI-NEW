@@ -40,11 +40,7 @@ export function useCategory() {
 
   async function fetchAllActiveCategories() {
     const { data } = await $api.get('categories/active')
-    let results: Category[] = []
-    if (Array.isArray(data))
-      results = data
-    else if (data && Array.isArray(data.data))
-      results = data.data
+    const results: Category[] = Array.isArray(data?.data) ? data.data : []
 
     categories.value = results
 

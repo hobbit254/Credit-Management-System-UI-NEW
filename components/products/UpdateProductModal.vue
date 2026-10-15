@@ -30,10 +30,6 @@ watch(
   { immediate: true, deep: true },
 )
 
-function closeModal() {
-  isOpen.value = false
-}
-
 function handleConfirm() {
   if (!props.product)
     return
@@ -68,183 +64,74 @@ watch(() => props.modelValue, async open => {
 </script>
 
 <template>
-  <VDialog
+  <FormDialog
     v-model="isOpen"
-    max-width="600"
-    scrollable
+    title="Edit product"
+    confirm-text="Save changes"
+    :loading="props.loading"
+    @confirm="handleConfirm"
   >
-    <VCard>
-      <VCardTitle class="d-flex align-center ga-3 pa-4">
-        <VAvatar
-          color="primary"
-          variant="tonal"
-          size="40"
-        >
-          <VIcon>tabler-edit</VIcon>
-        </VAvatar>
-        <div class="d-flex flex-column">
-          <span class="text-h6 font-weight-bold">Edit Product</span>
-          <span class="text-caption text-medium-emphasis">Update product details and pricing</span>
-        </div>
-      </VCardTitle>
+    <VRow dense>
+      <VCol cols="12">
+        <AppTextField
+          v-model="localProduct.product_name"
+          label="Product Name*"
+          placeholder="Enter product name"
+        />
+      </VCol>
 
-      <VDivider />
+      <VCol
+        cols="12"
+        md="6"
+      >
+        <AppTextField
+          v-model="localProduct.product_brand"
+          label="Brand*"
+          placeholder="Enter brand"
+        />
+      </VCol>
 
-      <VCardText class="pa-4">
-        <VForm @submit.prevent="handleConfirm">
-          <VRow dense>
-            <VCol cols="12">
-              <p class="text-caption text-medium-emphasis font-weight-medium mb-1 text-uppercase">
-                Product Name
-              </p>
-              <AppTextField
-                v-model="localProduct.product_name"
-                label="Product Name*"
-                placeholder="Enter product name"
-              >
-                <template #prepend-inner>
-                  <VIcon size="18">
-                    tabler-box
-                  </VIcon>
-                </template>
-              </AppTextField>
-            </VCol>
+      <VCol
+        cols="12"
+        md="6"
+      >
+        <AppTextField
+          v-model="localProduct.product_model_number"
+          label="Model Number*"
+          placeholder="Enter model number"
+        />
+      </VCol>
 
-            <VCol
-              cols="12"
-              md="6"
-            >
-              <p class="text-caption text-medium-emphasis font-weight-medium mb-1 text-uppercase">
-                Brand
-              </p>
-              <AppTextField
-                v-model="localProduct.product_brand"
-                label="Brand*"
-                placeholder="Enter brand"
-              >
-                <template #prepend-inner>
-                  <VIcon size="18">
-                    tabler-building-factory
-                  </VIcon>
-                </template>
-              </AppTextField>
-            </VCol>
+      <VCol cols="12">
+        <AppSelect
+          v-model="localProduct.category_uuid"
+          :items="categories"
+          item-title="category_name"
+          item-value="category_uuid"
+          label="Category Type*"
+          :loading="loadingCategories"
+          placeholder="Select a category"
+        />
+      </VCol>
 
-            <VCol
-              cols="12"
-              md="6"
-            >
-              <p class="text-caption text-medium-emphasis font-weight-medium mb-1 text-uppercase">
-                Model Number
-              </p>
-              <AppTextField
-                v-model="localProduct.product_model_number"
-                label="Model Number*"
-                placeholder="Enter model number"
-              >
-                <template #prepend-inner>
-                  <VIcon size="18">
-                    tabler-barcode
-                  </VIcon>
-                </template>
-              </AppTextField>
-            </VCol>
+      <VCol cols="12">
+        <AppTextField
+          v-model="localProduct.default_price"
+          label="Default Price*"
+          type="number"
+          placeholder="Enter default price"
+          prefix="KES"
+        />
+      </VCol>
 
-            <VCol cols="12">
-              <p class="text-caption text-medium-emphasis font-weight-medium mb-1 text-uppercase">
-                Category
-              </p>
-              <AppSelect
-                v-model="localProduct.category_uuid"
-                :items="categories"
-                item-title="category_name"
-                item-value="category_uuid"
-                label="Category Type*"
-                :loading="loadingCategories"
-                placeholder="Select a category"
-              >
-                <template #prepend-inner>
-                  <VIcon size="18">
-                    tabler-tag
-                  </VIcon>
-                </template>
-                <template #item="{ item, props: itemProps }">
-                  <VListItem v-bind="itemProps">
-                    <template #prepend>
-                      <VAvatar
-                        size="26"
-                        color="info"
-                        variant="tonal"
-                      >
-                        <span class="text-caption font-weight-bold">
-                          {{ item.raw.category_name?.charAt(0)?.toUpperCase() ?? '?' }}
-                        </span>
-                      </VAvatar>
-                    </template>
-                  </VListItem>
-                </template>
-              </AppSelect>
-            </VCol>
-
-            <VCol cols="12">
-              <p class="text-caption text-medium-emphasis font-weight-medium mb-1 text-uppercase">
-                Default Price
-              </p>
-              <AppTextField
-                v-model="localProduct.default_price"
-                label="Default Price*"
-                type="number"
-                placeholder="Enter default price"
-              >
-                <template #prepend-inner>
-                  <span class="text-caption font-weight-bold text-success pt-1">KES</span>
-                </template>
-              </AppTextField>
-            </VCol>
-
-            <VCol
-              v-if="localProduct.default_price"
-              cols="12"
-            >
-              <VAlert
-                color="info"
-                variant="tonal"
-                density="compact"
-              >
-                <template #prepend>
-                  <VIcon color="info">
-                    tabler-info-circle
-                  </VIcon>
-                </template>
-                Updating price to <strong>KES {{ Number(localProduct.default_price).toLocaleString() }}</strong>
-              </VAlert>
-            </VCol>
-          </VRow>
-        </VForm>
-      </VCardText>
-
-      <VDivider />
-
-      <VCardActions class="pa-3">
-        <VSpacer />
-        <VBtn
-          variant="plain"
-          prepend-icon="tabler-x"
-          :disabled="props.loading"
-          @click="closeModal"
-        >
-          Cancel
-        </VBtn>
-        <VBtn
-          color="primary"
-          variant="tonal"
-          prepend-icon="tabler-check"
-          :loading="props.loading"
-          @click="handleConfirm"
-        >
-          Update Product
-        </VBtn>
-      </VCardActions>
-    </VCard>
-  </VDialog>
+      <VCol
+        v-if="localProduct.default_price"
+        cols="12"
+      >
+        <p class="text-body-2 text-medium-emphasis mb-0">
+          Updating price to KES {{ Number(localProduct.default_price).toLocaleString() }}
+        </p>
+      </VCol>
+    </VRow>
+  </FormDialog>
 </template>

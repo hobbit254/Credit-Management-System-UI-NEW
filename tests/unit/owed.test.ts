@@ -41,8 +41,8 @@ describe('creditUse', () => {
     expect(creditUse(1030, 1000)).toEqual({ percent: 103, level: 'over' })
   })
 
-  it('treats any debt on a zero limit as over, and nothing owed as fine', () => {
-    expect(creditUse(50, 0)).toEqual({ percent: 100, level: 'over' })
-    expect(creditUse(0, 0)).toEqual({ percent: 0, level: 'ok' })
+  it('treats a zero limit as no limit, never over it', () => {
+    expect(creditUse(50_000, 0)).toEqual({ percent: null, level: 'ok' })
+    expect(creditUse(0, 0)).toEqual({ percent: null, level: 'ok' })
   })
 })

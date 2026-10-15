@@ -15,10 +15,6 @@ const isOpen = computed({
   set: value => emit('update:modelValue', value),
 })
 
-function closeModal() {
-  isOpen.value = false
-}
-
 // Local editable copy
 const localRole = ref<Partial<Role>>({
   role_name: '',
@@ -47,120 +43,35 @@ function handleConfirm() {
 </script>
 
 <template>
-  <VDialog
+  <FormDialog
     v-model="isOpen"
-    max-width="550"
-    scrollable
+    title="Edit role"
+    confirm-text="Save changes"
+    :loading="props.loading"
+    @confirm="handleConfirm"
   >
-    <VCard>
-      <VCardTitle class="d-flex align-center ga-3 pa-4">
-        <VAvatar
-          color="primary"
-          variant="tonal"
-          size="40"
-        >
-          <VIcon>tabler-shield-check</VIcon>
-        </VAvatar>
-        <div class="d-flex flex-column">
-          <span class="text-h6 font-weight-bold">Update Role Details</span>
-          <span class="text-caption text-medium-emphasis">Modify name and description for this role</span>
-        </div>
-      </VCardTitle>
+    <VRow dense>
+      <VCol cols="12">
+        <AppTextField
+          v-model="localRole.role_name"
+          label="Role Name*"
+          placeholder="Enter role name"
+          autofocus
+        />
+      </VCol>
 
-      <VDivider />
-
-      <VCardText class="pa-4">
-        <VForm @submit.prevent="handleConfirm">
-          <VRow dense>
-            <VCol
-              cols="12"
-              class="mb-4"
-            >
-              <div class="d-flex align-center justify-space-between pa-3 rounded bg-var-theme-background border-dashed">
-                <div class="d-flex align-center ga-2">
-                  <VIcon
-                    size="16"
-                    color="secondary"
-                  >
-                    tabler-lock
-                  </VIcon>
-                  <span class="text-caption font-weight-bold text-uppercase">Role Slug</span>
-                </div>
-                <code class="text-primary font-weight-bold">{{ props.role?.role_slug }}</code>
-              </div>
-            </VCol>
-
-            <VCol cols="12">
-              <p class="text-caption text-medium-emphasis font-weight-medium mb-1 text-uppercase">
-                Display Name
-              </p>
-              <AppTextField
-                v-model="localRole.role_name"
-                label="Role Name*"
-                placeholder="Enter role name"
-                autofocus
-              >
-                <template #prepend-inner>
-                  <VIcon size="18">
-                    tabler-user-cog
-                  </VIcon>
-                </template>
-              </AppTextField>
-            </VCol>
-
-            <VCol
-              cols="12"
-              class="mt-2"
-            >
-              <p class="text-caption text-medium-emphasis font-weight-medium mb-1 text-uppercase">
-                Role Description
-              </p>
-              <AppTextarea
-                v-model="localRole.description"
-                label="Description"
-                placeholder="Briefly describe the purpose of this role..."
-                auto-grow
-                rows="3"
-              >
-                <template #prepend-inner>
-                  <VIcon size="18">
-                    tabler-align-left
-                  </VIcon>
-                </template>
-              </AppTextarea>
-            </VCol>
-          </VRow>
-        </VForm>
-      </VCardText>
-
-      <VDivider />
-
-      <VCardActions class="pa-3">
-        <VSpacer />
-        <VBtn
-          variant="plain"
-          prepend-icon="tabler-x"
-          :disabled="props.loading"
-          @click="closeModal"
-        >
-          Cancel
-        </VBtn>
-        <VBtn
-          color="primary"
-          variant="tonal"
-          prepend-icon="tabler-refresh"
-          :loading="props.loading"
-          @click="handleConfirm"
-        >
-          Update Role
-        </VBtn>
-      </VCardActions>
-    </VCard>
-  </VDialog>
+      <VCol
+        cols="12"
+        class="mt-2"
+      >
+        <AppTextarea
+          v-model="localRole.description"
+          label="Description"
+          placeholder="Briefly describe the purpose of this role..."
+          auto-grow
+          rows="3"
+        />
+      </VCol>
+    </VRow>
+  </FormDialog>
 </template>
-
-<style scoped>
-.border-dashed {
-  border: 1px dashed rgba(var(--v-border-color), var(--v-border-opacity));
-}
-</style>

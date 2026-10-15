@@ -28,10 +28,6 @@ watch(localPermission, newVal => {
   emit('update:permission', newVal)
 }, { deep: true })
 
-function closeModal() {
-  isOpen.value = false
-}
-
 function handleConfirm() {
   emit('confirm')
 }
@@ -45,138 +41,57 @@ const permissionActionItems = [
 </script>
 
 <template>
-  <VDialog
+  <FormDialog
     v-model="isOpen"
-    max-width="550"
-    scrollable
+    title="Add a permission"
+    description="One per API route. Give it to roles under Who can do what."
+    confirm-text="Add permission"
+    :loading="props.loading"
+    @confirm="handleConfirm"
   >
-    <VCard>
-      <VCardTitle class="d-flex align-center ga-3 pa-4">
-        <VAvatar
-          color="primary"
-          variant="tonal"
-          size="40"
-        >
-          <VIcon>tabler-lock-plus</VIcon>
-        </VAvatar>
-        <div class="d-flex flex-column">
-          <span class="text-h6 font-weight-bold">Add New Permission</span>
-          <span class="text-caption text-medium-emphasis">Define granular access control rules</span>
-        </div>
-      </VCardTitle>
+    <VRow dense>
+      <VCol cols="12">
+        <AppTextField
+          v-model="localPermission.permission_name"
+          label="Permission Name*"
+          placeholder="e.g. Inventory Management"
+          autofocus
+        />
+      </VCol>
 
-      <VDivider />
+      <VCol cols="12">
+        <AppSelect
+          v-model="localPermission.permission_action"
+          :items="permissionActionItems"
+          label="Action*"
+          placeholder="Select HTTP Verb"
+        />
+      </VCol>
 
-      <VCardText class="pa-4">
-        <VForm @submit.prevent="handleConfirm">
-          <VRow dense>
-            <VCol cols="12">
-              <p class="text-caption text-medium-emphasis font-weight-medium mb-1 text-uppercase">
-                Permission Identity
-              </p>
-              <AppTextField
-                v-model="localPermission.permission_name"
-                label="Permission Name*"
-                placeholder="e.g. Inventory Management"
-                autofocus
-              >
-                <template #prepend-inner>
-                  <VIcon size="18">
-                    tabler-shield-check
-                  </VIcon>
-                </template>
-              </AppTextField>
-            </VCol>
+      <VCol
+        cols="12"
+        class="mb-2"
+      >
+        <!-- The permission only works if this is a real API route for the action above -->
+        <AppTextField
+          v-model="localPermission.permission_slug"
+          label="Route*"
+          placeholder="e.g. v1/product-inventory/delete"
+          hint="The API route this permission opens, exactly as the server has it."
+          persistent-hint
+          class="font-mono"
+        />
+      </VCol>
 
-            <VCol cols="12">
-              <p class="text-caption text-medium-emphasis font-weight-medium mb-1 text-uppercase">
-                Authorized Action
-              </p>
-              <AppSelect
-                v-model="localPermission.permission_action"
-                :items="permissionActionItems"
-                label="Action*"
-                placeholder="Select HTTP Verb"
-              >
-                <template #prepend-inner>
-                  <VIcon size="18">
-                    tabler-api-app
-                  </VIcon>
-                </template>
-              </AppSelect>
-            </VCol>
-
-            <VCol
-              cols="12"
-              class="mb-2"
-            >
-              <!-- The permission only works if this is a real API route for the action above -->
-              <AppTextField
-                v-model="localPermission.permission_slug"
-                label="Route*"
-                placeholder="e.g. v1/product-inventory/delete"
-                hint="The API route this permission opens, exactly as the server has it."
-                persistent-hint
-                class="font-mono"
-              >
-                <template #prepend-inner>
-                  <VIcon size="18">
-                    tabler-route
-                  </VIcon>
-                </template>
-              </AppTextField>
-            </VCol>
-
-            <VCol cols="12">
-              <p class="text-caption text-medium-emphasis font-weight-medium mb-1 text-uppercase">
-                Capability Description
-              </p>
-              <AppTextarea
-                v-model="localPermission.description"
-                label="Description"
-                placeholder="What exactly does this permission allow?"
-                auto-grow
-                rows="2"
-              >
-                <template #prepend-inner>
-                  <VIcon size="18">
-                    tabler-align-left
-                  </VIcon>
-                </template>
-              </AppTextarea>
-            </VCol>
-          </VRow>
-        </VForm>
-      </VCardText>
-
-      <VDivider />
-
-      <VCardActions class="pa-3">
-        <VSpacer />
-        <VBtn
-          variant="plain"
-          prepend-icon="tabler-x"
-          :disabled="props.loading"
-          @click="closeModal"
-        >
-          Cancel
-        </VBtn>
-        <VBtn
-          color="primary"
-          variant="tonal"
-          prepend-icon="tabler-check"
-          :loading="props.loading"
-          @click="handleConfirm"
-        >
-          Create Permission
-        </VBtn>
-      </VCardActions>
-    </VCard>
-  </VDialog>
+      <VCol cols="12">
+        <AppTextarea
+          v-model="localPermission.description"
+          label="Description"
+          placeholder="What exactly does this permission allow?"
+          auto-grow
+          rows="2"
+        />
+      </VCol>
+    </VRow>
+  </FormDialog>
 </template>
-
-<style scoped>
-.border-dashed {
-  border: 1px dashed rgba(var(--v-border-color), var(--v-border-opacity));
-}
-</style>

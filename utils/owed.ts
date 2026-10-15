@@ -31,9 +31,12 @@ export function summarizeOwed(sales: OwedSale[], now = Date.now()) {
   }
 }
 
-// How much of a credit limit is used. A limit of 0 means no credit, so any debt is over it.
+// How much of a credit limit is used. A limit of 0 means no limit, as the backend enforces it.
 export function creditUse(owed: number, limit: number) {
-  const percent = limit > 0 ? Math.round(owed / limit * 100) : (owed > 0 ? 100 : 0)
+  if (limit <= 0)
+    return { percent: null, level: 'ok' as const }
+
+  const percent = Math.round(owed / limit * 100)
   const level: 'ok' | 'near' | 'over' = owed > limit ? 'over' : percent >= 80 ? 'near' : 'ok'
 
   return { percent, level }

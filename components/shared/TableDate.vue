@@ -7,7 +7,7 @@ const formattedDate = computed(() => {
   if (!props.value)
     return '' // return empty string if null
 
-  return new Date(props.value).toLocaleDateString('en-US', {
+  return new Date(props.value).toLocaleDateString('en-KE', {
     year: 'numeric',
     month: 'short',
     day: 'numeric',

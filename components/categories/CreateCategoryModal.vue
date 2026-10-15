@@ -28,10 +28,6 @@ watch(localCategory, newVal => {
   emit('update:category', newVal)
 }, { deep: true })
 
-function closeModal() {
-  isOpen.value = false
-}
-
 const fieldErrors = ref<Record<string, string[]>>({})
 
 function handleConfirm() {
@@ -49,89 +45,33 @@ function handleConfirm() {
 </script>
 
 <template>
-  <VDialog
+  <FormDialog
     v-model="isOpen"
-    max-width="500"
-    scrollable
+    title="Add a category"
+    description="Groups your products, such as phones or accessories."
+    confirm-text="Add category"
+    :loading="props.loading"
+    @confirm="handleConfirm"
   >
-    <VCard>
-      <VCardTitle class="d-flex align-center ga-3 pa-4">
-        <VAvatar
-          color="primary"
-          variant="tonal"
-          size="40"
-        >
-          <VIcon>tabler-category</VIcon>
-        </VAvatar>
-        <div class="d-flex flex-column">
-          <span class="text-h6 font-weight-bold">Add New Category</span>
-          <span class="text-caption text-medium-emphasis">Create a grouping for your products</span>
-        </div>
-      </VCardTitle>
+    <VRow dense>
+      <VCol cols="12">
+        <AppTextField
+          v-model="localCategory.category_name"
+          label="Category Name*"
+          placeholder="e.g. Electronics, Furniture, etc."
+          :error-messages="fieldErrors.category_name"
+          autofocus
+        />
+      </VCol>
 
-      <VDivider />
-
-      <VCardText class="pa-4">
-        <VForm @submit.prevent="handleConfirm">
-          <VRow dense>
-            <VCol cols="12">
-              <p class="text-caption text-medium-emphasis font-weight-medium mb-1 text-uppercase">
-                Category Details
-              </p>
-              <AppTextField
-                v-model="localCategory.category_name"
-                label="Category Name*"
-                placeholder="e.g. Electronics, Furniture, etc."
-                :error-messages="fieldErrors.category_name"
-                autofocus
-              >
-                <template #prepend-inner>
-                  <VIcon size="18">
-                    tabler-tag
-                  </VIcon>
-                </template>
-              </AppTextField>
-            </VCol>
-
-            <VCol
-              cols="12"
-              class="mt-2"
-            >
-              <VAlert
-                color="info"
-                variant="tonal"
-                density="compact"
-                class="text-caption"
-              >
-                Categories help you organize products and generate better inventory reports.
-              </VAlert>
-            </VCol>
-          </VRow>
-        </VForm>
-      </VCardText>
-
-      <VDivider />
-
-      <VCardActions class="pa-3">
-        <VSpacer />
-        <VBtn
-          variant="plain"
-          prepend-icon="tabler-x"
-          :disabled="props.loading"
-          @click="closeModal"
-        >
-          Cancel
-        </VBtn>
-        <VBtn
-          color="primary"
-          variant="tonal"
-          prepend-icon="tabler-check"
-          :loading="props.loading"
-          @click="handleConfirm"
-        >
-          Save Category
-        </VBtn>
-      </VCardActions>
-    </VCard>
-  </VDialog>
+      <VCol
+        cols="12"
+        class="mt-2"
+      >
+        <p class="text-body-2 text-medium-emphasis mb-0">
+          Categories help you organize products and generate better inventory reports.
+        </p>
+      </VCol>
+    </VRow>
+  </FormDialog>
 </template>

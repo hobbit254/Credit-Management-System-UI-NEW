@@ -152,7 +152,16 @@ const rows = computed(() => debtors.value.map(debtor => ({
         {{ debtor.owed > 0 ? kes(debtor.owed) : 'Paid up' }}
       </td>
       <td>
-        <div class="d-flex align-center gap-3">
+        <div
+          v-if="use.percent === null"
+          class="text-body-2 text-medium-emphasis"
+        >
+          No limit
+        </div>
+        <div
+          v-else
+          class="d-flex align-center gap-3"
+        >
           <div
             role="img"
             :aria-label="`${use.percent} percent of a ${kes(debtor.credit_limit)} limit used`"
@@ -165,8 +174,11 @@ const rows = computed(() => debtors.value.map(debtor => ({
             :class="{ 'text-error font-weight-bold': use.level === 'over' }"
           >{{ use.percent }}%</span>
         </div>
-        <div class="text-body-2 text-medium-emphasis">
-          {{ debtor.credit_limit > 0 ? `of ${kes(debtor.credit_limit)}` : 'No credit allowed' }}
+        <div
+          v-if="use.percent !== null"
+          class="text-body-2 text-medium-emphasis"
+        >
+          of {{ kes(debtor.credit_limit) }}
         </div>
       </td>
       <td>

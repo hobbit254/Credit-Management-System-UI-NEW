@@ -18,10 +18,6 @@ const isOpen = computed({
   set: value => emit('update:modelValue', value),
 })
 
-function closeModal() {
-  isOpen.value = false
-}
-
 const localStatus = ref('')
 const localSerialNumber = ref('')
 const localProductUuid = ref('')
@@ -85,30 +81,8 @@ watch(() => props.modelValue, async open => {
   }
 }, { immediate: true })
 
-const sourceTypeOptions = [
-  { label: 'Inventory', icon: 'tabler-building-warehouse', color: 'primary' },
-  { label: 'Outsourced', icon: 'tabler-truck-delivery', color: 'warning' },
-]
-
-const statusOptions = [
-  { label: 'InStock', icon: 'tabler-circle-check', color: 'success' },
-  { label: 'Returned', icon: 'tabler-arrow-back-up', color: 'warning' },
-  { label: 'ReturnedToSupplier', icon: 'tabler-arrow-forward-up', color: 'info' },
-  { label: 'OnCredit', icon: 'tabler-clock', color: 'warning' },
-  { label: 'Paid', icon: 'tabler-circle-check', color: 'success' },
-  { label: 'Sold', icon: 'tabler-shopping-cart', color: 'secondary' },
-]
-
 // Only these can be set by hand (sales set the rest); the current status stays listed so other fields can be edited.
 const statusLabels = computed(() => [...new Set(['InStock', 'ReturnedToSupplier', props.productInventory?.status].filter(Boolean))])
-
-const selectedStatusOption = computed(() =>
-  statusOptions.find(s => s.label === localStatus.value),
-)
-
-const selectedSourceOption = computed(() =>
-  sourceTypeOptions.find(s => s.label === localSourceType.value),
-)
 
 const selectedProduct = computed(() => props.productInventory)
 
@@ -118,265 +92,55 @@ const selectedSupplier = computed(() =>
 </script>
 
 <template>
-  <VDialog
+  <FormDialog
     v-model="isOpen"
-    max-width="620"
-    scrollable
+    title="Edit device"
+    confirm-text="Save changes"
+    :loading="props.loading"
+    @confirm="handleConfirm"
   >
-    <VCard>
-      <!-- Header -->
-      <VCardTitle class="d-flex align-center ga-3 pa-4">
-        <VAvatar
-          color="warning"
-          variant="tonal"
-          size="40"
-        >
-          <VIcon>tabler-package</VIcon>
-        </VAvatar>
-        <div class="d-flex flex-column">
-          <span class="text-h6 font-weight-bold">Update Product Inventory</span>
-          <span class="text-caption text-medium-emphasis">Edit the inventory details below</span>
-        </div>
-      </VCardTitle>
+    <VRow dense>
+      <!-- Only the serial number and status can change; the rest is fixed once the device is added. -->
+      <VCol cols="12">
+        <dl class="fixed-details text-body-1 mb-2">
+          <dt>Product</dt>
+          <dd>{{ selectedProduct?.product_name ?? '—' }} {{ selectedProduct?.product_brand }} {{ selectedProduct?.product_model_number }}</dd>
+          <dt>Source</dt>
+          <dd>{{ localSourceType || '—' }}</dd>
+          <dt>Supplier</dt>
+          <dd>{{ selectedSupplier?.supplier_name ?? '—' }}</dd>
+        </dl>
+      </VCol>
 
-      <VDivider />
+      <!-- Serial Number — editable -->
+      <VCol cols="12">
+        <AppTextField
+          v-model="localSerialNumber"
+          label="Serial Number*"
+          placeholder="Enter serial number"
+        />
+      </VCol>
 
-      <VCardText class="pa-4">
-        <VForm @submit.prevent="handleConfirm">
-          <VRow dense>
-            <!-- Product — readonly display -->
-            <VCol cols="12">
-              <p class="text-caption text-medium-emphasis font-weight-medium mb-1">
-                PRODUCT
-              </p>
-              <VCard
-                variant="outlined"
-                class="pa-3 mb-2"
-              >
-                <div class="d-flex align-center ga-3">
-                  <VAvatar
-                    size="36"
-                    color="primary"
-                    variant="tonal"
-                  >
-                    <span class="text-caption font-weight-bold">
-                      {{ selectedProduct?.product_name?.charAt(0)?.toUpperCase() ?? '?' }}
-                    </span>
-                  </VAvatar>
-                  <div class="d-flex flex-column">
-                    <span class="font-weight-medium text-body-2">
-                      {{ selectedProduct?.product_name ?? '—' }}
-                    </span>
-                    <div class="d-flex align-center ga-1 mt-1">
-                      <VChip
-                        v-if="selectedProduct?.product_brand"
-                        size="x-small"
-                        color="secondary"
-                        variant="tonal"
-                      >
-                        {{ selectedProduct.product_brand }}
-                      </VChip>
-                      <VChip
-                        v-if="selectedProduct?.product_model_number"
-                        size="x-small"
-                        color="info"
-                        variant="tonal"
-                      >
-                        {{ selectedProduct.product_model_number }}
-                      </VChip>
-                    </div>
-                  </div>
-                  <VSpacer />
-                  <VChip
-                    size="x-small"
-                    color="secondary"
-                    variant="tonal"
-                  >
-                    <VIcon
-                      start
-                      size="11"
-                    >
-                      tabler-lock
-                    </VIcon>
-                    Read-only
-                  </VChip>
-                </div>
-              </VCard>
-            </VCol>
-
-            <!-- Source Type — readonly display -->
-            <VCol cols="12">
-              <p class="text-caption text-medium-emphasis font-weight-medium mb-1">
-                SOURCE TYPE
-              </p>
-              <VCard
-                variant="outlined"
-                class="pa-3 mb-2"
-              >
-                <div class="d-flex align-center ga-2">
-                  <VIcon
-                    :color="selectedSourceOption?.color"
-                    size="18"
-                  >
-                    {{ selectedSourceOption?.icon ?? 'tabler-box' }}
-                  </VIcon>
-                  <span class="text-body-2 font-weight-medium">{{ localSourceType || '—' }}</span>
-                  <VSpacer />
-                  <VChip
-                    size="x-small"
-                    color="secondary"
-                    variant="tonal"
-                  >
-                    <VIcon
-                      start
-                      size="11"
-                    >
-                      tabler-lock
-                    </VIcon>
-                    Read-only
-                  </VChip>
-                </div>
-              </VCard>
-            </VCol>
-
-            <!-- Supplier — readonly display -->
-            <VCol cols="12">
-              <p class="text-caption text-medium-emphasis font-weight-medium mb-1">
-                SUPPLIER
-              </p>
-              <VCard
-                variant="outlined"
-                class="pa-3 mb-2"
-              >
-                <div class="d-flex align-center ga-3">
-                  <VAvatar
-                    size="32"
-                    color="warning"
-                    variant="tonal"
-                  >
-                    <span class="text-caption font-weight-bold">
-                      {{ selectedSupplier?.supplier_name?.charAt(0)?.toUpperCase() ?? '?' }}
-                    </span>
-                  </VAvatar>
-                  <span class="text-body-2 font-weight-medium">
-                    {{ selectedSupplier?.supplier_name ?? '—' }}
-                  </span>
-                  <VSpacer />
-                  <VChip
-                    size="x-small"
-                    color="secondary"
-                    variant="tonal"
-                  >
-                    <VIcon
-                      start
-                      size="11"
-                    >
-                      tabler-lock
-                    </VIcon>
-                    Read-only
-                  </VChip>
-                </div>
-              </VCard>
-            </VCol>
-
-            <VDivider class="my-2" />
-
-            <!-- Serial Number — editable -->
-            <VCol cols="12">
-              <p class="text-caption text-medium-emphasis font-weight-medium mb-1">
-                SERIAL NUMBER
-              </p>
-              <AppTextField
-                v-model="localSerialNumber"
-                label="Serial Number*"
-                placeholder="Enter serial number"
-              >
-                <template #prepend-inner>
-                  <VIcon size="18">
-                    tabler-hash
-                  </VIcon>
-                </template>
-              </AppTextField>
-            </VCol>
-
-            <!-- Status — editable -->
-            <VCol cols="12">
-              <p class="text-caption text-medium-emphasis font-weight-medium mb-1">
-                STATUS
-              </p>
-              <AppSelect
-                v-model="localStatus"
-                :items="statusLabels"
-                label="Status*"
-                placeholder="Select status"
-              >
-                <template #prepend-inner>
-                  <VIcon
-                    size="18"
-                    :color="selectedStatusOption?.color"
-                  >
-                    {{ selectedStatusOption?.icon ?? 'tabler-circle' }}
-                  </VIcon>
-                </template>
-                <template #item="{ item, props: itemProps }">
-                  <VListItem v-bind="itemProps">
-                    <template #prepend>
-                      <VIcon
-                        :color="statusOptions.find(s => s.label === item.raw)?.color"
-                        size="18"
-                      >
-                        {{ statusOptions.find(s => s.label === item.raw)?.icon }}
-                      </VIcon>
-                    </template>
-                  </VListItem>
-                </template>
-              </AppSelect>
-            </VCol>
-
-            <!-- Status Preview -->
-            <VCol
-              v-if="localStatus"
-              cols="12"
-            >
-              <VAlert
-                :color="selectedStatusOption?.color"
-                variant="tonal"
-                density="compact"
-              >
-                <template #prepend>
-                  <VIcon :color="selectedStatusOption?.color">
-                    {{ selectedStatusOption?.icon }}
-                  </VIcon>
-                </template>
-                Status set to <strong>{{ localStatus }}</strong>
-              </VAlert>
-            </VCol>
-          </VRow>
-        </VForm>
-      </VCardText>
-
-      <VDivider />
-
-      <VCardActions class="pa-3">
-        <VSpacer />
-        <VBtn
-          variant="plain"
-          prepend-icon="tabler-x"
-          :disabled="props.loading"
-          @click="closeModal"
-        >
-          Cancel
-        </VBtn>
-        <VBtn
-          color="primary"
-          variant="tonal"
-          prepend-icon="tabler-check"
-          :loading="props.loading"
-          @click="handleConfirm"
-        >
-          Save Changes
-        </VBtn>
-      </VCardActions>
-    </VCard>
-  </VDialog>
+      <!-- Status — editable -->
+      <VCol cols="12">
+        <AppSelect
+          v-model="localStatus"
+          :items="statusLabels"
+          label="Status*"
+          placeholder="Select status"
+        />
+      </VCol>
+    </VRow>
+  </FormDialog>
 </template>
+
+<style scoped>
+.fixed-details {
+  display: grid;
+  gap: 4px 16px;
+  grid-template-columns: max-content 1fr;
+}
+
+.fixed-details dt { color: rgba(var(--v-theme-on-surface), var(--v-medium-emphasis-opacity)); }
+.fixed-details dd { margin: 0; }
+</style>

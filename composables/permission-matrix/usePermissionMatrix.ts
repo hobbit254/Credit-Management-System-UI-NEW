@@ -30,7 +30,8 @@ export function usePermissionMatrix() {
 
     // 🔹 Load roles & mapping once
     if (!initialized.value) {
-      const rolePermRes = await $api.get('permission-matrix')
+      // The server's largest page: without it only the 10 newest roles came back.
+      const rolePermRes = await $api.get('permission-matrix', { params: { per_page: 100 } })
 
       const rolesWithPerms: RoleWithPermissions[]
         = rolePermRes.data.data.roles.data

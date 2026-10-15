@@ -18,6 +18,9 @@ export function useProductInventory() {
     lastPage: 1,
   })
 
+  // search: serial number, product name, model or brand; status: 'all' or a unit status
+  const filters = ref({ search: '', status: 'all' })
+
   async function fetchAllProductInventory(options?: { page?: number; perPage?: number }) {
     await withLoading(loading, async () => {
       // FIX: Correctly update state based on options
@@ -30,6 +33,8 @@ export function useProductInventory() {
         params: {
           page: pagination.value.currentPage,
           per_page: pagination.value.perPage,
+          search: filters.value.search || undefined,
+          status: filters.value.status === 'all' ? undefined : filters.value.status,
         },
       })
 
@@ -145,6 +150,7 @@ export function useProductInventory() {
     loading,
     showToast,
     productInventories,
+    filters,
     fetchAllProductInventory,
     pagination,
     openAdd,

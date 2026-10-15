@@ -17,6 +17,9 @@ export function useSuppliers() {
     lastPage: 1,
   })
 
+  // search: shop name, contact name or phone
+  const filters = ref({ search: '' })
+
   async function fetchAllSuppliers(options?: { page?: number; perPage?: number }) {
     loading.value = true
     try {
@@ -30,6 +33,7 @@ export function useSuppliers() {
         params: {
           page: pagination.value.currentPage,
           per_page: pagination.value.perPage,
+          search: filters.value.search || undefined,
         },
       })
 
@@ -198,6 +202,7 @@ export function useSuppliers() {
   return {
     showToast,
     suppliers,
+    filters,
     loading,
     pagination,
     fetchAllSuppliers,

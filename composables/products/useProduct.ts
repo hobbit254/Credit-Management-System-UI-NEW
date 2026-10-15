@@ -18,6 +18,9 @@ export function useProduct() {
     lastPage: 1,
   })
 
+  // search: name, model or brand
+  const filters = ref({ search: '' })
+
   async function fetchAllProducts(options?: { page?: number; perPage?: number }) {
     await withLoading(loading, async () => {
       if (options?.page)
@@ -29,6 +32,7 @@ export function useProduct() {
         params: {
           page: pagination.value.currentPage,
           per_page: pagination.value.perPage,
+          search: filters.value.search || undefined,
         },
       })
 
@@ -209,6 +213,7 @@ export function useProduct() {
     showToast,
     loading,
     products,
+    filters,
     pagination,
     fetchAllProducts,
     openAdd,

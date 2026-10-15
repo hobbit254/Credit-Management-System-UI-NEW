@@ -27,7 +27,10 @@ const agingLabel = computed(() => `Money owed by days since the sale: ${owed.val
 const stock = computed(() => {
   const models = new Map<string, { model: string; brand: string; inStock: number; onCredit: number; sold: number }>()
   for (const p of dashboardStats.value.products) {
-    const row = models.get(p.product_model_number)
+    // Model numbers repeat across brands (Samsung A15, Oppo A15): key on the whole product.
+    const key = `${p.product_brand} ${p.product_name} ${p.product_model_number}`
+
+    const row = models.get(key)
       ?? { model: p.product_name, brand: p.product_brand, inStock: 0, onCredit: 0, sold: 0 }
 
     if (p.status === 'InStock')
@@ -36,7 +39,7 @@ const stock = computed(() => {
       row.onCredit += p.total
     else if (p.status === 'Sold')
       row.sold += p.total
-    models.set(p.product_model_number, row)
+    models.set(key, row)
   }
 
   return [...models.values()].sort((a, b) => b.onCredit + b.inStock - (a.onCredit + a.inStock))

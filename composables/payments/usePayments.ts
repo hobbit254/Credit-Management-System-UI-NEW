@@ -17,6 +17,9 @@ export function usePayments() {
     lastPage: 1,
   })
 
+  // status: 'all' or a payment status; search: receipt code or customer name
+  const filters = ref({ search: '', status: 'all' })
+
   async function fetchAllPayments(options?: { page?: number; perPage?: number }) {
     await withLoading(loading, async () => {
       if (options?.page)
@@ -28,6 +31,8 @@ export function usePayments() {
         params: {
           page: pagination.value.currentPage,
           per_page: pagination.value.perPage,
+          search: filters.value.search || undefined,
+          status: filters.value.status === 'all' ? undefined : filters.value.status,
         },
       })
 
@@ -79,6 +84,7 @@ export function usePayments() {
   return {
     loading,
     pagination,
+    filters,
     showToast,
     updatePaymentStatus,
     fetchAllPayments,

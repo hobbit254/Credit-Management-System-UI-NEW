@@ -3,35 +3,29 @@ import { onMounted, ref } from 'vue'
 import { useUsers } from '@/composables/users/useUsers'
 import UpdateUserProfileModal from '@/components/users/UpdateUserProfileModal.vue'
 
-const { updateProfile, fetchActiveUser, activeUser } = useUsers()
+const { updateProfile, fetchActiveUser, activeUser, loading: saving } = useUsers()
 
-// Dialog Controls
-const isUserInfoEditDialogVisible = ref(false)
+const isEditOpen = ref(false)
 const loading = ref(false)
 
 onMounted(async () => {
   loading.value = true
-  await fetchActiveUser()
-  loading.value = false
+  try {
+    await fetchActiveUser()
+  }
+  finally {
+    loading.value = false
+  }
 })
 
-// Formatting Helpers
-const avatarText = (name?: string) =>
-  name ? name.split(' ').map(n => n[0]).join('').toUpperCase() : 'U'
-
-const resolveUserStatusVariant = (status: number) => {
-  if (status === 1)
-    return { color: 'success', text: 'Active' }
-
-  return { color: 'secondary', text: 'Inactive' }
-}
+const day = (date: string) => new Date(date).toLocaleDateString('en-KE', { day: 'numeric', month: 'long', year: 'numeric' })
 
 // Saves through users/me, so every role can edit their own profile. The dialog closes only on success;
 // the toast shows the server's answer either way (e.g. a wrong current password).
-const handleUserUpdate = async (updatedData: Record<string, string>) => {
+async function handleUserUpdate(updatedData: Record<string, string>) {
   if (!await updateProfile(updatedData))
     return
-  isUserInfoEditDialogVisible.value = false
+  isEditOpen.value = false
   await fetchActiveUser()
 }
 </script>
@@ -43,208 +37,102 @@ const handleUserUpdate = async (updatedData: Record<string, string>) => {
     color="primary"
   />
 
-  <VRow v-else-if="activeUser">
-    <VCol cols="12">
-      <VCard>
-        <VCardText class="text-center pt-12">
-          <VAvatar
-            rounded
-            size="120"
-            color="primary"
-            variant="tonal"
-            class="mb-4"
-          >
-            <span class="text-4xl font-weight-medium">
-              {{ avatarText(activeUser.full_name) }}
-            </span>
-          </VAvatar>
-
-          <h5 class="text-h5">
-            {{ activeUser.full_name }}
-          </h5>
-
-          <VChip
-            label
-            color="primary"
-            size="small"
-            class="text-capitalize mt-3 px-4"
-          >
-            {{ activeUser.roles?.[0]?.role_name || 'Standard User' }}
-          </VChip>
-        </VCardText>
-
-        <VCardText>
-          <div class="d-flex justify-space-around gap-x-6 gap-y-2 flex-wrap mb-6">
-            <div class="d-flex align-center me-8">
-              <VAvatar
-                :size="40"
-                rounded
-                color="primary"
-                variant="tonal"
-                class="me-4"
-              >
-                <VIcon
-                  icon="tabler-shield-check"
-                  size="24"
-                />
-              </VAvatar>
-              <div>
-                <h5 class="text-h5">
-                  Verified
-                </h5>
-                <span class="text-sm">{{ activeUser.email_verified_at ? 'Identity Confirmed' : 'Pending' }}</span>
-              </div>
-            </div>
-
-            <div class="d-flex align-center me-4">
-              <VAvatar
-                :size="38"
-                rounded
-                color="success"
-                variant="tonal"
-                class="me-4"
-              >
-                <VIcon
-                  icon="tabler-activity"
-                  size="24"
-                />
-              </VAvatar>
-              <div>
-                <h5 class="text-h5">
-                  {{ resolveUserStatusVariant(activeUser.active).text }}
-                </h5>
-                <span class="text-sm">Current State</span>
-              </div>
-            </div>
-          </div>
-
-          <h5 class="text-h5">
-            Details
-          </h5>
-          <VDivider class="my-4" />
-
-          <VList class="card-list mt-2">
-            <VListItem>
-              <VListItemTitle>
-                <h6 class="text-h6">
-                  Account ID:
-                  <div class="d-inline-block text-body-1 font-mono text-xs">
-                    {{ activeUser.user_uuid }}
-                  </div>
-                </h6>
-              </VListItemTitle>
-            </VListItem>
-
-            <VListItem>
-              <VListItemTitle>
-                <span class="text-h6">Email: </span>
-                <span class="text-body-1">{{ activeUser.email }}</span>
-              </VListItemTitle>
-            </VListItem>
-
-            <VListItem>
-              <VListItemTitle>
-                <h6 class="text-h6">
-                  Verification Status:
-                  <VIcon
-                    :icon="activeUser.email_verified_at ? 'tabler-circle-check' : 'tabler-circle-x'"
-                    :color="activeUser.email_verified_at ? 'success' : 'warning'"
-                    size="18"
-                    class="ms-2"
-                  />
-                </h6>
-              </VListItemTitle>
-            </VListItem>
-
-            <VListItem>
-              <VListItemTitle>
-                <h6 class="text-h6">
-                  Member Since:
-                  <div class="d-inline-block text-body-1">
-                    <TableDate :value="activeUser.created_at" />
-                  </div>
-                </h6>
-              </VListItemTitle>
-            </VListItem>
-          </VList>
-        </VCardText>
-
-        <VCardText class="d-flex justify-center gap-x-4">
-          <VBtn
-            variant="elevated"
-            prepend-icon="tabler-edit"
-            @click="isUserInfoEditDialogVisible = true"
-          >
-            Edit Profile
-          </VBtn>
-        </VCardText>
-      </VCard>
-    </VCol>
-
-    <VCol cols="12">
-      <VCard
-        border
-        class="border-dashed"
+  <div v-else-if="activeUser">
+    <header class="d-flex flex-wrap align-end gap-4 mb-6">
+      <div class="flex-grow-1">
+        <h1 class="text-h2 mb-1">
+          {{ activeUser.full_name }}
+        </h1>
+        <p class="text-body-1 text-medium-emphasis mb-0">
+          Your profile. Only you can change your name, email or password here.
+        </p>
+      </div>
+      <VBtn
+        prepend-icon="tabler-edit"
+        @click="isEditOpen = true"
       >
-        <VCardText>
-          <div class="d-flex align-center justify-space-between mb-4">
-            <h6 class="text-h6">
-              Security Strength
-            </h6>
-            <VChip
-              label
-              color="info"
-              size="x-small"
-            >
-              System Verified
-            </VChip>
-          </div>
+        Edit profile
+      </VBtn>
+    </header>
 
-          <div class="mb-6">
-            <div class="d-flex justify-space-between mb-1">
-              <span class="text-sm">Password Reliability</span>
-              <span class="text-sm font-weight-bold">85%</span>
-            </div>
-            <VProgressLinear
-              rounded
-              height="8"
-              :model-value="85"
-              color="success"
-            />
-            <p class="text-caption mt-2">
-              Last password change: <TableDate :value="activeUser.updated_at" />
-            </p>
-          </div>
+    <VRow>
+      <VCol
+        cols="12"
+        md="7"
+      >
+        <VCard
+          border
+          flat
+          class="pa-6 h-100"
+        >
+          <h2 class="text-h5 mb-4">
+            Your details
+          </h2>
+          <dl class="details text-body-1">
+            <dt>Name</dt>
+            <dd>{{ activeUser.full_name }}</dd>
+            <dt>Email</dt>
+            <dd>
+              {{ activeUser.email }}
+              <span
+                class="text-body-2 ms-2"
+                :class="activeUser.email_verified_at ? 'text-medium-emphasis' : 'text-warning font-weight-medium'"
+              >
+                {{ activeUser.email_verified_at ? 'Verified' : 'Not verified yet' }}
+              </span>
+            </dd>
+            <dt>Role</dt>
+            <dd>{{ activeUser.roles?.[0]?.role_name ?? 'No role' }}</dd>
+            <dt>Member since</dt>
+            <dd>{{ day(activeUser.created_at) }}</dd>
+          </dl>
+        </VCard>
+      </VCol>
 
+      <VCol
+        cols="12"
+        md="5"
+      >
+        <VCard
+          border
+          flat
+          class="pa-6 h-100"
+        >
+          <h2 class="text-h5 mb-2">
+            Password
+          </h2>
+          <p class="text-body-1 text-medium-emphasis mb-4">
+            To change it you need your current password. If you've forgotten it, ask an administrator to set a new one.
+          </p>
           <VBtn
-            block
-            variant="tonal"
+            variant="outlined"
+            color="default"
             prepend-icon="tabler-key"
-            @click="isUserInfoEditDialogVisible = true"
+            @click="isEditOpen = true"
           >
-            Reset Credentials
+            Change password
           </VBtn>
-        </VCardText>
-      </VCard>
-    </VCol>
-  </VRow>
+        </VCard>
+      </VCol>
+    </VRow>
+  </div>
 
   <UpdateUserProfileModal
-    v-model:model-value="isUserInfoEditDialogVisible"
+    v-model:model-value="isEditOpen"
     :user="activeUser"
-    :loading="loading"
+    :loading="saving"
     @confirm="handleUserUpdate"
   />
 </template>
 
-<style lang="scss" scoped>
-.card-list {
-  --v-card-list-gap: 0.75rem;
+<style scoped>
+.details {
+  display: grid;
+  gap: 12px 24px;
+  grid-template-columns: max-content 1fr;
+  margin: 0;
 }
-.font-mono {
-  font-family: 'Fira Code', monospace;
-}
-.border-dashed {
-  border: 1px dashed rgba(var(--v-border-color), 0.4) !important;
-}
+
+.details dt { color: rgba(var(--v-theme-on-surface), var(--v-medium-emphasis-opacity)); }
+.details dd { margin: 0; overflow-wrap: anywhere; }
 </style>

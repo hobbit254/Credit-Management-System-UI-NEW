@@ -28,10 +28,12 @@ const lastShown = computed(() => props.pagination ? Math.min(props.pagination.cu
           {{ title }}
         </h1>
         <p
-          v-if="subtitle"
+          v-if="subtitle || $slots.subtitle"
           class="text-body-1 text-medium-emphasis mb-0"
         >
-          {{ subtitle }}
+          <slot name="subtitle">
+            {{ subtitle }}
+          </slot>
         </p>
       </div>
       <div class="d-flex flex-wrap gap-2">
@@ -93,10 +95,11 @@ const lastShown = computed(() => props.pagination ? Math.min(props.pagination.cu
 </template>
 
 <style scoped>
-.list-page { max-width: 1120px; }
-
 .list-table { overflow-x: auto; }
 .list-table :deep(table) { min-inline-size: 760px; }
 .list-table :deep(th) { font-weight: 500 !important; }
 .list-table :deep(tr.archived) { opacity: 0.6; }
+
+/* On a header cell: the column only takes the width its content needs, leaving the rest to the others. */
+.list-table :deep(th.fit) { inline-size: 1%; white-space: nowrap; }
 </style>

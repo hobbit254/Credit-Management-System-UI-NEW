@@ -306,8 +306,6 @@ onMounted(fetchDashboardStats)
 </template>
 
 <style scoped>
-.overview { max-width: 1120px; }
-
 .headline {
   max-width: 24ch;
   font-size: clamp(2rem, 4.4vw, 3.5rem);

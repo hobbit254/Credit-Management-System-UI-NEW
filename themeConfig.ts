@@ -12,7 +12,7 @@ export const { themeConfig, layoutConfig } = defineThemeConfig({
   app: {
     title: 'plugpoint', // also the cookie namespace, so it must stay lower case
     logo: h('div', { innerHTML: logo, style: 'line-height:0; color: rgb(var(--v-global-theme-primary))' }),
-    contentWidth: ContentWidth.Boxed,
+    contentWidth: ContentWidth.Fluid, // tables use the whole width of the screen
     contentLayoutNav: AppContentLayoutNav.Vertical,
     overlayNavFromBreakpoint: breakpointsVuetifyV3.lg - 1, // 1 for matching with vuetify breakpoint. Docs: https://next.vuetifyjs.com/en/features/display-and-platform/
     i18n: {

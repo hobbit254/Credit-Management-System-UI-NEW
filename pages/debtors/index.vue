@@ -53,31 +53,32 @@ const rows = computed(() => debtors.value.map(debtor => ({
   use: creditUse(debtor.owed, debtor.credit_limit),
   paid: lastPaid(debtor),
 })))
-
-const firstShown = computed(() => (pagination.value.currentPage - 1) * pagination.value.perPage + 1)
-const lastShown = computed(() => Math.min(pagination.value.currentPage * pagination.value.perPage, pagination.value.total))
 </script>
 
 <template>
-  <div class="debtors">
-    <header class="d-flex flex-wrap align-end gap-4 mb-6">
-      <div class="flex-grow-1">
-        <h1 class="text-h2 mb-1">
-          Debtors
-        </h1>
-        <p class="text-body-1 text-medium-emphasis mb-0">
-          {{ pagination.total }} {{ filters.show === 'over_limit' ? 'over their credit limit' : filters.show === 'owing' ? 'still owe money' : (pagination.total === 1 ? 'customer' : 'customers') }}
-        </p>
-      </div>
+  <ListPage
+    title="Debtors"
+    :loading="loading"
+    :pagination="pagination"
+    :row-count="debtors.length"
+    :columns="5"
+    :empty-text="filters.search || filters.show !== 'all' ? 'No debtors match. Try another name or filter.' : 'No debtors yet. Add one to start selling on credit.'"
+    @page="page => fetchAllDebtors({ page })"
+  >
+    <template #subtitle>
+      {{ pagination.total }} {{ filters.show === 'over_limit' ? 'over their credit limit' : filters.show === 'owing' ? 'still owe money' : (pagination.total === 1 ? 'customer' : 'customers') }}
+    </template>
+
+    <template #actions>
       <VBtn
         prepend-icon="tabler-user-plus"
         @click="addDebtor"
       >
         Add debtor
       </VBtn>
-    </header>
+    </template>
 
-    <div class="d-flex flex-wrap align-center gap-3 mb-6">
+    <template #filters>
       <AppTextField
         v-model="filters.search"
         aria-label="Search debtors"
@@ -86,183 +87,147 @@ const lastShown = computed(() => Math.min(pagination.value.currentPage * paginat
         clearable
         style="max-inline-size: 360px; min-inline-size: 220px;"
       />
-      <VBtnToggle
+      <!-- Chips wrap onto a new line on narrow screens; a button group would overflow. -->
+      <VChipGroup
         v-model="filters.show"
         mandatory
-        divided
-        variant="outlined"
-        color="primary"
+        column
+        selected-class="bg-primary"
         aria-label="Show"
       >
-        <VBtn
+        <VChip
           v-for="option in showOptions"
           :key="option.value"
           :value="option.value"
+          size="large"
+          variant="outlined"
         >
           {{ option.label }}
-        </VBtn>
-      </VBtnToggle>
-    </div>
+        </VChip>
+      </VChipGroup>
+    </template>
 
-    <VCard
-      border
-      flat
+    <template #head>
+      <th>Customer</th>
+      <th class="text-end">
+        Owes
+      </th>
+      <th style="min-inline-size: 220px;">
+        Credit limit used
+      </th>
+      <th>Last payment</th>
+      <th>
+        <span class="d-sr-only">Actions</span>
+      </th>
+    </template>
+
+    <tr
+      v-for="{ debtor, use, paid } in rows"
+      :key="debtor.debtor_uuid"
+      :class="{ archived: debtor.deleted_at }"
     >
-      <VTable class="debtor-table">
-        <thead>
-          <tr>
-            <th>Customer</th>
-            <th class="text-end">
-              Owes
-            </th>
-            <th style="min-inline-size: 220px;">
-              Credit limit used
-            </th>
-            <th>Last payment</th>
-            <th>
-              <span class="d-sr-only">Actions</span>
-            </th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr
-            v-for="{ debtor, use, paid } in rows"
-            :key="debtor.debtor_uuid"
-            :class="{ archived: debtor.deleted_at }"
+      <td class="py-3">
+        <div class="d-flex align-center gap-2">
+          <span class="font-weight-medium text-body-1">{{ debtor.debtor_name }}</span>
+          <VChip
+            v-if="debtor.deleted_at"
+            size="small"
+            color="error"
           >
-            <td class="py-3">
-              <div class="d-flex align-center gap-2">
-                <span class="font-weight-medium text-body-1">{{ debtor.debtor_name }}</span>
-                <VChip
-                  v-if="debtor.deleted_at"
-                  size="small"
-                  color="error"
-                >
-                  Archived
-                </VChip>
-                <VChip
-                  v-else-if="!debtor.active"
-                  size="small"
-                  color="warning"
-                >
-                  Suspended
-                </VChip>
-              </div>
-              <div class="text-body-2 text-medium-emphasis">
-                {{ debtor.debtor_phone }}, {{ debtor.debtor_type }}
-              </div>
-            </td>
-            <td class="text-end font-weight-bold text-body-1">
-              {{ debtor.owed > 0 ? kes(debtor.owed) : 'Paid up' }}
-            </td>
-            <td>
-              <div class="d-flex align-center gap-3">
-                <div
-                  role="img"
-                  :aria-label="`${use.percent} percent of a ${kes(debtor.credit_limit)} limit used`"
-                  class="limit-track"
-                >
-                  <div :style="{ inlineSize: `${Math.min(use.percent, 100)}%`, background: barColor[use.level] }" />
-                </div>
-                <span
-                  class="text-body-2 percent"
-                  :class="{ 'text-error font-weight-bold': use.level === 'over' }"
-                >{{ use.percent }}%</span>
-              </div>
-              <div class="text-body-2 text-medium-emphasis">
-                {{ debtor.credit_limit > 0 ? `of ${kes(debtor.credit_limit)}` : 'No credit allowed' }}
-              </div>
-            </td>
-            <td>
-              <div class="text-body-1">
-                {{ paid.date }}
-              </div>
-              <div
-                class="text-body-2"
-                :class="paid.late ? 'text-error font-weight-medium' : 'text-medium-emphasis'"
-              >
-                {{ paid.ago }}
-              </div>
-            </td>
-            <td class="text-end">
-              <VMenu location="bottom end">
-                <template #activator="{ props: menuProps }">
-                  <VBtn
-                    :aria-label="`Actions for ${debtor.debtor_name}`"
-                    icon="tabler-dots-vertical"
-                    variant="text"
-                    color="default"
-                    v-bind="menuProps"
-                  />
-                </template>
-                <VList>
-                  <VListItem
-                    prepend-icon="tabler-edit"
-                    title="Edit details"
-                    @click="editDebtor(debtor)"
-                  />
-                  <VListItem
-                    prepend-icon="tabler-copy"
-                    title="Copy ID"
-                    @click="copyId(debtor.debtor_uuid)"
-                  />
-                  <!-- Archived rows are restored, not unsuspended -->
-                  <template v-if="!debtor.deleted_at">
-                    <VDivider class="my-1" />
-                    <VListItem
-                      :prepend-icon="debtor.active ? 'tabler-lock-pause' : 'tabler-lock-open'"
-                      :title="debtor.active ? 'Suspend' : 'Unsuspend'"
-                      @click="debtor.active ? deactivateDebtor(debtor) : activateDebtor(debtor)"
-                    />
-                    <VListItem
-                      prepend-icon="tabler-archive"
-                      title="Archive"
-                      base-color="error"
-                      @click="deleteDebtorModal(debtor)"
-                    />
-                  </template>
-                  <VListItem
-                    v-else
-                    prepend-icon="tabler-restore"
-                    title="Restore"
-                    @click="restoreDebtor(debtor)"
-                  />
-                </VList>
-              </VMenu>
-            </td>
-          </tr>
-          <tr v-if="!debtors.length && !loading">
-            <td
-              colspan="5"
-              class="text-body-1 text-medium-emphasis py-6"
-            >
-              {{ filters.search || filters.show !== 'all' ? 'No debtors match. Try another name or filter.' : 'No debtors yet. Add one to start selling on credit.' }}
-            </td>
-          </tr>
-        </tbody>
-      </VTable>
-      <VProgressLinear
-        v-if="loading"
-        indeterminate
-        color="primary"
-        height="2"
-      />
-    </VCard>
-
-    <nav
-      v-if="pagination.total"
-      aria-label="Pages"
-      class="d-flex flex-wrap justify-space-between align-center gap-3 mt-4"
-    >
-      <span class="text-body-1 text-medium-emphasis">Showing {{ firstShown }}–{{ lastShown }} of {{ pagination.total }}</span>
-      <VPagination
-        :model-value="pagination.currentPage"
-        :length="pagination.lastPage"
-        :total-visible="5"
-        @update:model-value="page => fetchAllDebtors({ page })"
-      />
-    </nav>
-  </div>
+            Archived
+          </VChip>
+          <VChip
+            v-else-if="!debtor.active"
+            size="small"
+            color="warning"
+          >
+            Suspended
+          </VChip>
+        </div>
+        <div class="text-body-2 text-medium-emphasis">
+          {{ debtor.debtor_phone }}, {{ debtor.debtor_type }}
+        </div>
+      </td>
+      <td class="text-end font-weight-bold text-body-1">
+        {{ debtor.owed > 0 ? kes(debtor.owed) : 'Paid up' }}
+      </td>
+      <td>
+        <div class="d-flex align-center gap-3">
+          <div
+            role="img"
+            :aria-label="`${use.percent} percent of a ${kes(debtor.credit_limit)} limit used`"
+            class="limit-track"
+          >
+            <div :style="{ inlineSize: `${Math.min(use.percent, 100)}%`, background: barColor[use.level] }" />
+          </div>
+          <span
+            class="text-body-2 percent"
+            :class="{ 'text-error font-weight-bold': use.level === 'over' }"
+          >{{ use.percent }}%</span>
+        </div>
+        <div class="text-body-2 text-medium-emphasis">
+          {{ debtor.credit_limit > 0 ? `of ${kes(debtor.credit_limit)}` : 'No credit allowed' }}
+        </div>
+      </td>
+      <td>
+        <div class="text-body-1">
+          {{ paid.date }}
+        </div>
+        <div
+          class="text-body-2"
+          :class="paid.late ? 'text-error font-weight-medium' : 'text-medium-emphasis'"
+        >
+          {{ paid.ago }}
+        </div>
+      </td>
+      <td class="text-end">
+        <VMenu location="bottom end">
+          <template #activator="{ props: menuProps }">
+            <VBtn
+              :aria-label="`Actions for ${debtor.debtor_name}`"
+              icon="tabler-dots-vertical"
+              variant="text"
+              color="default"
+              v-bind="menuProps"
+            />
+          </template>
+          <VList>
+            <VListItem
+              prepend-icon="tabler-edit"
+              title="Edit details"
+              @click="editDebtor(debtor)"
+            />
+            <VListItem
+              prepend-icon="tabler-copy"
+              title="Copy ID"
+              @click="copyId(debtor.debtor_uuid)"
+            />
+            <!-- Archived rows are restored, not unsuspended -->
+            <template v-if="!debtor.deleted_at">
+              <VDivider class="my-1" />
+              <VListItem
+                :prepend-icon="debtor.active ? 'tabler-lock-pause' : 'tabler-lock-open'"
+                :title="debtor.active ? 'Suspend' : 'Unsuspend'"
+                @click="debtor.active ? deactivateDebtor(debtor) : activateDebtor(debtor)"
+              />
+              <VListItem
+                prepend-icon="tabler-archive"
+                title="Archive"
+                base-color="error"
+                @click="deleteDebtorModal(debtor)"
+              />
+            </template>
+            <VListItem
+              v-else
+              prepend-icon="tabler-restore"
+              title="Restore"
+              @click="restoreDebtor(debtor)"
+            />
+          </VList>
+        </VMenu>
+      </td>
+    </tr>
+  </ListPage>
 
   <CreateDebtorModal
     v-model:model-value="openAdd"
@@ -285,14 +250,6 @@ const lastShown = computed(() => Math.min(pagination.value.currentPage * paginat
 </template>
 
 <style scoped>
-.debtors { max-width: 1120px; }
-
-.debtor-table { overflow-x: auto; }
-.debtor-table :deep(table) { min-inline-size: 820px; }
-.debtor-table th { font-weight: 500 !important; }
-
-.archived { opacity: 0.6; }
-
 .limit-track {
   flex: 1;
   overflow: hidden;

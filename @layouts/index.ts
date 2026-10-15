@@ -29,7 +29,9 @@ export const createLayouts = (userConfig: PartialDeep<LayoutConfig>): Plugin => 
     // Reactive Values (Store)
     configStore.$patch({
       appContentLayoutNav: cookieRef('appContentLayoutNav', userConfig.app?.contentLayoutNav ?? layoutConfig.app.contentLayoutNav).value,
-      appContentWidth: cookieRef('appContentWidth', userConfig.app?.contentWidth ?? layoutConfig.app.contentWidth).value,
+
+      // Not from a cookie: nothing in the app changes it any more, and an old saved "boxed" would win.
+      appContentWidth: userConfig.app?.contentWidth ?? layoutConfig.app.contentWidth,
       footerType: cookieRef('footerType', userConfig.footer?.type ?? layoutConfig.footer.type).value,
       navbarType: cookieRef('navbarType', userConfig.navbar?.type ?? layoutConfig.navbar.type).value,
       isNavbarBlurEnabled: cookieRef('isNavbarBlurEnabled', userConfig.navbar?.navbarBlur ?? layoutConfig.navbar.navbarBlur).value,

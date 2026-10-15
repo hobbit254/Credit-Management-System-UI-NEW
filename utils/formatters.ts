@@ -41,3 +41,26 @@ const saleStatusLabels: Record<string, string> = {
 }
 
 export const saleStatusLabel = (status: string) => saleStatusLabels[status] ?? status.replace(/_/g, ' ')
+
+// Audit actions are "Controller.method" (older rows are free text): name them by the method's first word.
+const actionVerbs: [RegExp, string][] = [
+  [/^(all|fetch|get|show|index|me)/i, 'Viewed'],
+  [/^(create|save)/i, 'Created'],
+  [/^(update|mark)/i, 'Changed'],
+  [/^(delete|remove|soft delete)/i, 'Archived'],
+  [/^restore/i, 'Restored'],
+  [/^import/i, 'Imported'],
+  [/^login/i, 'Signed in'],
+  [/^logout/i, 'Signed out'],
+  [/^resend/i, 'Resent'],
+]
+
+export function describeAction(action: string, entity: string) {
+  const method = action.includes('.') ? action.split('.').pop()! : action
+  const verb = actionVerbs.find(([pattern]) => pattern.test(method))?.[1]
+
+  if (!verb)
+    return action
+
+  return verb.startsWith('Signed') ? verb : `${verb} ${entity.replace(/_/g, ' ')}`
+}

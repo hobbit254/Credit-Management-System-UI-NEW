@@ -8,7 +8,7 @@ const props = defineProps<{
   title: string
   subtitle?: string
   loading: boolean
-  pagination: Pagination
+  pagination?: Pagination // leave out for a list that is never paged
   rowCount: number
   columns: number
   emptyText: string
@@ -16,8 +16,8 @@ const props = defineProps<{
 
 const emit = defineEmits<{ page: [page: number] }>()
 
-const firstShown = computed(() => (props.pagination.currentPage - 1) * props.pagination.perPage + 1)
-const lastShown = computed(() => Math.min(props.pagination.currentPage * props.pagination.perPage, props.pagination.total))
+const firstShown = computed(() => props.pagination ? (props.pagination.currentPage - 1) * props.pagination.perPage + 1 : 0)
+const lastShown = computed(() => props.pagination ? Math.min(props.pagination.currentPage * props.pagination.perPage, props.pagination.total) : 0)
 </script>
 
 <template>
@@ -77,7 +77,7 @@ const lastShown = computed(() => Math.min(props.pagination.currentPage * props.p
     </VCard>
 
     <nav
-      v-if="pagination.total"
+      v-if="pagination?.total"
       aria-label="Pages"
       class="d-flex flex-wrap justify-space-between align-center gap-3 mt-4"
     >

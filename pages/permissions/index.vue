@@ -1,6 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted } from 'vue'
-import { useTheme } from 'vuetify'
+import { onMounted } from 'vue'
 import { usePermissions } from '@/composables/permissions/usePermissions'
 
 definePageMeta({
@@ -15,294 +14,130 @@ const {
   restorePermission, activatePermission, deactivatePermission,
 } = usePermissions()
 
-const theme = useTheme()
-const surfaceColor = computed(() => theme.current.value.colors.surface)
+onMounted(() => fetchAllPermissions())
 
-onMounted(async () => {
-  loading.value = true
-  try {
-    await fetchAllPermissions()
-  }
-  finally {
-    loading.value = false
-  }
-})
+// What the request method lets someone do.
+const methodLabel: Record<string, string> = { GET: 'View', POST: 'Create', PUT: 'Change', PATCH: 'Change', DELETE: 'Delete' }
 
-const perPageOptions = [10, 25, 50, 100]
-
-function changePerPage(value: number) {
-  pagination.value.perPage = value
-  pagination.value.currentPage = 1
-  fetchAllPermissions()
-}
-
-function copyUuid(uuid: string) {
+function copyId(uuid: string) {
   navigator.clipboard.writeText(uuid)
-  showToast({
-    title: 'Copied',
-    text: 'Permission ID copied to clipboard',
-    color: 'success',
-    icon: 'tabler-clipboard-check',
-  })
-}
-
-const headers = [
-  { title: 'Permission Identity', key: 'permission_name', fixed: true },
-  { title: 'Slug Identifier', key: 'permission_slug' },
-  { title: 'Operation', key: 'permission_action', align: 'center' },
-  { title: 'Status', key: 'active', align: 'center' },
-  { title: 'Lifecycle', key: 'created_at' },
-  { title: 'Actions', key: 'actions', sortable: false, align: 'end' },
-] as const
-
-function getRowProps({ item }: { item: any }) {
-  return item.deleted_at !== null
-    ? { class: 'deleted-row-active font-italic' }
-    : {}
+  showToast({ title: 'Copied', text: 'Permission ID copied', color: 'success', icon: 'tabler-clipboard-check' })
 }
 </script>
 
 <template>
-  <VRow class="h-100">
-    <VCol
-      cols="12"
-      class="h-100 d-flex"
+  <ListPage
+    title="Permissions"
+    subtitle="One per thing the app can do. Give them to roles under Who can do what."
+    :loading="loading"
+    :pagination="pagination"
+    :row-count="permissions.length"
+    :columns="4"
+    empty-text="No permissions yet."
+    @page="page => fetchAllPermissions({ page })"
+  >
+    <template #actions>
+      <VBtn
+        prepend-icon="tabler-plus"
+        @click="addPermission"
+      >
+        Add permission
+      </VBtn>
+    </template>
+
+    <template #head>
+      <th>Permission</th>
+      <th>Lets someone</th>
+      <th>Description</th>
+      <th>
+        <span class="d-sr-only">Actions</span>
+      </th>
+    </template>
+
+    <tr
+      v-for="permission in permissions"
+      :key="permission.permission_uuid"
+      :class="{ archived: permission.deleted_at }"
     >
-      <VCard class="d-flex flex-column flex-grow-1 border shadow-sm">
-        <VCardTitle class="d-flex justify-space-between align-center pa-4">
-          <div class="d-flex align-center ga-3">
-            <VAvatar
-              color="primary"
-              variant="tonal"
-              size="42"
-              rounded="lg"
-            >
-              <VIcon size="24">
-                tabler-lock-access
-              </VIcon>
-            </VAvatar>
-            <div class="d-flex flex-column">
-              <span class="text-h6 font-weight-black">System Permissions</span>
-              <span class="text-caption text-medium-emphasis">Manage granular access control logic and API scopes</span>
-            </div>
-          </div>
-          <VBtn
-            color="primary"
-            prepend-icon="tabler-plus"
-            variant="elevated"
-            @click="addPermission"
+      <td class="py-3">
+        <div class="d-flex flex-wrap align-center gap-2">
+          <span class="font-weight-medium text-body-1">{{ permission.permission_name }}</span>
+          <VChip
+            v-if="permission.deleted_at"
+            color="error"
+            size="small"
           >
-            Add Permission
-          </VBtn>
-        </VCardTitle>
-
-        <VDivider />
-
-        <VDataTable
-          :headers="headers"
-          :items="permissions"
-          :loading="loading"
-          item-key="permission_uuid"
-          class="flex-grow-1 permissions-table"
-          :items-per-page="pagination.perPage"
-          :row-props="getRowProps"
-          hover
-        >
-          <template #item.permission_name="{ item }">
-            <div class="d-flex align-center ga-3 py-3">
-              <VAvatar
-                size="34"
-                color="primary"
-                variant="tonal"
-                class="border"
-              >
-                <span class="text-xs font-weight-bold">
-                  {{ item.permission_name?.charAt(0)?.toUpperCase() ?? '?' }}
-                </span>
-              </VAvatar>
-              <div class="d-flex flex-column overflow-hidden">
-                <span class="text-body-2 font-weight-bold text-high-emphasis text-truncate">
-                  {{ item.permission_name }}
-                </span>
-                <span
-                  class="text-xxs text-disabled text-truncate line-clamp-1"
-                  style="max-width: 220px;"
-                >
-                  {{ item.description || 'No description provided' }}
-                </span>
-              </div>
-            </div>
+            Archived
+          </VChip>
+          <VChip
+            v-else-if="!permission.active"
+            color="warning"
+            size="small"
+          >
+            Switched off
+          </VChip>
+        </div>
+        <div class="text-body-2 text-medium-emphasis">
+          {{ permission.permission_slug }}
+        </div>
+      </td>
+      <td class="text-body-1">
+        {{ methodLabel[permission.permission_action] ?? permission.permission_action }}
+      </td>
+      <td
+        class="text-body-1"
+        style="max-inline-size: 48ch;"
+      >
+        {{ permission.description }}
+      </td>
+      <td class="text-end">
+        <VMenu location="bottom end">
+          <template #activator="{ props: menuProps }">
+            <VBtn
+              :aria-label="`Actions for ${permission.permission_name}`"
+              icon="tabler-dots-vertical"
+              variant="text"
+              color="default"
+              v-bind="menuProps"
+            />
           </template>
-
-          <template #item.permission_slug="{ item }">
-            <div class="d-flex align-center">
-              <VChip
-                size="x-small"
-                label
-                color="secondary"
-                variant="flat"
-                class="font-weight-black  tracking-widest px-2"
-              >
-                {{ item.permission_slug }}
-              </VChip>
-            </div>
-          </template>
-
-          <template #item.permission_action="{ item }">
-            <VChip
-              size="x-small"
-              variant="tonal"
-              :color="item.permission_action === 'write' ? 'warning' : 'info'"
-              label
-              class="font-weight-black text-uppercase tracking-tighter"
-            >
-              {{ item.permission_action ?? 'read' }}
-            </VChip>
-          </template>
-
-          <template #item.active="{ item }">
-            <StatusBadge :active="item.active" />
-          </template>
-
-          <template #item.created_at="{ item }">
-            <div class="d-flex flex-column ga-1 text-xxs text-medium-emphasis">
-              <div class="d-flex align-center ga-1">
-                <VIcon size="12">
-                  tabler-calendar-plus
-                </VIcon>
-                <TableDate :value="item.created_at" />
-              </div>
-              <div
-                v-if="item.deleted_at"
-                class="d-flex align-center ga-1 text-error font-weight-bold"
-              >
-                <VIcon size="12">
-                  tabler-trash-x
-                </VIcon>
-                <TableDate :value="item.deleted_at" />
-              </div>
-            </div>
-          </template>
-
-          <template #item.actions="{ item }">
-            <VMenu location="bottom end">
-              <template #activator="{ props: menuProps }">
-                <VBtn
-                  aria-label="Permission actions"
-                  icon="tabler-dots-vertical"
-                  variant="text"
-                  size="small"
-                  v-bind="menuProps"
-                />
-              </template>
-
-              <VList density="compact">
-                <VListSubheader class="text-xxs font-weight-black uppercase tracking-widest">
-                  Access Management
-                </VListSubheader>
-
-                <VListItem @click="editPermission(item)">
-                  <template #prepend>
-                    <VIcon size="18">
-                      tabler-edit
-                    </VIcon>
-                  </template>
-                  <VListItemTitle>Edit Scope</VListItemTitle>
-                </VListItem>
-
-                <VListItem @click="copyUuid(item.permission_uuid)">
-                  <template #prepend>
-                    <VIcon size="18">
-                      tabler-fingerprint
-                    </VIcon>
-                  </template>
-                  <VListItemTitle>Copy UUID</VListItemTitle>
-                </VListItem>
-
-                <VDivider class="my-1" />
-
-                <VListItem
-                  :color="item.active === 1 ? 'warning' : 'success'"
-                  @click="item.active === 1 ? deactivatePermission(item) : activatePermission(item)"
-                >
-                  <template #prepend>
-                    <VIcon size="18">
-                      {{ item.active === 1 ? 'tabler-lock-off' : 'tabler-lock-check' }}
-                    </VIcon>
-                  </template>
-                  <VListItemTitle class="font-weight-medium">
-                    {{ item.active === 1 ? 'Deactivate' : 'Activate' }}
-                  </VListItemTitle>
-                </VListItem>
-
-                <VListItem
-                  v-if="item.deleted_at !== null"
-                  color="success"
-                  @click="restorePermission(item)"
-                >
-                  <template #prepend>
-                    <VIcon size="18">
-                      tabler-restore
-                    </VIcon>
-                  </template>
-                  <VListItemTitle class="font-weight-bold">
-                    Restore Permission
-                  </VListItemTitle>
-                </VListItem>
-
-                <VListItem
-                  v-else
-                  color="error"
-                  @click="deletePermissionModal(item)"
-                >
-                  <template #prepend>
-                    <VIcon size="18">
-                      tabler-archive
-                    </VIcon>
-                  </template>
-                  <VListItemTitle class="font-weight-bold">
-                    Archive Permission
-                  </VListItemTitle>
-                </VListItem>
-              </VList>
-            </VMenu>
-          </template>
-
-          <template #bottom>
-            <VDivider />
-            <div class="d-flex justify-space-between align-center flex-wrap ga-4 pa-4 bg-var-theme-surface">
-              <div class="d-flex align-center ga-3">
-                <span class="text-caption text-medium-emphasis font-weight-medium">Rows per page:</span>
-                <VSelect
-                  aria-label="Items per page"
-                  :model-value="pagination.perPage"
-                  :items="perPageOptions"
-                  density="compact"
-                  variant="outlined"
-                  hide-details
-                  style="width: 85px"
-                  @update:model-value="changePerPage"
-                />
-              </div>
-              <div class="d-flex align-center ga-4">
-                <span class="text-caption text-medium-emphasis">
-                  Page <span class="text-high-emphasis font-weight-bold">{{ pagination.currentPage }}</span> of {{ pagination.lastPage }}
-                </span>
-                <VPagination
-                  v-model="pagination.currentPage"
-                  :length="pagination.lastPage"
-                  :total-visible="5"
-                  density="compact"
-                  active-color="primary"
-                  @update:model-value="(page) => fetchAllPermissions({ page })"
-                />
-              </div>
-            </div>
-          </template>
-        </VDataTable>
-      </VCard>
-    </VCol>
-  </VRow>
+          <VList>
+            <VListItem
+              prepend-icon="tabler-edit"
+              title="Edit"
+              @click="editPermission(permission)"
+            />
+            <VListItem
+              prepend-icon="tabler-copy"
+              title="Copy ID"
+              @click="copyId(permission.permission_uuid)"
+            />
+            <!-- Archived rows are restored, not switched on -->
+            <template v-if="!permission.deleted_at">
+              <VDivider class="my-1" />
+              <VListItem
+                :prepend-icon="permission.active ? 'tabler-lock-off' : 'tabler-lock-check'"
+                :title="permission.active ? 'Switch off' : 'Switch on'"
+                @click="permission.active ? deactivatePermission(permission) : activatePermission(permission)"
+              />
+              <VListItem
+                prepend-icon="tabler-archive"
+                title="Archive"
+                base-color="error"
+                @click="deletePermissionModal(permission)"
+              />
+            </template>
+            <VListItem
+              v-else
+              prepend-icon="tabler-restore"
+              title="Restore"
+              @click="restorePermission(permission)"
+            />
+          </VList>
+        </VMenu>
+      </td>
+    </tr>
+  </ListPage>
 
   <CreatePermissionModal
     v-model:model-value="openAdd"
@@ -323,41 +158,3 @@ function getRowProps({ item }: { item: any }) {
     @confirm="deletePermission"
   />
 </template>
-
-<style scoped>
-.permissions-table :deep(td:first-child) {
-  position: sticky;
-  left: 0;
-  background: v-bind(surfaceColor) !important;
-  z-index: 1;
-  border-right: 1px solid rgba(var(--v-border-color), 0.12);
-}
-
-/* Row Highlighting for Deleted Items */
-.permissions-table :deep(.deleted-row-active td) {
-  background-color: rgba(var(--v-theme-error,255,255,255), 0.08) !important;
-  color: rgba(var(--v-theme-on-surface,255,255,255), 0.6) !important;
-}
-
-.permissions-table :deep(.deleted-row-active td:first-child) {
-  background-color: rgba(var(--v-theme-error,255,255,255), 0.12) !important;
-  border-right-color: rgba(var(--v-theme-error,255,255,255), 0.2) !important;
-}
-
-.permissions-table :deep(.deleted-row-active:hover td) {
-  background-color: rgba(var(--v-theme-error,255,255,255), 0.15) !important;
-}
-
-.text-xxs { font-size: 0.65rem; }
-.font-mono { font-family: 'Fira Code', 'Roboto Mono', monospace; }
-.tracking-widest { letter-spacing: 0.12em; }
-.border { border: 1px solid rgba(var(--v-border-color), 0.12) !important; }
-.font-italic { font-style: italic; }
-
-.line-clamp-1 {
-  display: -webkit-box;
-  -webkit-line-clamp: 1;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
-}
-</style>
